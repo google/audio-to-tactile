@@ -1,0 +1,20 @@
+       0 18:37:41] StartTactophone lessons_file=lessons.txt, sample_rate=44100Hz, phoneme_spacing=0.050s, clock_tick=50ms
+      31 18:37:43] QuitTactophone
+       0 18:38:47] StartTactophone lessons_file=lessons.txt, sample_rate=44100Hz, phoneme_spacing=0.050s, clock_tick=50ms
+     107 18:38:52] QuitTactophone
+       0 21:28:11] StartTactophone lessons_file=lessons.txt, sample_rate=44100Hz, phoneme_spacing=0.050s, clock_tick=50ms
+     428 21:28:32] QuitTactophone
+       0 21:29:19] StartTactophone lessons_file=lessons.txt, sample_rate=44100Hz, phoneme_spacing=0.050s, clock_tick=50ms
+     233 21:29:31] QuitTactophone
+       0 21:30:07] StartTactophone lessons_file=lessons.txt, sample_rate=44100Hz, phoneme_spacing=0.050s, clock_tick=50ms
+      40 21:30:09] QuitTactophone
+       0 21:31:38] StartTactophone lessons_file=lessons.txt, sample_rate=44100Hz, phoneme_spacing=0.050s, clock_tick=50ms
+      33 21:31:40] QuitTactophone
+       0 21:32:01] StartTactophone lessons_file=lessons.txt, sample_rate=44100Hz, phoneme_spacing=0.050s, clock_tick=50ms
+      67 21:32:05] QuitTactophone
+       0 21:32:19] StartTactophone lessons_file=lessons.txt, sample_rate=44100Hz, phoneme_spacing=0.050s, clock_tick=50ms
+      19 21:32:20] QuitTactophone
+       0 21:32:24] StartTactophone lessons_file=lessons.txt, sample_rate=44100Hz, phoneme_spacing=0.050s, clock_tick=50ms
+     779 21:33:03] QuitTactophone
+       0 10:58:02] StartTactophone lessons_file=lessons.txt, sample_rate=44100Hz, phoneme_spacing=0.050s, clock_tick=50ms
+      37 10:58:04] QuitTactophone
