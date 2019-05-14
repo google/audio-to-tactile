@@ -1,11 +1,11 @@
 # Copyright 2019 Google LLC
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     https://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,22 +34,22 @@ ARCHIVE_NAME=tactophone_$(shell date -u +%Y%m%d)
 default: tactophone
 
 tactophone: $(TACTOPHONE_OBJS)
-	$(CC) $(LDFLAGS) $(TACTOPHONE_OBJS) -o $@
+	$(CC) $(TACTOPHONE_OBJS) $(LDFLAGS) -o $@
 
 phoneme_code_test: $(PHONEME_CODE_TEST_OBJS)
-	$(CC) $(LDFLAGS) $(PHONEME_CODE_TEST_OBJS) -o $@
+	$(CC) $(PHONEME_CODE_TEST_OBJS) $(LDFLAGS) -o $@
 
 tactophone_engine_test: $(TACTOPHONE_ENGINE_TEST_OBJS)
-	$(CC) $(LDFLAGS) $(TACTOPHONE_ENGINE_TEST_OBJS) -o $@
+	$(CC) $(TACTOPHONE_ENGINE_TEST_OBJS) $(LDFLAGS) -o $@
 
 tactophone_lesson_test: $(TACTOPHONE_LESSON_TEST_OBJS)
-	$(CC) $(LDFLAGS) $(TACTOPHONE_LESSON_TEST_OBJS) -o $@
+	$(CC) $(TACTOPHONE_LESSON_TEST_OBJS) $(LDFLAGS) -o $@
 
 tactile_player_test: $(TACTILE_PLAYER_TEST_OBJS)
-	$(CC) $(LDFLAGS) $(TACTILE_PLAYER_TEST_OBJS) -o $@
+	$(CC) $(TACTILE_PLAYER_TEST_OBJS) $(LDFLAGS) -o $@
 
 util_test: $(UTIL_TEST_OBJS)
-	$(CC) $(LDFLAGS) $(UTIL_TEST_OBJS) -o $@
+	$(CC) $(UTIL_TEST_OBJS) $(LDFLAGS) -o $@
 
 .c.o:
 	$(CC) -c $(CFLAGS) $< -o $@
