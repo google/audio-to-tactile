@@ -1,11 +1,11 @@
 /* Copyright 2019 Google LLC
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -168,7 +168,7 @@ static float SineWave(float frequency_hz, float t) {
 static float* GenerateTestBuzz(int channel, float sample_rate_hz,
                                int* num_frames) {
   CHECK(1 <= channel && channel <= kNumChannels);
-  const float kAmplitude = 0.15f;
+  const float kAmplitude = 0.07f;
   const float kDuration = 0.6f;
   const float kTransition = 0.1f;
   const float kFrequencyHz = 200.0f;
@@ -196,9 +196,9 @@ static float* GenerateTestBuzz(int channel, float sample_rate_hz,
  * frames is written to `*num_frames`.
  */
 static float* GenerateWinBuzz(float sample_rate_hz, int* num_frames) {
-  const float kAmplitude = 0.1f;
+  const float kAmplitude = 0.05f;
   const float kDuration = 0.6f;
-  const float kFrequencyHz = 120.0f;
+  const float kFrequencyHz = 110.0f;
   *num_frames = (int)(kDuration * sample_rate_hz + 0.5f);
   float* waveform =
       (float*)CHECK_NOTNULL(malloc(kNumChannels * *num_frames * sizeof(float)));
@@ -233,8 +233,8 @@ static float* GenerateWinBuzz(float sample_rate_hz, int* num_frames) {
        */
       dest[c] =
           kAmplitude * SineWave(kFrequencyHz, t) *
-          (TukeyWindow(0.2f, 0.05f, t - 0.04f * ring) +
-           TukeyWindow(0.2f, 0.05f, t - 0.4f + 0.04f * ring) * (ring != 5));
+          (TukeyWindow(0.15f, 0.05f, t - 0.04f * ring) +
+           TukeyWindow(0.15f, 0.05f, t - 0.4f + 0.04f * ring) * (ring != 5));
     }
 
     dest += kNumChannels;
@@ -244,6 +244,12 @@ static float* GenerateWinBuzz(float sample_rate_hz, int* num_frames) {
 
 static void PlayTactileSignal(TactophoneEngine* engine, float* samples,
                               int num_frames) {
+  const int num_samples = num_frames * kNumChannels;
+  int i;
+  for (i = 0; i < num_samples; ++i) {
+    samples[i] *= engine->gain;
+  }
+
   PermuteWaveformChannels(engine->channel_permutation, samples, num_frames,
                           kNumChannels);
   TactilePlayerPlay(engine->tactile_player, samples, num_frames);

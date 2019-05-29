@@ -1,18 +1,18 @@
 /* Copyright 2019 Google LLC
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * 
+ *
  * Tactophone phoneme training game.
  */
 
@@ -57,6 +57,7 @@ int main(int argc, char** argv) {
   const char* log_file = "tactophone.log";
   int* channel_permutation = DefaultChannelPermutation();
   int output_device = -1;
+  float gain = 1.0f;
   int i;
 
   for (i = 1; i < argc; ++i) { /* Parse flags. */
@@ -66,6 +67,8 @@ int main(int argc, char** argv) {
       lessons_file = strchr(argv[i], '=') + 1;
     } else if (StartsWith(argv[i], "--log=")) {
       log_file = strchr(argv[i], '=') + 1;
+    } else if (StartsWith(argv[i], "--gain=")) {
+      gain = atof(strchr(argv[i], '=') + 1);
     } else if (StartsWith(argv[i], "--channels=")) {
       free(channel_permutation);
       int length;
@@ -93,6 +96,7 @@ int main(int argc, char** argv) {
   params.lessons_file = lessons_file;
   params.log_file = log_file;
   params.output_device = output_device;
+  params.gain = gain;
   params.channel_permutation = channel_permutation;
   params.initial_state = &kTactophoneStateMainMenu;
   Tactophone(&params);

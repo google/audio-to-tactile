@@ -20,10 +20,10 @@ distinct vibrotactile pattern on a 24-tactor "sleeve" that the user wears.
 This code uses the Apache License 2.0. See the LICENSE file for details.
 
 
-## Hardware 
+## Hardware
 
 Tactophone is intended to be used with a tactile sleeve as described in the
-Reed et al. work linked above. 
+Reed et al. work linked above.
 
 ![Tactile sleeve hardware](doc/sleeve-hw.jpg)
 
@@ -47,7 +47,7 @@ Tactophone is implemented in C and depends on the
 [ncurses](https://www.gnu.org/software/ncurses/ncurses.html), and
 [portaudio](http://www.portaudio.com/) libraries. On Debian-based systems, use
 
-``` shell 
+``` shell
 sudo apt-get install libncurses-dev portaudio19-dev
 ```
 
@@ -60,9 +60,7 @@ make
 
 This should produce a `tactophone` executable file.
 
-
 ## First time set up
-
 Some first time set up is needed to find the right output audio device and to map
 the order of the 24 channels from Purdue's order to your hardware.
 
@@ -123,12 +121,19 @@ Press `[Q]` repeatedly to quit Tactophone. Rerun it using `--channels` to set
 the channel mapping (as a comma-delimited list of numbers, without spaces):
 
 ``` shell
-tactophone --output=6 --channels=20,24,23,19,15,11,7,3,13,9,5,1,4,8,12,16,2,6,10,14,18,22,21,17
+./tactophone --output=6 --channels=20,24,23,19,15,11,7,3,13,9,5,1,4,8,12,16,2,6,10,14,18,22,21,17
 ```
 
 Press `[T]` to go to the Test Tactors screen again, and test each button `[2]`,
 `[W]`, etc. to verify the channel mapping. If the mapping is correct, then each
 button should activate the tactor at the indicated position.
+
+Finally, if necessary, use the `--gain` option to tune Tactophone's output gain.
+Press `[Q]` to return to the main menu and then `[F]` to enter the Free Play
+screen. This screen lets you play the tactile codes for each phoneme. If the
+tactile vibration seems too strong, restart tactophone with for instance
+`gain=0.5` to multiply output amplitude by factor 0.5. Or conversely if output
+seems too weak, set a gain > 1.
 
 Now Tactophone is ready to use! For future runs, note your settings of
 `--output` and `--channels`. You could save them for instance in a small shell
@@ -137,7 +142,7 @@ script like
 *run_tactophone.sh*
 ``` shell
 #!/bin/bash
-./tactophone --output=6 --channels=20,24,23,19,15,11,7,3,13,9,5,1,4,8,12,16,2,6,10,14,18,22,21,17 "$@"
+./tactophone --output=6 --gain=1.0 --channels=20,24,23,19,15,11,7,3,13,9,5,1,4,8,12,16,2,6,10,14,18,22,21,17 "$@"
 ```
 
 
@@ -182,7 +187,23 @@ learning a few phoneme codes at a time.
 
 ## Other features and details
 
-### Free play mode 
+### tactophone command line options
+
+ * `--output=<int>` - Sets the portaudio output device number. If not specified,
+   tactophone prints a numbered list of connected devices.
+
+ * `--lessons=<filename>` - Lesson file to read (default `lessons.txt`).
+
+ * `--log=<filename>` - Log file to write (default `tactophone.log`).
+
+ * `--gain=<float>` - Gain factor on tactile output. A value > 1 makes output
+   stronger; value < 1 reduces it.
+
+ * `--channels=<list>` - Specifies the channel order. The list should be a
+   comma-delimited sequence of integers between 1 and 24.
+
+
+### Free play mode
 
 In the main menu, press `[F]` to enter "free play" mode.
 

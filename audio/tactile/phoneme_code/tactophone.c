@@ -98,6 +98,7 @@ void Tactophone(const TactophoneParams* params) {
   TactophoneEngine engine;
   TactophoneEngineInit(&engine);
 
+  engine.gain = params->gain;
   engine.channel_permutation = params->channel_permutation;
   engine.lesson_set =
       CHECK_NOTNULL(TactophoneReadLessonSet(params->lessons_file));

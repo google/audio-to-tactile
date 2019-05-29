@@ -1,11 +1,11 @@
 /* Copyright 2019 Google LLC
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -32,6 +32,8 @@ struct TactophoneParams {
   const char* log_file;
   /* Portaudio output device for playing tactile signals. */
   int output_device;
+  /* Gain factor on tactile output. Value > 1 amplifies. */
+  float gain;
   /* Permutation for mapping Purdue's channel order to the output device, an
    * array of size 24 of 0-based indices. Channels are mapped like
    *   output_frame[c] = purdue_frame[channel_permutation[c]].
