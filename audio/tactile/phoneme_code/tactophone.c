@@ -98,12 +98,19 @@ void Tactophone(const TactophoneParams* params) {
   TactophoneEngine engine;
   TactophoneEngineInit(&engine);
 
-  engine.gain = params->gain;
-  engine.channel_permutation = params->channel_permutation;
+  CHECK(ChannelMapParse(kNumChannels, params->channel_source_list,
+        params->channel_gains_db_list, &engine.channel_map));
+  ChannelMapPrint(&engine.channel_map);
+  const int num_output_channels = engine.channel_map.num_output_channels;
+  if (num_output_channels != kNumChannels) {
+    fprintf(stderr, "Error: Must have %d output channels.\n", kNumChannels);
+    exit(1);
+  }
   engine.lesson_set =
       CHECK_NOTNULL(TactophoneReadLessonSet(params->lessons_file));
   CheckLessonSet(engine.lesson_set);
   engine.log_file = CHECK_NOTNULL(fopen(params->log_file, "a"));
+
 
   /* Set up portaudio. */
   CheckPortaudioNoError(Pa_Initialize());
@@ -111,7 +118,7 @@ void Tactophone(const TactophoneParams* params) {
 
   PaStreamParameters output_parameters;
   output_parameters.device = params->output_device;
-  output_parameters.channelCount = kNumChannels;
+  output_parameters.channelCount = num_output_channels;
   output_parameters.sampleFormat = paFloat32;
   output_parameters.suggestedLatency =
       Pa_GetDeviceInfo(output_parameters.device)->defaultLowOutputLatency;

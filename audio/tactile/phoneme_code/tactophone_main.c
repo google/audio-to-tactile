@@ -24,40 +24,13 @@
 #include "audio/tactile/phoneme_code/tactophone_states.h"
 #include "audio/tactile/util.h"
 
-int* DefaultChannelPermutation() {
-  int* channel_permutation = (int*)CHECK_NOTNULL(malloc(24 * sizeof(int)));
-  int c;
-  for (c = 0; c < 24; ++c) {
-    channel_permutation[c] = c;
-  }
-  return channel_permutation;
-}
-
-int CheckChannelPermutation(const int* channel_permutation, int length) {
-  if (channel_permutation == NULL) {
-    fprintf(stderr, "Error: --channels has invalid syntax\n");
-    return 0;
-  } else if (length != 24) {
-    fprintf(stderr, "Error: --channels must have length 24, got %d\n", length);
-    return 0;
-  }
-
-  int c;
-  for (c = 0; c < 24; ++c) {
-    if (!(1 <= channel_permutation[c] && channel_permutation[c] <= 24)) {
-      fprintf(stderr, "Error: Channel %d is invalid\n", channel_permutation[c]);
-      return 0;
-    }
-  }
-  return 1;
-}
-
 int main(int argc, char** argv) {
   const char* lessons_file = "lessons.txt";
   const char* log_file = "tactophone.log";
-  int* channel_permutation = DefaultChannelPermutation();
+  const char* channel_source_list =
+    "1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24";
+  const char* channel_gains_db_list = NULL;
   int output_device = -1;
-  float gain = 1.0f;
   int i;
 
   for (i = 1; i < argc; ++i) { /* Parse flags. */
@@ -67,20 +40,10 @@ int main(int argc, char** argv) {
       lessons_file = strchr(argv[i], '=') + 1;
     } else if (StartsWith(argv[i], "--log=")) {
       log_file = strchr(argv[i], '=') + 1;
-    } else if (StartsWith(argv[i], "--gain=")) {
-      gain = atof(strchr(argv[i], '=') + 1);
     } else if (StartsWith(argv[i], "--channels=")) {
-      free(channel_permutation);
-      int length;
-      channel_permutation = ParseListOfInts(strchr(argv[i], '=') + 1, &length);
-      if (!CheckChannelPermutation(channel_permutation, length)) {
-        goto fail;
-      }
-
-      int c;
-      for (c = 0; c < 24; ++c) {
-        --channel_permutation[c]; /* Change from 1-base to 0-base indices. */
-      }
+      channel_source_list = strchr(argv[i], '=') + 1;
+    } else if (StartsWith(argv[i], "--channel_gains_db=")) {
+      channel_gains_db_list = strchr(argv[i], '=') + 1;
     } else {
       fprintf(stderr, "Error: Invalid flag \"%s\"\n", argv[i]);
       goto fail;
@@ -96,15 +59,13 @@ int main(int argc, char** argv) {
   params.lessons_file = lessons_file;
   params.log_file = log_file;
   params.output_device = output_device;
-  params.gain = gain;
-  params.channel_permutation = channel_permutation;
+  params.channel_source_list = channel_source_list;
+  params.channel_gains_db_list = channel_gains_db_list;
   params.initial_state = &kTactophoneStateMainMenu;
   Tactophone(&params);
 
-  free(channel_permutation);
   return EXIT_SUCCESS;
 
 fail:
-  free(channel_permutation);
   return EXIT_SUCCESS;
 }

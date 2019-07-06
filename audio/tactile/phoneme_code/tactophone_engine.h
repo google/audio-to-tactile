@@ -26,6 +26,7 @@
 #include "portaudio.h"
 
 #include "audio/tactile/phoneme_code/tactophone_lesson.h"
+#include "audio/tactile/channel_map.h"
 #include "audio/tactile/tactile_player.h"
 #include "audio/tactile/util.h"
 
@@ -72,8 +73,7 @@ struct TactophoneEngine {
 
   /* Tactile output. */
   PaStream* portaudio_stream;
-  float gain;
-  const int* channel_permutation;
+  ChannelMap channel_map;
   TactilePlayer* tactile_player;
 
   /* Logging. */

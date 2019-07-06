@@ -1,11 +1,11 @@
 /* Copyright 2019 Google LLC
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -36,7 +36,7 @@ void TestStartsWith() {
 }
 
 /* Test ParseListOfInts() function. */
-void TestParsListOfInts() {
+void TestParseListOfInts() {
   int num_ints;
   int* result = CHECK_NOTNULL(ParseListOfInts("756,0,-32,1", &num_ints));
 
@@ -52,6 +52,26 @@ void TestParsListOfInts() {
   CHECK(ParseListOfInts("756,0.5,-32,1", &num_ints) == NULL);
   CHECK(ParseListOfInts(NULL, &num_ints) == NULL);
   CHECK(ParseListOfInts("756,0,-32,1", NULL) == NULL);
+
+  free(result);
+}
+
+/* Test ParseListOfDoubles() function. */
+void TestParseListOfDoubles() {
+  int num_doubles;
+  double* result = CHECK_NOTNULL(
+      ParseListOfDoubles("42,-0.01,7.2e-4", &num_doubles));
+
+  CHECK(num_doubles == 3);
+  CHECK(fabs(result[0] - 42) < 1e-16);
+  CHECK(fabs(result[1] - -0.01) < 1e-16);
+  CHECK(fabs(result[2] - 7.2e-4) < 1e-16);
+
+  CHECK(ParseListOfDoubles("", &num_doubles) == NULL);
+  CHECK(ParseListOfDoubles("42,-0.01,7.2e-4nonsense", &num_doubles) == NULL);
+  CHECK(ParseListOfDoubles("42,nonsense,7.2e-4", &num_doubles) == NULL);
+  CHECK(ParseListOfDoubles(NULL, &num_doubles) == NULL);
+  CHECK(ParseListOfDoubles("42,-0.01,7.2e-4", NULL) == NULL);
 
   free(result);
 }
@@ -85,6 +105,21 @@ void TestRandomInt() {
 
     /* Check goodness-of-fit with 0.1% significance level. */
     CHECK(chi2_stat <= 150);
+  }
+}
+
+/* Check AmplitudeRatioToDecibels and DecibelsToAmplitudeRatio. */
+void TestDecibelConversions() {
+  CHECK(fabs(AmplitudeRatioToDecibels(10.0f) - 20.0f) < 1e-6f);
+  CHECK(fabs(DecibelsToAmplitudeRatio(20.0f) - 10.0f) < 1e-6f);
+  CHECK(fabs(AmplitudeRatioToDecibels(2.0f) - 6.0206f) < 1e-6f);
+  CHECK(fabs(DecibelsToAmplitudeRatio(6.0f) - 1.995262f) < 1e-6f);
+
+  int i;
+  for (i = 0; i < 20; ++i) {
+    float decibels = -40.0f + (80.0f * rand()) / RAND_MAX;
+    float amplitude_ratio = DecibelsToAmplitudeRatio(decibels);
+    CHECK(fabs(AmplitudeRatioToDecibels(amplitude_ratio) - decibels) < 1e-6f);
   }
 }
 
@@ -144,8 +179,10 @@ void TestPermuteWaveformChannels() {
 
 int main(int argc, char** argv) {
   TestStartsWith();
-  TestParsListOfInts();
+  TestParseListOfInts();
+  TestParseListOfDoubles();
   TestRandomInt();
+  TestDecibelConversions();
   TestTukeyWindow();
   TestPermuteWaveformChannels();
 

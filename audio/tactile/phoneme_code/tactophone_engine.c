@@ -244,15 +244,12 @@ static float* GenerateWinBuzz(float sample_rate_hz, int* num_frames) {
 
 static void PlayTactileSignal(TactophoneEngine* engine, float* samples,
                               int num_frames) {
-  const int num_samples = num_frames * kNumChannels;
-  int i;
-  for (i = 0; i < num_samples; ++i) {
-    samples[i] *= engine->gain;
-  }
+  float* mapped_samples = (float*)CHECK_NOTNULL(malloc(
+        engine->channel_map.num_output_channels * num_frames * sizeof(float)));
+  ChannelMapApply(&engine->channel_map, samples, num_frames, mapped_samples);
+  free(samples);
 
-  PermuteWaveformChannels(engine->channel_permutation, samples, num_frames,
-                          kNumChannels);
-  TactilePlayerPlay(engine->tactile_player, samples, num_frames);
+  TactilePlayerPlay(engine->tactile_player, mapped_samples, num_frames);
 }
 
 void TactophonePlayPhonemes(TactophoneEngine* engine, const char* phonemes) {
@@ -281,11 +278,11 @@ void TactophoneVisualizeTactors(TactophoneEngine* engine, int y, int x) {
   TactilePlayerGetRms(engine->tactile_player,
                       0.001f * kMillisecondsPerClockTick, rms);
 
-  /* Consider a tactor "active" if its current RMS value is above 1e-3. */
+  /* Consider a tactor "active" if its current RMS value is above 1e-4. */
   int active[kNumChannels];
   int c;
   for (c = 0; c < kNumChannels; c++) {
-    active[engine->channel_permutation[c]] = (rms[c] > 1e-3f);
+    active[engine->channel_map.channels[c].source] = (rms[c] > 1e-4f);
   }
 
   /* To avoid ugly line wrapping, we constrain the X dimension so that the

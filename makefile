@@ -15,13 +15,15 @@
 CFLAGS=-O2 -I. -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-sign-compare
 LDFLAGS=-lm -lportaudio -lncurses -pthread
 
-TACTOPHONE_OBJS=audio/tactile/phoneme_code/tactophone_main.o audio/tactile/phoneme_code/tactophone_state_main_menu.o audio/tactile/phoneme_code/tactophone_state_free_play.o audio/tactile/phoneme_code/tactophone_state_test_tactors.o audio/tactile/phoneme_code/tactophone_state_begin_lesson.o audio/tactile/phoneme_code/tactophone_state_lesson_trial.o audio/tactile/phoneme_code/tactophone_state_lesson_review.o audio/tactile/phoneme_code/tactophone_state_lesson_done.o audio/tactile/phoneme_code/phoneme_code.o audio/tactile/phoneme_code/tactophone_engine.o audio/tactile/phoneme_code/tactophone.o audio/tactile/phoneme_code/tactophone_lesson.o audio/tactile/util.o audio/tactile/tactile_player.o
+TACTOPHONE_OBJS=audio/tactile/phoneme_code/tactophone_main.o audio/tactile/phoneme_code/tactophone_state_main_menu.o audio/tactile/phoneme_code/tactophone_state_free_play.o audio/tactile/phoneme_code/tactophone_state_test_tactors.o audio/tactile/phoneme_code/tactophone_state_begin_lesson.o audio/tactile/phoneme_code/tactophone_state_lesson_trial.o audio/tactile/phoneme_code/tactophone_state_lesson_review.o audio/tactile/phoneme_code/tactophone_state_lesson_done.o audio/tactile/phoneme_code/phoneme_code.o audio/tactile/phoneme_code/tactophone_engine.o audio/tactile/phoneme_code/tactophone.o audio/tactile/phoneme_code/tactophone_lesson.o audio/tactile/util.o audio/tactile/tactile_player.o audio/tactile/channel_map.o
 
 PHONEME_CODE_TEST_OBJS=audio/tactile/phoneme_code/phoneme_code.o audio/tactile/util.o audio/tactile/phoneme_code/phoneme_code_test.o
 
 TACTOPHONE_LESSON_TEST_OBJS=audio/tactile/phoneme_code/tactophone_lesson_test.o audio/tactile/phoneme_code/tactophone_lesson.o
 
-TACTOPHONE_ENGINE_TEST_OBJS=audio/tactile/phoneme_code/tactophone_engine_test.o audio/tactile/phoneme_code/phoneme_code.o audio/tactile/phoneme_code/tactophone_lesson.o audio/tactile/phoneme_code/tactophone_engine.o audio/tactile/tactile_player.o audio/tactile/util.o
+TACTOPHONE_ENGINE_TEST_OBJS=audio/tactile/phoneme_code/tactophone_engine_test.o audio/tactile/phoneme_code/phoneme_code.o audio/tactile/phoneme_code/tactophone_lesson.o audio/tactile/phoneme_code/tactophone_engine.o audio/tactile/tactile_player.o audio/tactile/util.o audio/tactile/channel_map.o
+
+CHANNEL_MAP_TEST_OBJS=audio/tactile/channel_map_test.o audio/tactile/channel_map.o audio/tactile/util.o
 
 TACTILE_PLAYER_TEST_OBJS=audio/tactile/tactile_player_test.o audio/tactile/tactile_player.o
 
@@ -45,6 +47,9 @@ tactophone_engine_test: $(TACTOPHONE_ENGINE_TEST_OBJS)
 tactophone_lesson_test: $(TACTOPHONE_LESSON_TEST_OBJS)
 	$(CC) $(TACTOPHONE_LESSON_TEST_OBJS) $(LDFLAGS) -o $@
 
+channel_map_test: $(CHANNEL_MAP_TEST_OBJS)
+	$(CC) $(CHANNEL_MAP_TEST_OBJS) $(LDFLAGS) -o $@
+
 tactile_player_test: $(TACTILE_PLAYER_TEST_OBJS)
 	$(CC) $(TACTILE_PLAYER_TEST_OBJS) $(LDFLAGS) -o $@
 
@@ -54,15 +59,16 @@ util_test: $(UTIL_TEST_OBJS)
 .c.o:
 	$(CC) -c $(CFLAGS) $< -o $@
 
-run_tests: phoneme_code_test tactophone_engine_test tactophone_lesson_test tactile_player_test util_test
+run_tests: phoneme_code_test tactophone_engine_test tactophone_lesson_test channel_map_test tactile_player_test util_test
 	./phoneme_code_test
 	./tactophone_engine_test
 	./tactophone_lesson_test
+	./channel_map_test
 	./tactile_player_test
 	./util_test
 
 clean:
-	$(RM) $(TACTILE_PLAYER_TEST_OBJS) $(UTIL_TEST_OBJS) $(PHONEME_CODE_TEST_OBJS) $(TACTOPHONE_LESSON_TEST_OBJS) $(TACTOPHONE_ENGINE_TEST_OBJS) $(TACTOPHONE_OBJS) phoneme_code_test tactile_player_test util_test tactophone_lesson_test tactophone_engine_test tactophone
+	$(RM) $(TACTILE_PLAYER_TEST_OBJS) $(UTIL_TEST_OBJS) $(PHONEME_CODE_TEST_OBJS) $(TACTOPHONE_LESSON_TEST_OBJS) $(TACTOPHONE_ENGINE_TEST_OBJS) $(TACTOPHONE_OBJS) $(CHANNEL_MAP_TEST_OBJS) phoneme_code_test tactile_player_test util_test tactophone_lesson_test tactophone_engine_test tactophone channel_map_test
 
 dist:
 	-$(RM) -rf $(ARCHIVE_NAME)

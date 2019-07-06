@@ -128,21 +128,22 @@ Press `[T]` to go to the Test Tactors screen again, and test each button `[2]`,
 `[W]`, etc. to verify the channel mapping. If the mapping is correct, then each
 button should activate the tactor at the indicated position.
 
-Finally, if necessary, use the `--gain` option to tune Tactophone's output gain.
-Press `[Q]` to return to the main menu and then `[F]` to enter the Free Play
-screen. This screen lets you play the tactile codes for each phoneme. If the
-tactile vibration seems too strong, restart tactophone with for instance
-`gain=0.5` to multiply output amplitude by factor 0.5. Or conversely if output
-seems too weak, set a gain > 1.
+Finally, if needed, use the `--channel_gains_db` option to tune Tactophone's
+gain for each output channel. This option is a comma-delimited list of gains in
+decibels. The more negative the value, the lower the signal level. For instance,
+`--channel_gains_db=-10.3,-6` sets the gain for channel 1 to -10.3 dB and the
+gain for channel 2 to -6 dB (and the unspecified channels 3-24 have gain 0 dB).
+The Free Play screen (`[F]` from the main menu) and Test Tactors screen (`[T]`
+from the main menu) are useful to test whether gains are set appropriately.
 
 Now Tactophone is ready to use! For future runs, note your settings of
-`--output` and `--channels`. You could save them for instance in a small shell
-script like
+`--output`, `--channels`, and `--channel_gains_db`. You could save them for
+instance in a small shell script like
 
 *run_tactophone.sh*
 ``` shell
 #!/bin/bash
-./tactophone --output=6 --gain=1.0 --channels=20,24,23,19,15,11,7,3,13,9,5,1,4,8,12,16,2,6,10,14,18,22,21,17 "$@"
+./tactophone --output=6 --channels=20,24,23,19,15,11,7,3,13,9,5,1,4,8,12,16,2,6,10,14,18,22,21,17 "$@"
 ```
 
 

@@ -44,45 +44,80 @@ static int CountNumCommas(const char* s) {
   return count;
 }
 
-int* ParseListOfInts(const char* s, int* length) {
+/* Parses a comma-delimited list by calling a function `parse_fun` on each item:
+ *
+ *   int parse_fun(const char* s, const char** s_end, void* out)
+ *
+ * `s` points to the beginning of an item. `*s_end` is set by `parse_fun` to the
+ * character immediately following the item. The parsed item is written to
+ * `*out`. The return value indicates success (1) or failure (0).
+ */
+static void* ParseListGeneric(const char* s, int* length,
+    size_t item_size, int (*parse_fun)(const char*, const char**, void*)) {
   if (s == NULL || length == NULL) {
     return NULL;
   }
   *length = 1 + CountNumCommas(s);
 
-  int* parsed_ints = (int*)malloc(*length * sizeof(int));
-  if (parsed_ints == NULL) { return NULL; }
+  void* parsed_items = malloc(*length * item_size);
+  if (parsed_items == NULL) { return NULL; }
 
   int i;
   for (i = 0; i < *length; ++i) {
-    char* s_end;
-    /* There's no safe standard C function for parsing ints, so parse a long. */
-    const long next_integer = strtol(s, &s_end, /*base*/ 10);
-
-    /* strtol() indicates error by setting s_end = s. An edge case is that the
-     * string represents a valid long [so strtol() succeeds], but would overflow
-     * an int, so we check for this as well.
-     */
-    if (s_end == s || !(INT_MIN <= next_integer && next_integer <= INT_MAX)) {
-      return 0;  /* Integer conversion failed or is out of range. */
+    /* Item should be followed by ',' or the null terminator. */
+    const char expected_next_char = (i < *length - 1) ? ',' : '\0';
+    const char* s_end;
+    if (!parse_fun(s, &s_end, parsed_items + item_size * i) ||
+        *s_end != expected_next_char) {
+      free(parsed_items);
+      return NULL;  /* Parsing failed. */
     }
-    /* Int should be followed by ',' or the null terminator. */
-    const char next_char = (i < *length - 1) ? ',' : '\0';
-    if (*s_end != next_char) {
-      free(parsed_ints);
-      return NULL;
-    }
-
-    parsed_ints[i] = (int)next_integer;
     s = s_end + 1;
   }
 
-  return parsed_ints;
+  return parsed_items;
+}
+
+static int ParseInt(const char* s, const char** s_end, void* out) {
+  /* There's no safe standard C function for parsing ints, so parse a long. */
+  const long parsed_value = strtol(s, (char**)s_end, /*base*/ 10);
+
+  /* strtol() indicates error by setting s_end = s. An edge case is that the
+   * string represents a valid long [so strtol() succeeds], but would overflow
+   * an int, so we check for this as well.
+   */
+  if (*s_end == s || !(INT_MIN <= parsed_value && parsed_value <= INT_MAX)) {
+    return 0;  /* Integer conversion failed or is out of range. */
+  }
+
+  *((int*)out) = (int)parsed_value;
+  return 1;
+}
+
+int* ParseListOfInts(const char* s, int* length) {
+  return (int*)ParseListGeneric(s, length, sizeof(int), ParseInt);
+}
+
+static int ParseDouble(const char* s, const char** s_end, void* out) {
+  *((double*)out) = strtod(s, (char**)s_end);
+  return *s_end != s;  /* strtod() indicates error by setting s_end = s. */
+}
+
+double* ParseListOfDoubles(const char* s, int* length) {
+  return (double*)ParseListGeneric(s, length, sizeof(double), ParseDouble);
 }
 
 int RandomInt(int max_value) {
   int result = (int) (((1.0f + max_value) / (1.0f + RAND_MAX)) * rand());
   return result <= max_value ? result : max_value;
+}
+
+float DecibelsToAmplitudeRatio(float decibels) {
+  return exp((M_LN10 / 20) * decibels);
+}
+
+float AmplitudeRatioToDecibels(float amplitude_ratio) {
+  return (20 / M_LN10) * log(amplitude_ratio);
 }
 
 float TukeyWindow(float window_duration, float transition, float t) {

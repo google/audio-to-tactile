@@ -32,13 +32,12 @@ struct TactophoneParams {
   const char* log_file;
   /* Portaudio output device for playing tactile signals. */
   int output_device;
-  /* Gain factor on tactile output. Value > 1 amplifies. */
-  float gain;
-  /* Permutation for mapping Purdue's channel order to the output device, an
-   * array of size 24 of 0-based indices. Channels are mapped like
-   *   output_frame[c] = purdue_frame[channel_permutation[c]].
+  /* Comma-delimited string describing permutation for mapping Purdue's channel
+   * order to the output device.
    */
-  const int* channel_permutation;
+  const char* channel_source_list;
+  /* Comma-delimited string of per-channel gains in decibels. */
+  const char* channel_gains_db_list;
   /* Initial state to start Tactophone in. */
   const struct TactophoneState* initial_state;
 };

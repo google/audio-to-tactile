@@ -1,11 +1,11 @@
 /* Copyright 2019 Google LLC
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     https://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -32,8 +32,17 @@ int StartsWith(const char* s, const char* prefix);
  */
 int* ParseListOfInts(const char* s, int* length);
 
+/* Same as above, but for a list of doubles. */
+double* ParseListOfDoubles(const char* s, int* length);
+
 /* Generate pseudorandom integer uniformly in {0, 1, ..., max_value}. */
 int RandomInt(int max_value);
+
+/* Convert Decibels to amplitude ratio. */
+float DecibelsToAmplitudeRatio(float decibels);
+
+/* Convert amplitude ratio to Decibels. */
+float AmplitudeRatioToDecibels(float amplitude_ratio);
 
 /* Evaluate a Tukey window, nonzero over 0 < t < `window_duration` and having
  * transitions of length `transition`.
