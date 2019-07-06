@@ -197,11 +197,10 @@ learning a few phoneme codes at a time.
 
  * `--log=<filename>` - Log file to write (default `tactophone.log`).
 
- * `--gain=<float>` - Gain factor on tactile output. A value > 1 makes output
-   stronger; value < 1 reduces it.
-
  * `--channels=<list>` - Specifies the channel order. The list should be a
    comma-delimited sequence of integers between 1 and 24.
+
+ * `--channel_gains_db=<list>` - Sets the gain for each channel in decibels.
 
 
 ### Free play mode
