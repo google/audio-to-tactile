@@ -90,7 +90,7 @@ void ChannelMapPrint(const ChannelMap* channel_map) {
 }
 
 void ChannelMapApply(const ChannelMap* channel_map,
-    float* input, int num_frames, float* output) {
+    const float* input, int num_frames, float* output) {
   const ChannelMapEntry* channels = channel_map->channels;
   const int num_input_channels = channel_map->num_input_channels;
   const int num_output_channels = channel_map->num_output_channels;

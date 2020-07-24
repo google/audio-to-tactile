@@ -15,15 +15,35 @@
 
 #include "audio/tactile/util.h"
 
+#include <limits.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "audio/dsp/portable/logging.h"
+#include "audio/dsp/portable/math_constants.h"
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846264338327950288
-#endif
+void TestStringEqualIgnoreCase() {
+  CHECK(StringEqualIgnoreCase("banana", "banana"));
+  CHECK(StringEqualIgnoreCase("Banana", "baNANa"));
+  CHECK(StringEqualIgnoreCase("", ""));
+
+  CHECK(!StringEqualIgnoreCase("Banana", "xyz"));
+  CHECK(!StringEqualIgnoreCase("Banana", ""));
+  CHECK(!StringEqualIgnoreCase("", "Banana"));
+}
+
+void TestFindSubstringIgnoreCase() {
+  const char* s = "banana!";
+  CHECK(FindSubstringIgnoreCase(s, "nan") == s + 2);
+  CHECK(FindSubstringIgnoreCase(s, "NaN") == s + 2);
+  CHECK(FindSubstringIgnoreCase(s, "!") == s + 6);
+  CHECK(FindSubstringIgnoreCase(s, "BANANA") == s);
+  CHECK(FindSubstringIgnoreCase(s, "") == s);
+
+  CHECK(FindSubstringIgnoreCase(s, "xyz") == NULL);
+  CHECK(FindSubstringIgnoreCase(s, "banananana") == NULL);
+}
 
 /* Check StartsWith() function. */
 void TestStartsWith() {
@@ -31,8 +51,28 @@ void TestStartsWith() {
   CHECK(StartsWith("needleXYZ", "needle"));
   CHECK(StartsWith("XYZ", ""));  /* Always true with an empty prefix. */
 
+  CHECK(!StartsWith("NeedleXYZ", "needle"));
   CHECK(!StartsWith("XYZneedle", "needle"));
   CHECK(!StartsWith("", "needle"));
+}
+
+void TestStartsWithIgnoreCase() {
+  CHECK(StartsWithIgnoreCase("needle", "NEEDLE"));
+  CHECK(StartsWithIgnoreCase("NeedleXYZ", "nEEdle"));
+  CHECK(StartsWithIgnoreCase("XYZ", ""));
+
+  CHECK(!StartsWithIgnoreCase("XYZneedle", "needle"));
+  CHECK(!StartsWithIgnoreCase("", "needle"));
+}
+
+/* Check EndsWith() function. */
+void TestEndsWith() {
+  CHECK(EndsWith("needle", "needle"));
+  CHECK(EndsWith("XYZneedle", "needle"));
+  CHECK(EndsWith("XYZ", ""));  /* Always true with an empty suffix. */
+
+  CHECK(!EndsWith("needleXYZ", "needle"));
+  CHECK(!EndsWith("", "needle"));
 }
 
 /* Test ParseListOfInts() function. */
@@ -74,6 +114,16 @@ void TestParseListOfDoubles() {
   CHECK(ParseListOfDoubles("42,-0.01,7.2e-4", NULL) == NULL);
 
   free(result);
+}
+
+void TestRoundUpToPowerOfTwo() {
+  CHECK(RoundUpToPowerOfTwo(1) == 1);
+  CHECK(RoundUpToPowerOfTwo(15) == 16);
+  CHECK(RoundUpToPowerOfTwo(16) == 16);
+  CHECK(RoundUpToPowerOfTwo(17) == 32);
+  CHECK(RoundUpToPowerOfTwo(300) == 512);
+  CHECK(RoundUpToPowerOfTwo(3000) == 4096);
+  CHECK(RoundUpToPowerOfTwo(INT_MAX) > 0);
 }
 
 /* Check RandomInt() function with chi-squared goodness-of-fit test. */
@@ -120,6 +170,66 @@ void TestDecibelConversions() {
     float decibels = -40.0f + (80.0f * rand()) / RAND_MAX;
     float amplitude_ratio = DecibelsToAmplitudeRatio(decibels);
     CHECK(fabs(AmplitudeRatioToDecibels(amplitude_ratio) - decibels) < 1e-6f);
+  }
+}
+
+#define kMaxFilterOrder 5
+
+typedef struct {
+  float smoother_coeff;
+  float state[kMaxFilterOrder];
+  int order;
+} GammaFilter;
+
+static float ApplyGammaFilter(GammaFilter* filter, float input_sample) {
+  float next_stage_input = input_sample;
+  const float smoother_coeff = filter->smoother_coeff;
+  int k;
+  for (k = 0; k < filter->order; ++k) {
+    filter->state[k] += smoother_coeff * (next_stage_input - filter->state[k]);
+    next_stage_input = filter->state[k];
+  }
+  return next_stage_input;
+}
+
+/* Check that GammaFilterSmootherCoeff() achieves the specified cutoff. */
+void TestGammaFilterSmootherCoeff() {
+  static const float kCutoffs[] = {350.0f, 500.0f, 3200.0f};
+  const float kSampleRateHz = 8000.0f;
+  int i;
+  for (i = 0; i < sizeof(kCutoffs) / sizeof(*kCutoffs); ++i) {
+    const float cutoff_frequency_hz = kCutoffs[i];
+    GammaFilter filter;
+    for (filter.order = 1; filter.order <= kMaxFilterOrder; ++filter.order) {
+      /* Get smoother_coeff for the specified order and cutoff. */
+      filter.smoother_coeff = GammaFilterSmootherCoeff(
+          filter.order, cutoff_frequency_hz, kSampleRateHz);
+      int k;
+      for (k = 0; k < filter.order; ++k) {
+        filter.state[k] = 0.0f;
+      }
+
+      /* Estimate the filter's actual gain at cutoff_frequency_hz. */
+      const float radians_per_sample =
+          2 * M_PI * cutoff_frequency_hz / kSampleRateHz;
+      const float period = kSampleRateHz / cutoff_frequency_hz;
+      /* Number of initial burn-in samples to ignore transient effects. */
+      const int kBurnInSamples = 4 * period;
+      /* Number of samples to sum, close to a whole multiple of the period. */
+      const int kNumSamples = (int)(period * (int)(2 + 100.0f / period) + 0.5f);
+      float energy = 0.0f;
+      int n;
+      for (n = 0; n < kBurnInSamples + kNumSamples; ++n) {
+        float input_sample = sin(radians_per_sample * n);
+        float output_sample = ApplyGammaFilter(&filter, input_sample);
+        if (n >= kBurnInSamples) {
+          energy += output_sample * output_sample;
+        }
+      }
+      const float estimated_gain = sqrt(2 * energy / kNumSamples);
+
+      CHECK(fabs(estimated_gain - 1 / M_SQRT2) <= 5e-4);
+    }
   }
 }
 
@@ -177,15 +287,45 @@ void TestPermuteWaveformChannels() {
   CHECK(memcmp(samples, kExpected, 3 * 4 * sizeof(float)) == 0);
 }
 
+void TestPrettyTextBar() {
+  const int kWidth = 3;
+  char* buffer = (char*)CHECK_NOTNULL(malloc(3 * kWidth + 1));
+
+  /* Make a 3-char-wide bar filled 40%. */
+  PrettyTextBar(kWidth, 0.4f, buffer);
+  /* 40% fill is 3*8*0.4 = 9.6 eighth characters, so the bar should be rendered
+   * as one full block, one 2/8th block, and one space.
+   */
+  CHECK(strcmp(buffer, "\xe2\x96\x88\xe2\x96\x8e ") == 0);
+
+  /* Fill 0%. */
+  PrettyTextBar(kWidth, 0.0f, buffer);
+  CHECK(strcmp(buffer, "   ") == 0);
+
+  /* Fill 120%. Should saturate to 100% full. */
+  PrettyTextBar(kWidth, 1.2f, buffer);
+  CHECK(strcmp(buffer, "\xe2\x96\x88\xe2\x96\x88\xe2\x96\x88") == 0);
+
+  free(buffer);
+}
+
 int main(int argc, char** argv) {
+  TestStringEqualIgnoreCase();
+  TestFindSubstringIgnoreCase();
   TestStartsWith();
+  TestStartsWithIgnoreCase();
+  TestEndsWith();
   TestParseListOfInts();
   TestParseListOfDoubles();
+  TestRoundUpToPowerOfTwo();
   TestRandomInt();
   TestDecibelConversions();
+  TestGammaFilterSmootherCoeff();
   TestTukeyWindow();
   TestPermuteWaveformChannels();
+  TestPrettyTextBar();
 
   puts("PASS");
   return EXIT_SUCCESS;
 }
+

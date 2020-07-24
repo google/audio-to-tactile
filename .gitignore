@@ -1,0 +1,30 @@
+# Ignore executables.
+run_tactile_processor
+tactophone
+tactometer
+play_buzz
+play_vpx_video
+run_auto_gain_control_on_wav
+run_energy_envelope
+run_energy_envelope_on_wav
+run_bratakos2001
+run_yuan2005
+tactile_processor_benchmark
+*_test
+# Ignore objects, libraries, and HTML output.
+*.[oa]
+*.PIC[oa]
+*.so
+*.html
+# Ignore file archives.
+*.tgz
+*.tar.gz
+*.zip
+# Ignore logs.
+*.log
+perf.data*
+# Ignore backup files.
+*.bak
+# Ignore bazel outputs.
+bazel-*
+
