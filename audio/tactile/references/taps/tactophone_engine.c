@@ -118,12 +118,15 @@ void TactophoneNextTrial(TactophoneEngine* engine) {
   const int exclude_previous = (engine->prev_question >= 0);
 
   int num = CurrentLesson(engine)->num_questions - exclude_previous;
-  engine->current_question = RandomInt(num - 1);
+
+  const int /* bool */ is_init = 1;
+
+  engine->current_question = RandomInt(num - 1, is_init);
   engine->current_question +=
       (exclude_previous && engine->current_question >= engine->prev_question);
 
   num = CurrentQuestion(engine)->num_choices - exclude_previous;
-  engine->correct_choice = RandomInt(num - 1);
+  engine->correct_choice = RandomInt(num - 1, is_init);
   engine->correct_choice +=
       (exclude_previous &&
        engine->correct_choice >= engine->prev_correct_choice);

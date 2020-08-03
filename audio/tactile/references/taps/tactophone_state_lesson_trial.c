@@ -80,7 +80,7 @@ static void LessonTrialOnEnterState(TactophoneEngine* engine) {
 
 static void PrintWinMessage() {
   attron(A_BOLD | COLOR_PAIR(kColorGreen));
-  switch (RandomInt(2)) {
+  switch (RandomInt(2, 1)) {
     case 0:
       mvprintw(1, 2, "   ___                         _      _ ");
       mvprintw(2, 2, "  / __\\___  _ __ _ __ ___  ___| |_   / \\");
