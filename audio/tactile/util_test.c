@@ -139,7 +139,7 @@ void TestRandomInt() {
 
     int j;
     for (j = 0; j < kNumSamples; ++j) {
-      const int value = RandomInt(max_value);
+      const int value = RandomInt(max_value, 1);
       CHECK(0 <= value && value <= max_value);
       ++hist[value];  /* Accumulate histogram. */
     }

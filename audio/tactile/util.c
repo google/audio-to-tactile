@@ -21,6 +21,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "audio/dsp/portable/math_constants.h"
 
@@ -158,7 +159,12 @@ int RoundUpToPowerOfTwo(int value) {
   return result;
 }
 
-int RandomInt(int max_value) {
+int RandomInt(int max_value, int /* bool */ is_init) {
+  if (is_init == 1) {
+    /* Initialize random seed */
+    srand((unsigned int)time(NULL));
+  }
+
   int result = (int) (((1.0f + max_value) / (1.0f + RAND_MAX)) * rand());
   return result <= max_value ? result : max_value;
 }

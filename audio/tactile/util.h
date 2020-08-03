@@ -51,7 +51,7 @@ double* ParseListOfDoubles(const char* s, int* length);
 int RoundUpToPowerOfTwo(int value);
 
 /* Generates pseudorandom integer uniformly in {0, 1, ..., max_value}. */
-int RandomInt(int max_value);
+int RandomInt(int max_value, int /* bool */ is_init);
 
 /* Convert decibels to amplitude ratio. */
 float DecibelsToAmplitudeRatio(float decibels);
