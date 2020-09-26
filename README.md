@@ -58,11 +58,6 @@ For the Motu's input, we connect by USB to a computer running the Tactophone
 program.
 
 
-## Live web demo
-
-![Tactile visualization](web/tactile_processor_demo.svg)
-
-
 ## Building
 
 This project uses the [bazel](https://www.bazel.build) build system. There is
