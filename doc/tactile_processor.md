@@ -48,9 +48,9 @@ This should produce a `run_tactile_processor` executable file.
 
 The `run_tactile_processor` program runs audio-to-tactile processing on
 microphone or WAV input, producing a visualization and 10-channel tactile signal
-output. Click the image below to open a web demo of this visualization.
+output. Here is a web demo of the visualization:
 
-[![Tactile visualization](tactile-visualization.gif)](../web/tactile_processor.html)
+![Tactile visualization](../web/tactile_processor_demo.svg)
 
 The 10 output channels (with base-1 indexing) are
 

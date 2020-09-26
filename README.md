@@ -58,9 +58,9 @@ For the Motu's input, we connect by USB to a computer running the Tactophone
 program.
 
 
-## Live web demo (click to open)
+## Live web demo
 
-[![Tactile visualization](doc/tactile-visualization.gif)](web/tactile_processor.html)
+![Tactile visualization](web/tactile_processor_demo.svg)
 
 
 ## Building
