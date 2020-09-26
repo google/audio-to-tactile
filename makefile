@@ -19,90 +19,90 @@ LDFLAGS += -lm
 
 # Compile flags for Python bindings. Set Python version for your installation.
 PYTHON_BINDINGS_CFLAGS = \
-		$$(pkg-config --cflags python-3.6m) -Wno-missing-field-initializers -Wno-cast-function-type $(CFLAGS)
+		$$(pkg-config --cflags python-3.8) -Wno-missing-field-initializers -Wno-cast-function-type $(CFLAGS)
 
 PROGRAMS=run_tactile_processor energy_envelope.so tactile_processor.so tactile_worker.so tactophone tactometer play_buzz run_energy_envelope run_energy_envelope_on_wav run_auto_gain_control_on_wav run_yuan2005 run_bratakos2001
 BENCHMARKS=tactile_processor_benchmark
 TESTS=auto_gain_control_test butterworth_test complex_test elliptic_fun_test fast_fun_test math_constants_test phasor_rotator_test read_wav_file_test read_wav_file_generic_test serialize_test write_wav_file_test carl_frontend_test embed_vowel_test phoneme_code_test tactophone_engine_test tactophone_lesson_test energy_envelope_test channel_map_test hexagon_interpolation_test nn_ops_test tactile_player_test tactile_processor_test util_test yuan2005_test
 
-RUN_TACTILE_PROCESSOR_OBJS=audio/tactile/run_tactile_processor.o audio/tactile/run_tactile_processor_assets.o audio/dsp/portable/number_util.o audio/dsp/portable/read_wav_file.o audio/dsp/portable/read_wav_file_generic.o audio/tactile/channel_map.o audio/tactile/portaudio_device.o audio/tactile/util.o audio/tactile/sdl/basic_sdl_app.o audio/tactile/sdl/texture_from_rle_data.o audio/tactile/sdl/window_icon.o audio/tactile/tactile_processor.a
+RUN_TACTILE_PROCESSOR_OBJS=tactile/run_tactile_processor.o tactile/run_tactile_processor_assets.o dsp/number_util.o dsp/read_wav_file.o dsp/read_wav_file_generic.o tactile/channel_map.o tactile/portaudio_device.o tactile/util.o sdl/basic_sdl_app.o sdl/texture_from_rle_data.o sdl/window_icon.o tactile/tactile_processor.a
 
-ENERGY_ENVELOPE_PYTHON_BINDINGS_OBJS=audio/tactile/python/energy_envelope_python_bindings.PICo audio/tactile/energy_envelope/energy_envelope.PICo audio/dsp/portable/butterworth.PICo audio/dsp/portable/complex.PICo audio/dsp/portable/fast_fun.PICo
+ENERGY_ENVELOPE_PYTHON_BINDINGS_OBJS=tactile/python/energy_envelope_python_bindings.PICo tactile/energy_envelope/energy_envelope.PICo dsp/butterworth.PICo dsp/complex.PICo dsp/fast_fun.PICo
 
-TACTILE_PROCESSOR_PYTHON_BINDINGS_OBJS=audio/tactile/python/tactile_processor_python_bindings.PICo audio/tactile/tactile_processor.PICa
+TACTILE_PROCESSOR_PYTHON_BINDINGS_OBJS=tactile/python/tactile_processor_python_bindings.PICo tactile/tactile_processor.PICa
 
-TACTILE_WORKER_PYTHON_BINDINGS_OBJS=audio/tactile/python/tactile_worker_python_bindings.PICo audio/tactile/python/tactile_worker.PICo audio/tactile/tactile_processor.PICa audio/tactile/channel_map.PICo audio/tactile/portaudio_device.PICo audio/tactile/util.PICo
+TACTILE_WORKER_PYTHON_BINDINGS_OBJS=tactile/python/tactile_worker_python_bindings.PICo tactile/python/tactile_worker.PICo tactile/tactile_processor.PICa tactile/channel_map.PICo tactile/portaudio_device.PICo tactile/util.PICo
 
-TACTOPHONE_OBJS=audio/tactile/references/taps/tactophone_main.o audio/tactile/references/taps/tactophone_state_main_menu.o audio/tactile/references/taps/tactophone_state_free_play.o audio/tactile/references/taps/tactophone_state_test_tactors.o audio/tactile/references/taps/tactophone_state_begin_lesson.o audio/tactile/references/taps/tactophone_state_lesson_trial.o audio/tactile/references/taps/tactophone_state_lesson_review.o audio/tactile/references/taps/tactophone_state_lesson_done.o audio/tactile/references/taps/phoneme_code.o audio/tactile/references/taps/tactophone_engine.o audio/tactile/references/taps/tactophone.o audio/tactile/references/taps/tactophone_lesson.o audio/tactile/util.o audio/tactile/references/taps/tactile_player.o audio/tactile/channel_map.o
+TACTOPHONE_OBJS=tactile/references/taps/tactophone_main.o tactile/references/taps/tactophone_state_main_menu.o tactile/references/taps/tactophone_state_free_play.o tactile/references/taps/tactophone_state_test_tactors.o tactile/references/taps/tactophone_state_begin_lesson.o tactile/references/taps/tactophone_state_lesson_trial.o tactile/references/taps/tactophone_state_lesson_review.o tactile/references/taps/tactophone_state_lesson_done.o tactile/references/taps/phoneme_code.o tactile/references/taps/tactophone_engine.o tactile/references/taps/tactophone.o tactile/references/taps/tactophone_lesson.o tactile/util.o tactile/references/taps/tactile_player.o tactile/channel_map.o
 
-TACTOMETER_OBJS=audio/tactile/tactometer.o audio/tactile/portaudio_device.o audio/tactile/sdl/basic_sdl_app.o audio/tactile/sdl/draw_text.o audio/tactile/sdl/window_icon.o audio/tactile/util.o
+TACTOMETER_OBJS=tactile/tactometer.o tactile/portaudio_device.o sdl/basic_sdl_app.o sdl/draw_text.o sdl/window_icon.o tactile/util.o
 
-PLAY_BUZZ_OBJS=audio/tactile/play_buzz.o audio/tactile/util.o
+PLAY_BUZZ_OBJS=tactile/play_buzz.o tactile/util.o
 
-RUN_ENERGY_ENVELOPE_OBJS=audio/tactile/energy_envelope/run_energy_envelope.o audio/dsp/portable/butterworth.o audio/dsp/portable/complex.o audio/dsp/portable/fast_fun.o audio/tactile/portaudio_device.o audio/tactile/util.o audio/tactile/energy_envelope/energy_envelope.o
+RUN_ENERGY_ENVELOPE_OBJS=tactile/energy_envelope/run_energy_envelope.o dsp/butterworth.o dsp/complex.o dsp/fast_fun.o tactile/portaudio_device.o tactile/util.o tactile/energy_envelope/energy_envelope.o
 
-RUN_ENERGY_ENVELOPE_ON_WAV_OBJS=audio/tactile/energy_envelope/run_energy_envelope_on_wav.o audio/dsp/portable/butterworth.o audio/dsp/portable/complex.o audio/dsp/portable/fast_fun.o audio/dsp/portable/read_wav_file.o audio/dsp/portable/read_wav_file_generic.o audio/dsp/portable/write_wav_file.o audio/dsp/portable/write_wav_file_generic.o audio/tactile/util.o audio/tactile/energy_envelope/energy_envelope.o
+RUN_ENERGY_ENVELOPE_ON_WAV_OBJS=tactile/energy_envelope/run_energy_envelope_on_wav.o dsp/butterworth.o dsp/complex.o dsp/fast_fun.o dsp/read_wav_file.o dsp/read_wav_file_generic.o dsp/write_wav_file.o dsp/write_wav_file_generic.o tactile/util.o tactile/energy_envelope/energy_envelope.o
 
-RUN_AUTO_GAIN_CONTROL_ON_WAV_OBJS=audio/dsp/portable/run_auto_gain_control_on_wav.o audio/dsp/portable/auto_gain_control.o audio/dsp/portable/fast_fun.o audio/dsp/portable/read_wav_file.o audio/dsp/portable/read_wav_file_generic.o audio/dsp/portable/write_wav_file.o audio/dsp/portable/write_wav_file_generic.o audio/tactile/util.o
+RUN_AUTO_GAIN_CONTROL_ON_WAV_OBJS=dsp/run_auto_gain_control_on_wav.o dsp/auto_gain_control.o dsp/fast_fun.o dsp/read_wav_file.o dsp/read_wav_file_generic.o dsp/write_wav_file.o dsp/write_wav_file_generic.o tactile/util.o
 
-RUN_YUAN2005_OBJS=audio/tactile/references/yuan2005/run_yuan2005.o audio/tactile/references/yuan2005/yuan2005.o audio/dsp/portable/auto_gain_control.o audio/dsp/portable/biquad_filter.o audio/dsp/portable/butterworth.o audio/dsp/portable/complex.o audio/dsp/portable/fast_fun.o audio/dsp/portable/phasor_rotator.o audio/tactile/util.o
+RUN_YUAN2005_OBJS=tactile/references/yuan2005/run_yuan2005.o tactile/references/yuan2005/yuan2005.o dsp/auto_gain_control.o dsp/biquad_filter.o dsp/butterworth.o dsp/complex.o dsp/fast_fun.o dsp/phasor_rotator.o tactile/util.o
 
-RUN_BRATAKOS2001_OBJS=audio/tactile/references/bratakos2001/run_bratakos2001.o audio/tactile/references/bratakos2001/bratakos2001.o audio/dsp/portable/auto_gain_control.o audio/dsp/portable/biquad_filter.o audio/dsp/portable/butterworth.o audio/dsp/portable/complex.o audio/dsp/portable/fast_fun.o audio/dsp/portable/phasor_rotator.o audio/tactile/util.o
+RUN_BRATAKOS2001_OBJS=tactile/references/bratakos2001/run_bratakos2001.o tactile/references/bratakos2001/bratakos2001.o dsp/auto_gain_control.o dsp/biquad_filter.o dsp/butterworth.o dsp/complex.o dsp/fast_fun.o dsp/phasor_rotator.o tactile/util.o
 
 # Benchmark.
-TACTILE_PROCESSOR_BENCHMARK_OBJS=audio/tactile/tactile_processor_benchmark.o audio/tactile/tactile_processor.a
+TACTILE_PROCESSOR_BENCHMARK_OBJS=tactile/tactile_processor_benchmark.o tactile/tactile_processor.a
 
-# Tests for audio/dsp/portable.
-AUTO_GAIN_CONTROL_TEST_OBJS=audio/dsp/portable/auto_gain_control_test.o audio/dsp/portable/auto_gain_control.o audio/dsp/portable/fast_fun.o
+# Tests for dsp.
+AUTO_GAIN_CONTROL_TEST_OBJS=dsp/auto_gain_control_test.o dsp/auto_gain_control.o dsp/fast_fun.o
 
-BUTTERWORTH_TEST_OBJS=audio/dsp/portable/butterworth_test.o audio/dsp/portable/complex.o audio/dsp/portable/butterworth.o
+BUTTERWORTH_TEST_OBJS=dsp/butterworth_test.o dsp/complex.o dsp/butterworth.o
 
-COMPLEX_TEST_OBJS=audio/dsp/portable/complex_test.o audio/dsp/portable/complex.o
+COMPLEX_TEST_OBJS=dsp/complex_test.o dsp/complex.o
 
-ELLIPTIC_FUN_TEST_OBJS=audio/dsp/portable/elliptic_fun_test.o audio/dsp/portable/elliptic_fun.o audio/dsp/portable/complex.o
+ELLIPTIC_FUN_TEST_OBJS=dsp/elliptic_fun_test.o dsp/elliptic_fun.o dsp/complex.o
 
-FAST_FUN_TEST_OBJS=audio/dsp/portable/fast_fun_test.o audio/dsp/portable/fast_fun.o audio/dsp/portable/fast_fun_compute_tables.o
+FAST_FUN_TEST_OBJS=dsp/fast_fun_test.o dsp/fast_fun.o dsp/fast_fun_compute_tables.o
 
-IIR_DESIGN_TEST_OBJS=audio/dsp/portable/iir_design_test.o audio/dsp/portable/iir_design.o audio/dsp/portable/complex.o audio/dsp/portable/elliptic_fun.o
+IIR_DESIGN_TEST_OBJS=dsp/iir_design_test.o dsp/iir_design.o dsp/complex.o dsp/elliptic_fun.o
 
-MATH_CONSTANTS_TEST_OBJS=audio/dsp/portable/math_constants_test.o
+MATH_CONSTANTS_TEST_OBJS=dsp/math_constants_test.o
 
-PHASOR_ROTATOR_TEST_OBJS=audio/dsp/portable/phasor_rotator_test.o audio/dsp/portable/phasor_rotator.o
+PHASOR_ROTATOR_TEST_OBJS=dsp/phasor_rotator_test.o dsp/phasor_rotator.o
 
-READ_WAV_FILE_TEST_OBJS=audio/dsp/portable/read_wav_file_test.o audio/dsp/portable/read_wav_file.o audio/dsp/portable/read_wav_file_generic.o audio/dsp/portable/write_wav_file.o audio/dsp/portable/write_wav_file_generic.o
+READ_WAV_FILE_TEST_OBJS=dsp/read_wav_file_test.o dsp/read_wav_file.o dsp/read_wav_file_generic.o dsp/write_wav_file.o dsp/write_wav_file_generic.o
 
-READ_WAV_FILE_GENERIC_TEST_OBJS=audio/dsp/portable/read_wav_file_generic_test.o audio/dsp/portable/read_wav_file_generic.o
+READ_WAV_FILE_GENERIC_TEST_OBJS=dsp/read_wav_file_generic_test.o dsp/read_wav_file_generic.o
 
-SERIALIZE_TEST_OBJS=audio/dsp/portable/serialize_test.o
+SERIALIZE_TEST_OBJS=dsp/serialize_test.o
 
-WRITE_WAV_FILE_TEST_OBJS=audio/dsp/portable/write_wav_file_test.o audio/dsp/portable/write_wav_file.o audio/dsp/portable/write_wav_file_generic.o
+WRITE_WAV_FILE_TEST_OBJS=dsp/write_wav_file_test.o dsp/write_wav_file.o dsp/write_wav_file_generic.o
 
-# Tests for audio/tactile.
-CARL_FRONTEND_TEST_OBJS=audio/tactile/frontend/carl_frontend_test.o audio/tactile/frontend/carl_frontend.o audio/tactile/frontend/carl_frontend_design.o audio/dsp/portable/complex.o audio/dsp/portable/fast_fun.o
+# Tests for tactile.
+CARL_FRONTEND_TEST_OBJS=frontend/carl_frontend_test.o frontend/carl_frontend.o frontend/carl_frontend_design.o dsp/complex.o dsp/fast_fun.o
 
-EMBED_VOWEL_TEST_OBJS=audio/tactile/phone_embedding/embed_vowel_test.o audio/tactile/phone_embedding/embed_vowel.o audio/dsp/portable/butterworth.o audio/dsp/portable/complex.o audio/dsp/portable/fast_fun.o audio/dsp/portable/read_wav_file.o audio/dsp/portable/read_wav_file_generic.o audio/tactile/frontend/carl_frontend.o audio/tactile/frontend/carl_frontend_design.o audio/tactile/hexagon_interpolation.o audio/tactile/nn_ops.o
+EMBED_VOWEL_TEST_OBJS=phonetics/embed_vowel_test.o phonetics/embed_vowel.o dsp/butterworth.o dsp/complex.o dsp/fast_fun.o dsp/read_wav_file.o dsp/read_wav_file_generic.o frontend/carl_frontend.o frontend/carl_frontend_design.o tactile/hexagon_interpolation.o phonetics/nn_ops.o
 
-PHONEME_CODE_TEST_OBJS=audio/tactile/references/taps/phoneme_code.o audio/tactile/util.o audio/tactile/references/taps/phoneme_code_test.o
+PHONEME_CODE_TEST_OBJS=tactile/references/taps/phoneme_code.o tactile/util.o tactile/references/taps/phoneme_code_test.o
 
-TACTOPHONE_LESSON_TEST_OBJS=audio/tactile/references/taps/tactophone_lesson_test.o audio/tactile/references/taps/tactophone_lesson.o
+TACTOPHONE_LESSON_TEST_OBJS=tactile/references/taps/tactophone_lesson_test.o tactile/references/taps/tactophone_lesson.o
 
-TACTOPHONE_ENGINE_TEST_OBJS=audio/tactile/references/taps/tactophone_engine_test.o audio/tactile/references/taps/phoneme_code.o audio/tactile/references/taps/tactophone_lesson.o audio/tactile/references/taps/tactophone_engine.o audio/tactile/references/taps/tactile_player.o audio/tactile/util.o audio/tactile/channel_map.o
+TACTOPHONE_ENGINE_TEST_OBJS=tactile/references/taps/tactophone_engine_test.o tactile/references/taps/phoneme_code.o tactile/references/taps/tactophone_lesson.o tactile/references/taps/tactophone_engine.o tactile/references/taps/tactile_player.o tactile/util.o tactile/channel_map.o
 
-ENERGY_ENVELOPE_TEST_OBJS=audio/tactile/energy_envelope/energy_envelope_test.o audio/tactile/energy_envelope/energy_envelope.o audio/dsp/portable/butterworth.o audio/dsp/portable/complex.o audio/dsp/portable/fast_fun.o
+ENERGY_ENVELOPE_TEST_OBJS=tactile/energy_envelope/energy_envelope_test.o tactile/energy_envelope/energy_envelope.o dsp/butterworth.o dsp/complex.o dsp/fast_fun.o
 
-YUAN2005_TEST_OBJS=audio/tactile/references/yuan2005/yuan2005_test.o audio/tactile/references/yuan2005/yuan2005.o audio/dsp/portable/biquad_filter.o audio/dsp/portable/butterworth.o audio/dsp/portable/complex.o audio/dsp/portable/phasor_rotator.o
+YUAN2005_TEST_OBJS=tactile/references/yuan2005/yuan2005_test.o tactile/references/yuan2005/yuan2005.o dsp/biquad_filter.o dsp/butterworth.o dsp/complex.o dsp/phasor_rotator.o
 
-CHANNEL_MAP_TEST_OBJS=audio/tactile/channel_map_test.o audio/tactile/channel_map.o audio/tactile/util.o
+CHANNEL_MAP_TEST_OBJS=tactile/channel_map_test.o tactile/channel_map.o tactile/util.o
 
-HEXAGON_INTERPOLATION_TEST_OBJS=audio/tactile/hexagon_interpolation_test.o audio/tactile/hexagon_interpolation.o
+HEXAGON_INTERPOLATION_TEST_OBJS=tactile/hexagon_interpolation_test.o tactile/hexagon_interpolation.o
 
-NN_OPS_TEST_OBJS=audio/tactile/nn_ops_test.o audio/tactile/nn_ops.o
+NN_OPS_TEST_OBJS=phonetics/nn_ops_test.o phonetics/nn_ops.o dsp/fast_fun.o
 
-TACTILE_PLAYER_TEST_OBJS=audio/tactile/references/taps/tactile_player_test.o audio/tactile/references/taps/tactile_player.o
+TACTILE_PLAYER_TEST_OBJS=tactile/references/taps/tactile_player_test.o tactile/references/taps/tactile_player.o
 
-TACTILE_PROCESSOR_TEST_OBJS=audio/tactile/tactile_processor_test.o audio/dsp/portable/read_wav_file.o audio/dsp/portable/read_wav_file_generic.o audio/tactile/tactile_processor.a
+TACTILE_PROCESSOR_TEST_OBJS=tactile/tactile_processor_test.o dsp/read_wav_file.o dsp/read_wav_file_generic.o tactile/tactile_processor.a
 
-UTIL_TEST_OBJS=audio/tactile/util_test.o audio/tactile/util.o
+UTIL_TEST_OBJS=tactile/util_test.o tactile/util.o
 
 MD_FILES = $(shell find . -type f -name '*.md')
 HTML_FILES = $(patsubst %.md, %.html, $(MD_FILES))
@@ -226,17 +226,17 @@ util_test: $(UTIL_TEST_OBJS)
 yuan2005_test: $(YUAN2005_TEST_OBJS)
 	$(CC) $(YUAN2005_TEST_OBJS) $(LDFLAGS) -o $@
 
-audio/tactile/tactile_processor.a: audio/tactile/tactile_processor.a(audio/tactile/tactile_processor.o) audio/tactile/tactile_processor.a(audio/tactile/phone_embedding/embed_vowel.o) audio/tactile/tactile_processor.a(audio/tactile/energy_envelope/energy_envelope.o) audio/tactile/tactile_processor.a(audio/tactile/hexagon_interpolation.o) audio/tactile/tactile_processor.a(audio/tactile/post_processor.o) audio/tactile/tactile_processor.a(audio/tactile/tactor_equalizer.o) audio/tactile/tactile_processor.a(audio/tactile/nn_ops.o) audio/tactile/tactile_processor.a(audio/tactile/frontend/carl_frontend.o) audio/tactile/tactile_processor.a(audio/tactile/frontend/carl_frontend_design.o) audio/tactile/tactile_processor.a(audio/dsp/portable/biquad_filter.o) audio/tactile/tactile_processor.a(audio/dsp/portable/butterworth.o) audio/tactile/tactile_processor.a(audio/dsp/portable/complex.o) audio/tactile/tactile_processor.a(audio/dsp/portable/fast_fun.o)
+tactile/tactile_processor.a: tactile/tactile_processor.a(tactile/tactile_processor.o) tactile/tactile_processor.a(phonetics/embed_vowel.o) tactile/tactile_processor.a(tactile/energy_envelope/energy_envelope.o) tactile/tactile_processor.a(tactile/hexagon_interpolation.o) tactile/tactile_processor.a(tactile/post_processor.o) tactile/tactile_processor.a(tactile/tactor_equalizer.o) tactile/tactile_processor.a(phonetics/nn_ops.o) tactile/tactile_processor.a(frontend/carl_frontend.o) tactile/tactile_processor.a(frontend/carl_frontend_design.o) tactile/tactile_processor.a(dsp/biquad_filter.o) tactile/tactile_processor.a(dsp/butterworth.o) tactile/tactile_processor.a(dsp/complex.o) tactile/tactile_processor.a(dsp/fast_fun.o)
 
-audio/tactile/tactile_processor.PICa: audio/tactile/tactile_processor.PICa(audio/tactile/tactile_processor.PICo) audio/tactile/tactile_processor.PICa(audio/tactile/phone_embedding/embed_vowel.PICo) audio/tactile/tactile_processor.PICa(audio/tactile/energy_envelope/energy_envelope.PICo) audio/tactile/tactile_processor.PICa(audio/dsp/portable/biquad_filter.PICo) audio/tactile/tactile_processor.PICa(audio/tactile/hexagon_interpolation.PICo) audio/tactile/tactile_processor.PICa(audio/tactile/post_processor.PICo) audio/tactile/tactile_processor.PICa(audio/tactile/tactor_equalizer.PICo) audio/tactile/tactile_processor.PICa(audio/tactile/nn_ops.PICo) audio/tactile/tactile_processor.PICa(audio/tactile/frontend/carl_frontend.PICo) audio/tactile/tactile_processor.PICa(audio/tactile/frontend/carl_frontend_design.PICo) audio/tactile/tactile_processor.PICa(audio/dsp/portable/biquad_filter.PICo) audio/tactile/tactile_processor.PICa(audio/dsp/portable/butterworth.PICo) audio/tactile/tactile_processor.PICa(audio/dsp/portable/complex.PICo) audio/tactile/tactile_processor.PICa(audio/dsp/portable/fast_fun.PICo)
+tactile/tactile_processor.PICa: tactile/tactile_processor.PICa(tactile/tactile_processor.PICo) tactile/tactile_processor.PICa(phonetics/embed_vowel.PICo) tactile/tactile_processor.PICa(tactile/energy_envelope/energy_envelope.PICo) tactile/tactile_processor.PICa(dsp/biquad_filter.PICo) tactile/tactile_processor.PICa(tactile/hexagon_interpolation.PICo) tactile/tactile_processor.PICa(tactile/post_processor.PICo) tactile/tactile_processor.PICa(tactile/tactor_equalizer.PICo) tactile/tactile_processor.PICa(phonetics/nn_ops.PICo) tactile/tactile_processor.PICa(frontend/carl_frontend.PICo) tactile/tactile_processor.PICa(frontend/carl_frontend_design.PICo) tactile/tactile_processor.PICa(dsp/biquad_filter.PICo) tactile/tactile_processor.PICa(dsp/butterworth.PICo) tactile/tactile_processor.PICa(dsp/complex.PICo) tactile/tactile_processor.PICa(dsp/fast_fun.PICo)
 
-audio/tactile/python/energy_envelope_python_bindings.PICo: audio/tactile/python/energy_envelope_python_bindings.c
+tactile/python/energy_envelope_python_bindings.PICo: tactile/python/energy_envelope_python_bindings.c
 	$(CC) -fPIC $(PYTHON_BINDINGS_CFLAGS) -c -o $@ $<
 
-audio/tactile/python/tactile_processor_python_bindings.PICo: audio/tactile/python/tactile_processor_python_bindings.c
+tactile/python/tactile_processor_python_bindings.PICo: tactile/python/tactile_processor_python_bindings.c
 	$(CC) -fPIC $(PYTHON_BINDINGS_CFLAGS) -c -o $@ $<
 
-audio/tactile/python/tactile_worker_python_bindings.PICo: audio/tactile/python/tactile_worker_python_bindings.c
+tactile/python/tactile_worker_python_bindings.PICo: tactile/python/tactile_worker_python_bindings.c
 	$(CC) -fPIC $(PYTHON_BINDINGS_CFLAGS) -c -o $@ $<
 
 .c.o:
@@ -249,7 +249,7 @@ check: $(TESTS)
 	for name in $(TESTS); do echo ./$$name; ./$$name || echo -e "\n\033[01;31mFAILED\033[00m: $$name\n"; done
 
 clean:
-	$(RM) -f -- $(RUN_TACTILE_PROCESSOR_OBJS) $(ENERGY_ENVELOPE_PYTHON_BINDINGS_OBJS) $(TACTILE_PROCESSOR_PYTHON_BINDINGS_OBJS) $(TACTILE_WORKER_PYTHON_BINDINGS_OBJS) $(TACTOPHONE_OBJS) $(TACTOMETER_OBJS) $(PLAY_BUZZ_OBJS) $(AUTO_GAIN_CONTROL_TEST_OBJS) $(RUN_YUAN2005_OBJS) $(RUN_BRATAKOS2001_OBJS) $(TACTILE_PROCESSOR_BENCHMARK_OBJS) $(RUN_ENERGY_ENVELOPE_OBJS) $(AUTO_GAIN_CONTROL_TEST_OBJS) $(BUTTERWORTH_TEST_OBJS) $(COMPLEX_TEST_OBJS) $(ELLIPTIC_FUN_TEST_OBJS) $(FAST_FUN_TEST_OBJS) $(IIR_DESIGN_TEST_OBJS) $(MATH_CONSTANTS_TEST_OBJS) $(PHASOR_ROTATOR_TEST_OBJS) $(READ_WAV_FILE_TEST_OBJS) $(READ_WAV_FILE_GENERIC_TEST_OBJS) $(SERIALIZE_TEST_OBJS) $(WRITE_WAV_FILE_TEST_OBJS) $(CARL_FRONTEND_TEST_OBJS) $(EMBED_VOWEL_TEST_OBJS) $(TACTILE_PLAYER_TEST_OBJS) $(UTIL_TEST_OBJS) $(PHONEME_CODE_TEST_OBJS) $(TACTOPHONE_LESSON_TEST_OBJS) $(TACTOPHONE_ENGINE_TEST_OBJS) $(ENERGY_ENVELOPE_TEST_OBJS) $(CHANNEL_MAP_TEST_OBJS) $(HEXAGON_INTERPOLATION_TEST_OBJS) $(NN_OPS_TEST_OBJS) $(YUAN2005_TEST_OBJS) $(TACTILE_PROCESSOR_TEST_OBJS) $(PROGRAMS) $(BENCHMARKS) $(TESTS) audio/tactile/tactile_processor.a
+	$(RM) -f -- $(RUN_TACTILE_PROCESSOR_OBJS) $(ENERGY_ENVELOPE_PYTHON_BINDINGS_OBJS) $(TACTILE_PROCESSOR_PYTHON_BINDINGS_OBJS) $(TACTILE_WORKER_PYTHON_BINDINGS_OBJS) $(TACTOPHONE_OBJS) $(TACTOMETER_OBJS) $(PLAY_BUZZ_OBJS) $(AUTO_GAIN_CONTROL_TEST_OBJS) $(RUN_YUAN2005_OBJS) $(RUN_BRATAKOS2001_OBJS) $(TACTILE_PROCESSOR_BENCHMARK_OBJS) $(RUN_ENERGY_ENVELOPE_OBJS) $(AUTO_GAIN_CONTROL_TEST_OBJS) $(BUTTERWORTH_TEST_OBJS) $(COMPLEX_TEST_OBJS) $(ELLIPTIC_FUN_TEST_OBJS) $(FAST_FUN_TEST_OBJS) $(IIR_DESIGN_TEST_OBJS) $(MATH_CONSTANTS_TEST_OBJS) $(PHASOR_ROTATOR_TEST_OBJS) $(READ_WAV_FILE_TEST_OBJS) $(READ_WAV_FILE_GENERIC_TEST_OBJS) $(SERIALIZE_TEST_OBJS) $(WRITE_WAV_FILE_TEST_OBJS) $(CARL_FRONTEND_TEST_OBJS) $(EMBED_VOWEL_TEST_OBJS) $(TACTILE_PLAYER_TEST_OBJS) $(UTIL_TEST_OBJS) $(PHONEME_CODE_TEST_OBJS) $(TACTOPHONE_LESSON_TEST_OBJS) $(TACTOPHONE_ENGINE_TEST_OBJS) $(ENERGY_ENVELOPE_TEST_OBJS) $(CHANNEL_MAP_TEST_OBJS) $(HEXAGON_INTERPOLATION_TEST_OBJS) $(NN_OPS_TEST_OBJS) $(YUAN2005_TEST_OBJS) $(TACTILE_PROCESSOR_TEST_OBJS) $(PROGRAMS) $(BENCHMARKS) $(TESTS) tactile/tactile_processor.a
 
 doc: $(HTML_FILES)
 

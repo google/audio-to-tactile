@@ -13,8 +13,8 @@
 # the License.
 
 PYTHON_INCLUDE_DIRS = [
-    "/usr/include/python3.6m",
-    "/usr/include/x86_64-linux-gnu/python3.6m",
+    "/usr/include/python3.8",
+    "/usr/include/x86_64-linux-gnu/python3.8",
 ]
 
 WARNING_OPTS = [

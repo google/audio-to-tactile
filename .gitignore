@@ -11,11 +11,13 @@ run_bratakos2001
 run_yuan2005
 tactile_processor_benchmark
 *_test
-# Ignore objects, libraries, and HTML output.
+# Ignore HTML under doc/
+doc/*.html
+# Ignore objects and libraries.
 *.[oa]
 *.PIC[oa]
+*.pyc
 *.so
-*.html
 # Ignore file archives.
 *.tgz
 *.tar.gz
