@@ -58,6 +58,12 @@ For the Motu's input, we connect by USB to a computer running the Tactophone
 program.
 
 
+## Live web demo (click to open)
+
+[![Tactile
+visualization](doc/tactile-visualization.gif)](https://google.github.io/audio-to-tactile/demo/tactile_processor.html)
+
+
 ## Building
 
 This project uses the [bazel](https://www.bazel.build) build system. There is
@@ -107,7 +113,7 @@ This command told bazel to build the target
 `tactile:run_tactile_processor` with optimization turned on (`-c opt`).
 The built binary is at `bazel-bin/tactile/run_tactile_processor`. The
 build configuration of this target is represented in a special "BUILD" file. If
-you look in `tactile/BUILD` around line 130, there is a stanza in
+you look in `tactile/BUILD` around line 120, there is a stanza in
 Python-like syntax defining how to build this binary:
 
 ```{.py}
@@ -123,6 +129,7 @@ c_binary(
         ":util",
         "//dsp:fast_fun",
         "//dsp:math_constants",
+        "//dsp:number_util",
         "//dsp:read_wav_file",
         "//sdl:basic_sdl_app",
         "//sdl:texture_from_rle_data",
