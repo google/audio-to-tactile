@@ -57,6 +57,12 @@ two ribbon cables to the tactors.
 For the Motu's input, we connect by USB to a computer running the Tactophone
 program.
 
+
+## Live web demo (click to open)
+
+[![Tactile visualization](doc/tactile-visualization.gif)](web/tactile_processor.html)
+
+
 ## Building
 
 This project uses the [bazel](https://www.bazel.build) build system. There is
