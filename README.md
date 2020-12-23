@@ -12,15 +12,15 @@ reading.
 
 ## Contents
 
- * [Tactile processor](doc/tactile_processor.md): demo of our approach to
+ * [Tactile processor](extras/doc/tactile_processor.md): demo of our approach to
    audio-to-tactile processing, taking input audio from the microphone and
    producing output on a 10-tactor interface.
 
- * [Phone embedding](doc/phonetics.md): low-latency network that maps input
-   audio into a 2D embedding where phones are distinct.
+ * [Phone embedding](extras/doc/phonetics.md): low-latency network that maps
+   input audio into a 2D embedding where phones are distinct.
 
- * [Tactophone](doc/tactophone.md): training game for the 24-tactor TActile
-   Phonemic Sleeve (TAPS) system described in
+ * [Tactophone](extras/doc/tactophone.md): training game for the 24-tactor
+   TActile Phonemic Sleeve (TAPS) system described in
 > Charlotte M. Reed, Hong Z. Tan, Zachary D. Perez, E. Courtenay Wilson,
 > Frederico M. Severgnini, Jaehong Jung, Juan S. Martinez, Yang Jiao, Ali
 > Israr, Frances Lau, Keith Klumb, Robert Turcott, Freddy Abnousi, ["A
@@ -28,7 +28,7 @@ reading.
 > Communication,"](https://doi.org/10.1109/TOH.2018.2861010) *IEEE Transactions
 > on Haptics*, 2018.
 
- * [play buzz](doc/play_buzz.md): simple diagnostic program that plays a
+ * [play buzz](extras/doc/play_buzz.md): simple diagnostic program that plays a
    sinusoid to a specified channel.
 
 
@@ -42,7 +42,7 @@ This code uses the Apache License 2.0. See the LICENSE file for details.
 This software is intended to be used with a tactile sleeve as described in the
 Reed et al. work linked above.
 
-![Tactile sleeve hardware](doc/sleeve-hw.jpg)
+![Tactile sleeve hardware](extras/doc/sleeve-hw.jpg)
 
 The sleeve is constructed from cloth and Velcro. The 24 tactors are
 [Tectonic TEAX13C02-8/RH speakers](https://www.parts-express.com/tectonic-teax13c02-8-rh-13mm-exciter-8-ohms--297-214)
@@ -61,7 +61,7 @@ program.
 ## Live web demo (click to open)
 
 [![Tactile
-visualization](doc/tactile-visualization.gif)](https://google.github.io/audio-to-tactile/demo/tactile_processor.html)
+visualization](extras/doc/tactile-visualization.gif)](https://google.github.io/audio-to-tactile/demo/tactile_processor.html)
 
 
 ## Building
@@ -81,8 +81,8 @@ Python headers:
 
 ```{.py}
 PYTHON_INCLUDE_DIRS = [
-    "/usr/include/python3.6m",
-    "/usr/include/x86_64-linux-gnu/python3.6m",
+    "/usr/include/python3.8",
+    "/usr/include/x86_64-linux-gnu/python3.8",
 ]
 ```
 
@@ -94,27 +94,27 @@ might also be useful. As a starting example, open a terminal and set the working
 directory to the root of this repo, then run this command:
 
 ```{.sh}
-bazel build -c opt tactile:run_tactile_processor
+bazel build -c opt extras/tools:run_tactile_processor
 ```
 
 When bazel is done, it should print something like
 
 ```{.sh}
-INFO: Analyzed target //tactile:run_tactile_processor (18 packages loaded, 121 targets configured).
+INFO: Analyzed target //extras/tools:run_tactile_processor (18 packages loaded, 121 targets configured).
 INFO: Found 1 target...
-Target //tactile:run_tactile_processor up-to-date:
-  bazel-bin/tactile/run_tactile_processor
+Target //extras/tools:run_tactile_processor up-to-date:
+  bazel-bin/extras/tools/run_tactile_processor
 INFO: Elapsed time: 1.218s, Critical Path: 0.62s
 INFO: 24 processes: 24 linux-sandbox.
 INFO: Build completed successfully, 28 total actions
 ```
 
-This command told bazel to build the target
-`tactile:run_tactile_processor` with optimization turned on (`-c opt`).
-The built binary is at `bazel-bin/tactile/run_tactile_processor`. The
-build configuration of this target is represented in a special "BUILD" file. If
-you look in `tactile/BUILD` around line 120, there is a stanza in
-Python-like syntax defining how to build this binary:
+This command told bazel to build the target `extras/tools:run_tactile_processor`
+with optimization turned on (`-c opt`). The built binary is at
+`bazel-bin/extras/tools/run_tactile_processor`. The build configuration of this
+target is represented in a special "BUILD" file. If you look in
+`extras/tools/BUILD` around line 120, there is a stanza in Python-like syntax
+defining how to build this binary:
 
 ```{.py}
 c_binary(
@@ -123,17 +123,14 @@ c_binary(
     deps = [
         ":channel_map",
         ":portaudio_device",
-        ":post_processor",
         ":run_tactile_processor_assets",
-        ":tactile_processor",
         ":util",
-        "//dsp:fast_fun",
-        "//dsp:math_constants",
-        "//dsp:number_util",
-        "//dsp:read_wav_file",
-        "//sdl:basic_sdl_app",
-        "//sdl:texture_from_rle_data",
-        "//sdl:window_icon",
+        "//:dsp",
+        "//:tactile",
+        "//extras/tools/sdl:basic_sdl_app",
+        "//extras/tools/sdl:texture_from_rle_data",
+        "//extras/tools/sdl:window_icon",
+        "@sdl2",
     ],
 )
 ```
@@ -146,7 +143,7 @@ Here are a couple other bazel commands to try:
 
 ```{.sh}
 # Build tactile_worker Python extension library. Checks that Python headers are set up.
-bazel build -c opt tactile/python:tactile_worker.so
+bazel build -c opt extras/python/tactile:tactile_worker.so
 
 # Run all the unit tests in the repo. Checks that everything is building and working Ok.
 bazel test ...
