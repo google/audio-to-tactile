@@ -1,4 +1,4 @@
-/* Copyright 2020 Google LLC
+/* Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include "dsp/rational_factor_resampler_kernel.h"
+#include "dsp/q_resampler_kernel.h"
 
 #include <assert.h>
 #include <float.h>
@@ -68,12 +68,12 @@ static double KaiserWindow(double x, double kaiser_beta) {
   return BesselI0(kaiser_beta * sqrt(y));
 }
 
-int RationalFactorResamplerKernelInit(RationalFactorResamplerKernel* kernel,
-                                      float input_sample_rate_hz,
-                                      float output_sample_rate_hz,
-                                      float filter_radius_factor,
-                                      float cutoff_proportion,
-                                      float kaiser_beta) {
+int QResamplerKernelInit(QResamplerKernel* kernel,
+                         float input_sample_rate_hz,
+                         float output_sample_rate_hz,
+                         float filter_radius_factor,
+                         float cutoff_proportion,
+                         float kaiser_beta) {
   if (kernel == NULL ||
       !(input_sample_rate_hz > 0.0f) ||
       !(output_sample_rate_hz > 0.0f) ||
@@ -120,8 +120,7 @@ int RationalFactorResamplerKernelInit(RationalFactorResamplerKernel* kernel,
   return 1;
 }
 
-double RationalFactorResamplerKernelEval(
-    const RationalFactorResamplerKernel* kernel, double x) {
+double QResamplerKernelEval(const QResamplerKernel* kernel, double x) {
   x = fabs(x);
   const double omega = kernel->radians_per_sample * x;
   const double sinc = (omega < 1e-8) ? 1.0 : sin(omega) / omega;

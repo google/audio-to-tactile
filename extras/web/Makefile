@@ -125,7 +125,7 @@ basic_sdl_app.o: ../tools/sdl/basic_sdl_app.c
 texture_from_rle_data.o: ../tools/sdl/texture_from_rle_data.c
 	emcc $(EMCC_FLAGS) -c $< -o $@
 
-all: tactile_processor_web_bindings.js classify_phoneme_web_bindings.js
+all: tactile_processor_web_bindings.js
 
 clean:
 	$(RM) tactile_processor_web_bindings.js tactile_processor_web_bindings.wasm \

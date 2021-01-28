@@ -1,4 +1,4 @@
-/* Copyright 2020 Google LLC
+/* Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@
  *   h_p[k] := h(p/b + k),  p = 0, 1, ..., b - 1.
  *
  * Benchmarks:
- * (measured by extras/benchmark/rational_factor_resampler_benchmark.cpp)
+ * (measured by extras/benchmark/q_resampler_benchmark.cpp)
  * Benchmark timings of processing 1000 frames of input on Skylake.
  *
  * Results on SkyLake, 2020-11-11:
@@ -67,8 +67,8 @@
  * BM_Resample12Channels48To16      72738 ns        72733 ns        38495
  */
 
-#ifndef AUDIO_TO_TACTILE_SRC_DSP_RATIONAL_FACTOR_RESAMPLER_H_
-#define AUDIO_TO_TACTILE_SRC_DSP_RATIONAL_FACTOR_RESAMPLER_H_
+#ifndef AUDIO_TO_TACTILE_SRC_DSP_Q_RESAMPLER_H_
+#define AUDIO_TO_TACTILE_SRC_DSP_Q_RESAMPLER_H_
 
 #include "dsp/number_util.h"
 
@@ -76,10 +76,10 @@
 extern "C" {
 #endif
 
-struct RationalFactorResampler; /* Forward declaration. */
-typedef struct RationalFactorResampler RationalFactorResampler;
+struct QResampler; /* Forward declaration. */
+typedef struct QResampler QResampler;
 
-/* Detail options for RationalFactorResampler. */
+/* Detail options for QResampler. */
 typedef struct {
   /* `max_denominator` determines the max allowed denominator b in approximating
    * the resampling factor with a rational a/b. This also determines the max
@@ -130,12 +130,11 @@ typedef struct {
    *   7.865            -80 dB
    */
   float kaiser_beta;
-} RationalFactorResamplerOptions;
-extern const RationalFactorResamplerOptions
-    kRationalFactorResamplerDefaultOptions;
+} QResamplerOptions;
+extern const QResamplerOptions kQResamplerDefaultOptions;
 
-/* Makes a RationalFactorResampler. The caller should free it when done with
- * `RationalFactorResamplerFree()`.
+/* Makes a QResampler. The caller should free it when done with
+ * `QResamplerFree()`.
  *
  * The resampling factor input_sample_rate_hz / output_sample_rate_hz
  * is approximated by a rational factor a/b where 0 < b <= max_denominator.
@@ -145,37 +144,36 @@ extern const RationalFactorResamplerOptions
  * number of channels with an optimized specialization for num_channels = 1.
  *
  * `max_input_frames` arg is the max number of input frames that will be passed
- * per call to `RationalFactorResamplerProcessSamples()`.
+ * per call to `QResamplerProcessSamples()`.
  *
  * An options struct may be passed to fine tune resampler details, or pass NULL
  * to use the default options.
  */
-RationalFactorResampler* RationalFactorResamplerMake(
-    float input_sample_rate_hz,
-    float output_sample_rate_hz,
-    int num_channels,
-    int max_input_frames,
-    const RationalFactorResamplerOptions* options);
+QResampler* QResamplerMake(float input_sample_rate_hz,
+                           float output_sample_rate_hz,
+                           int num_channels,
+                           int max_input_frames,
+                           const QResamplerOptions* options);
 
-/* Frees a RationalFactorResampler. */
-void RationalFactorResamplerFree(RationalFactorResampler* resampler);
+/* Frees a QResampler. */
+void QResamplerFree(QResampler* resampler);
 
 /* Resets to initial state. */
-void RationalFactorResamplerReset(RationalFactorResampler* resampler);
+void QResamplerReset(QResampler* resampler);
 
 /* Processes samples in a streaming manner.
  *
  * If `num_input_frames` exceeds `max_input_frames`, frames are dropped. The
  * function returns the number of resampled output samples. Get the output
- * buffer holding the samples themselves with `RationalFactorResamplerOutput()`.
+ * buffer holding the samples themselves with `QResamplerOutput()`.
  *
  * Example use:
  *
  *   while (...) {
  *     float* input = // Get num_input_frames frames...
- *     int num_output_frames = RationalFactorResamplerProcessSamples(
+ *     int num_output_frames = QResamplerProcessSamples(
  *         resampler, input, num_input_frames);
- *     float* output = RationalFactorResamplerOutput(resampler);
+ *     float* output = QResamplerOutput(resampler);
  *     // Do something with output.
  *   }
  *
@@ -183,41 +181,37 @@ void RationalFactorResamplerReset(RationalFactorResampler* resampler);
  * with num_input_frames fixed. The exact behavior depends on num_input_frames,
  * resampling factor, filter_radius_factor, and current resampling phase.
  */
-int RationalFactorResamplerProcessSamples(RationalFactorResampler* resampler,
-                                          const float* input,
-                                          int num_input_frames);
+int QResamplerProcessSamples(QResampler* resampler, const float* input,
+                             int num_input_frames);
 
 /* Gets the resampled output buffer. */
-float* RationalFactorResamplerOutput(const RationalFactorResampler* resampler);
+float* QResamplerOutput(const QResampler* resampler);
 
 /* Gets number of channels. */
-int RationalFactorResamplerNumChannels(
-    const RationalFactorResampler* resampler);
+int QResamplerNumChannels(const QResampler* resampler);
 
 /* Gets max number of input frames that can be passed to ProcessSamples(). */
-int RationalFactorResamplerMaxInputFrames(
-    const RationalFactorResampler* resampler);
+int QResamplerMaxInputFrames(const QResampler* resampler);
 
 /* Gets max number of output frames that ProcessSamples() can produce. */
-int RationalFactorResamplerMaxOutputFrames(
-    const RationalFactorResampler* resampler);
+int QResamplerMaxOutputFrames(const QResampler* resampler);
 
 /* Gets the rational used to approximate the requested resampling factor,
  *
  *   factor_numerator / factor_denominator
  *     ~= input_sample_rate_hz / output_sample_rate_hz.
  */
-void RationalFactorResamplerGetRationalFactor(
-    const RationalFactorResampler* resampler,
-    int* factor_numerator, int* factor_denominator);
+void QResamplerGetRationalFactor(const QResampler* resampler,
+                                 int* factor_numerator,
+                                 int* factor_denominator);
 
 /* Gets how many output frames will be produced in the next call to
  * ProcessSamples() for an input of `num_input_frames`, according to the current
  * resampler state. If `num_input_frames` exceeds max_input_frames, it returns
  * how many frames would have been produced supposing no samples were dropped.
  */
-int RationalFactorResamplerNextNumOutputFrames(
-    const RationalFactorResampler* resampler, int num_input_frames);
+int QResamplerNextNumOutputFrames(const QResampler* resampler,
+                                  int num_input_frames);
 
 /* Gets a number of zero-valued input frames guaranteed to flush the resampler.
  * Calling ProcessSamples() on FlushFrames() number of zero-valued input frames
@@ -226,7 +220,7 @@ int RationalFactorResamplerNextNumOutputFrames(
  * The value of FlushFrames() is constant for a given resampler instance.
  *
  * Example:
- *   int flush_frames = RationalFactorResamplerFlushFrames(resampler);
+ *   int flush_frames = QResamplerFlushFrames(resampler);
  *   float* flush_input = (float*) malloc(
  *       sizeof(float) * num_channels * flush_frames);
  *   int n;
@@ -234,14 +228,13 @@ int RationalFactorResamplerNextNumOutputFrames(
  *
  *   // Flush the resampler. The resampler reserves enough space that
  *   // an input of size flush_frames is allowed without dropping samples.
- *   int flush_output_frames = RationalFactorResamplerProcessSamples(
+ *   int flush_output_frames = QResamplerProcessSamples(
  *      resampler, flush_input, flush_frames);
- *   float* flush_output = RationalFactorResamplerOutput(resampler);
+ *   float* flush_output = QResamplerOutput(resampler);
  */
-int RationalFactorResamplerFlushFrames(
-    const RationalFactorResampler* resampler);
+int QResamplerFlushFrames(const QResampler* resampler);
 
 #ifdef __cplusplus
-}  /* extern "C" */
+} /* extern "C" */
 #endif
-#endif  /* AUDIO_TO_TACTILE_SRC_DSP_RATIONAL_FACTOR_RESAMPLER_H_ */
+#endif /* AUDIO_TO_TACTILE_SRC_DSP_Q_RESAMPLER_H_ */

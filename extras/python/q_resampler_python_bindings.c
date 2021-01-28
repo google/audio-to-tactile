@@ -1,4 +1,4 @@
-/* Copyright 2020 Google LLC
+/* Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,14 +13,14 @@
  * limitations under the License.
  *
  *
- * Python bindings for RationalFactorResampler C implementation.
+ * Python bindings for QResampler C implementation.
  *
  * These bindings wrap the resampler.c library in dsp as a
- * `rational_factor_resampler_python_bindings` Python module containing a
- * `ResamplerImpl` class and a `KernelImpl` class.
+ * `q_resampler_python_bindings` Python module containing a `ResamplerImpl`
+ * class and a `KernelImpl` class.
  *
- * The Python library rational_factor_resampler.py wraps these bindings to give
- * a nicer interface and type annotations.
+ * The Python library q_resampler.py wraps these bindings to give a nicer
+ * interface and type annotations.
  *
  * NOTE: Using a tool like CLIF is generally a better idea than writing bindings
  * manually. We do it here anyway since as open sourced code it matters that it
@@ -37,14 +37,13 @@
 #include "Python.h"
 /* Disallow Numpy 1.7 deprecated symbols. */
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-#include "src/dsp/rational_factor_resampler.h"
-#include "src/dsp/rational_factor_resampler_kernel.h"
 #include "numpy/arrayobject.h"
 #include "structmember.h"
+#include "src/dsp/q_resampler.h"
+#include "src/dsp/q_resampler_kernel.h"
 
 typedef struct {
-  PyObject_HEAD
-  RationalFactorResampler* resampler;
+  PyObject_HEAD QResampler* resampler;
 } ResamplerImplObject;
 
 /* Define `ResamplerImpl.__init__`. */
@@ -55,8 +54,7 @@ static int ResamplerImplObjectInit(ResamplerImplObject* self,
   int num_channels = 1;
   RationalApproximationOptions rational_approximation_options =
       kRationalApproximationDefaultOptions;
-  RationalFactorResamplerOptions options =
-      kRationalFactorResamplerDefaultOptions;
+  QResamplerOptions options = kQResamplerDefaultOptions;
   options.rational_approximation_options = &rational_approximation_options;
   int max_input_size = 1024;
   static const char* keywords[] = {
@@ -92,11 +90,8 @@ static int ResamplerImplObjectInit(ResamplerImplObject* self,
     return -1;  /* PyArg_ParseTupleAndKeywords failed. */
   }
 
-  self->resampler = RationalFactorResamplerMake(input_sample_rate_hz,
-                                                output_sample_rate_hz,
-                                                num_channels,
-                                                max_input_size,
-                                                &options);
+  self->resampler = QResamplerMake(input_sample_rate_hz, output_sample_rate_hz,
+                                   num_channels, max_input_size, &options);
   if (self->resampler == NULL) {
     PyErr_SetString(PyExc_ValueError, "Error making Resampler");
     return -1;
@@ -105,13 +100,13 @@ static int ResamplerImplObjectInit(ResamplerImplObject* self,
 }
 
 static void ResamplerImplDealloc(ResamplerImplObject* self) {
-  RationalFactorResamplerFree(self->resampler);
+  QResamplerFree(self->resampler);
   Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
 /* Define `ResamplerImpl.reset`. */
 static PyObject* ResamplerImplObjectReset(ResamplerImplObject* self) {
-  RationalFactorResamplerReset(self->resampler);
+  QResamplerReset(self->resampler);
   Py_INCREF(Py_None);
   return Py_None;
 }
@@ -125,7 +120,7 @@ static PyObject* ResamplerImplObjectProcessSamples(
   /* "O:process_samples" => parse a single required arg as a PyObject. */
   if (!PyArg_ParseTupleAndKeywords(args, kw, "O:process_samples",
                                    (char**)keywords, &samples_arg)) {
-    return NULL;  /* PyArg_ParseTupleAndKeywords failed. */
+    return NULL; /* PyArg_ParseTupleAndKeywords failed. */
   }
 
   /* Convert input samples to numpy array with contiguous float32 data. */
@@ -135,13 +130,13 @@ static PyObject* ResamplerImplObjectProcessSamples(
           NPY_ARRAY_DEFAULT,
       NULL);
 
-  if (!samples) {  /* PyArray_DescrFromType failed. */
+  if (!samples) { /* PyArray_DescrFromType failed. */
     /* PyArray_DescrFromType already set an error, so just need to return. */
     goto fail;
   }
 
-  RationalFactorResampler* resampler = self->resampler;
-  const int num_channels = RationalFactorResamplerNumChannels(resampler);
+  QResampler* resampler = self->resampler;
+  const int num_channels = QResamplerNumChannels(resampler);
 
   if (!((num_channels == 1 && PyArray_NDIM(samples) == 1) ||
         (PyArray_NDIM(samples) == 2 &&
@@ -155,19 +150,17 @@ static PyObject* ResamplerImplObjectProcessSamples(
 
   /* Create output numpy array. */
   npy_intp output_dims[2];
-  output_dims[0] = RationalFactorResamplerNextNumOutputFrames(
-      resampler, num_input_frames);
+  output_dims[0] = QResamplerNextNumOutputFrames(resampler, num_input_frames);
   output_dims[1] = num_channels;
-  PyArrayObject* output =
-      (PyArrayObject*)PyArray_SimpleNew(
-          PyArray_NDIM(samples), output_dims, NPY_FLOAT);
-  if (!output) {  /* PyArray_SimpleNew failed. */
+  PyArrayObject* output = (PyArrayObject*)PyArray_SimpleNew(
+      PyArray_NDIM(samples), output_dims, NPY_FLOAT);
+  if (!output) { /* PyArray_SimpleNew failed. */
     /* PyArray_SimpleNew already set an error, so clean up and return. */
     goto fail;
   }
 
   /* Process the samples. */
-  const int max_input_frames = RationalFactorResamplerMaxInputFrames(resampler);
+  const int max_input_frames = QResamplerMaxInputFrames(resampler);
   const float* samples_data = (const float*)PyArray_DATA(samples);
   float* output_data = (float*)PyArray_DATA(output);
   int start;
@@ -176,9 +169,9 @@ static PyObject* ResamplerImplObjectProcessSamples(
     if (max_input_frames < block_input_frames) {
       block_input_frames = max_input_frames;
     }
-    const int block_output_frames = RationalFactorResamplerProcessSamples(
+    const int block_output_frames = QResamplerProcessSamples(
         resampler, samples_data + start * num_channels, block_input_frames);
-    const float* block_output = RationalFactorResamplerOutput(resampler);
+    const float* block_output = QResamplerOutput(resampler);
     memcpy(output_data, block_output,
            sizeof(float) * block_output_frames * num_channels);
     output_data += block_output_frames * num_channels;
@@ -196,27 +189,25 @@ fail: /* If something went wrong above, we jump here and clean up. */
 static PyObject* ResamplerImplObjectRationalFactor(ResamplerImplObject* self) {
   int factor_numerator;
   int factor_denominator;
-  RationalFactorResamplerGetRationalFactor(
-      self->resampler, &factor_numerator, &factor_denominator);
+  QResamplerGetRationalFactor(self->resampler, &factor_numerator,
+                              &factor_denominator);
   return Py_BuildValue("(ii)", factor_numerator, factor_denominator);
 }
 
 /* Define `ResamplerImpl.num_channels` property getter. */
 static PyObject* ResamplerImplObjectNumChannels(ResamplerImplObject* self) {
-  return Py_BuildValue("i",
-                       RationalFactorResamplerNumChannels(self->resampler));
+  return Py_BuildValue("i", QResamplerNumChannels(self->resampler));
 }
 
 /* Define `ResamplerImpl.flush_frames` property getter. */
 static PyObject* ResamplerImplObjectFlushFrames(ResamplerImplObject* self) {
-  return Py_BuildValue("i",
-                       RationalFactorResamplerFlushFrames(self->resampler));
+  return Py_BuildValue("i", QResamplerFlushFrames(self->resampler));
 }
 
 /* Resampler's method functions. */
 static PyMethodDef kResamplerImplMethods[] = {
-    {"reset", (PyCFunction)ResamplerImplObjectReset,
-     METH_NOARGS, "Resets to initial state."},
+    {"reset", (PyCFunction)ResamplerImplObjectReset, METH_NOARGS,
+     "Resets to initial state."},
     {"process_samples", (PyCFunction)ResamplerImplObjectProcessSamples,
      METH_VARARGS | METH_KEYWORDS, "Processes samples in a streaming manner."},
     {NULL} /* Sentinel */
@@ -276,28 +267,26 @@ static PyTypeObject kResamplerImplType = {
 };
 
 typedef struct {
-  PyObject_HEAD
-  RationalFactorResamplerKernel kernel;
+  PyObject_HEAD QResamplerKernel kernel;
 } KernelImplObject;
 
 /* Define `factor` and `radius` as read-only members. */
 static PyMemberDef kKernelImplMembers[] = {
-  {"factor", T_DOUBLE, offsetof(KernelImplObject, kernel) +
-     offsetof(RationalFactorResamplerKernel, factor), READONLY, ""},
-  {"radius", T_DOUBLE, offsetof(KernelImplObject, kernel) +
-     offsetof(RationalFactorResamplerKernel, radius), READONLY, ""},
-  {"radians_per_sample", T_DOUBLE, offsetof(KernelImplObject, kernel) +
-     offsetof(RationalFactorResamplerKernel, radians_per_sample), READONLY, ""},
-  {NULL}  /* Sentinel. */
+    {"factor", T_DOUBLE, offsetof(KernelImplObject, kernel) +
+     offsetof(QResamplerKernel, factor), READONLY, ""},
+    {"radius", T_DOUBLE, offsetof(KernelImplObject, kernel) +
+     offsetof(QResamplerKernel, radius), READONLY, ""},
+    {"radians_per_sample", T_DOUBLE, offsetof(KernelImplObject, kernel) +
+     offsetof(QResamplerKernel, radians_per_sample), READONLY, ""},
+    {NULL} /* Sentinel. */
 };
 
 /* Define `Kernel.__init__`. */
-static int KernelImplObjectInit(KernelImplObject* self,
-                                PyObject* args, PyObject* kw) {
+static int KernelImplObjectInit(KernelImplObject* self, PyObject* args,
+                                PyObject* kw) {
   float input_sample_rate_hz = 0.0f;
   float output_sample_rate_hz = 0.0f;
-  RationalFactorResamplerOptions options =
-      kRationalFactorResamplerDefaultOptions;
+  QResamplerOptions options = kQResamplerDefaultOptions;
   static const char* keywords[] = {"input_sample_rate_hz",
                                    "output_sample_rate_hz",
                                    "filter_radius_factor",
@@ -312,15 +301,15 @@ static int KernelImplObjectInit(KernelImplObject* self,
           &options.filter_radius_factor,
           &options.cutoff_proportion,
           &options.kaiser_beta)) {
-    return -1;  /* PyArg_ParseTupleAndKeywords failed. */
+    return -1; /* PyArg_ParseTupleAndKeywords failed. */
   }
 
-  if (!RationalFactorResamplerKernelInit(&self->kernel,
-                                         input_sample_rate_hz,
-                                         output_sample_rate_hz,
-                                         options.filter_radius_factor,
-                                         options.cutoff_proportion,
-                                         options.kaiser_beta)) {
+  if (!QResamplerKernelInit(&self->kernel,
+                            input_sample_rate_hz,
+                            output_sample_rate_hz,
+                            options.filter_radius_factor,
+                            options.cutoff_proportion,
+                            options.kaiser_beta)) {
     PyErr_SetString(PyExc_ValueError, "Error making Kernel");
     return -1;
   }
@@ -354,11 +343,9 @@ static PyObject* KernelImplObjectCall(KernelImplObject* self,
     return NULL;
   }
 
-
   /* Create output numpy array. */
-  PyArrayObject* output =
-      (PyArrayObject*)PyArray_SimpleNew(
-          PyArray_NDIM(x), PyArray_DIMS(x), NPY_DOUBLE);
+  PyArrayObject* output = (PyArrayObject*)PyArray_SimpleNew(
+      PyArray_NDIM(x), PyArray_DIMS(x), NPY_DOUBLE);
   if (!output) {  /* PyArray_SimpleNew failed. */
     /* PyArray_SimpleNew already set an error, so clean up and return. */
     Py_XDECREF(x);
@@ -371,8 +358,7 @@ static PyObject* KernelImplObjectCall(KernelImplObject* self,
   const int size = PyArray_SIZE(x);
   int i;
   for (i = 0; i < size; ++i) {
-    output_data[i] = RationalFactorResamplerKernelEval(
-        &self->kernel, x_data[i]);
+    output_data[i] = QResamplerKernelEval(&self->kernel, x_data[i]);
   }
 
   Py_DECREF(x);
@@ -447,12 +433,12 @@ static /*bool*/ int AddTypeToModule(PyObject* m, PyTypeObject* type_object) {
 /* Module definition. */
 static struct PyModuleDef kModule = {
     PyModuleDef_HEAD_INIT,
-    "rational_factor_resampler_python_bindings", /* m_name */
-    NULL,                                        /* m_doc */
-    (Py_ssize_t)-1,                              /* m_size */
+    "q_resampler_python_bindings", /* m_name */
+    NULL,                          /* m_doc */
+    (Py_ssize_t)-1,                /* m_size */
 };
 
-PyMODINIT_FUNC PyInit_rational_factor_resampler_python_bindings() {
+PyMODINIT_FUNC PyInit_q_resampler_python_bindings() {
   import_array();
   PyObject* m = PyModule_Create(&kModule);
   if (m == NULL) { return NULL; }

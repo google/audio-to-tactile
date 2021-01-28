@@ -27,6 +27,65 @@ import numpy as np
 from extras.python import dsp
 
 
+class FastFunTest(unittest.TestCase):
+
+  def test_fast_log2_accuracy(self):
+    # An arbitrary spot check at x=4.2 with a scalar input.
+    output = dsp.fast_log2(np.float32(4.2))
+    self.assertIsInstance(output, np.float32)
+    self.assertAlmostEqual(output, np.log2(4.2), delta=0.002)
+
+    # Check thoroughly at random positions with an array input. To test a wide
+    # range, we first make x in [-125.5, 125.5], then make y = exp2(x), so that
+    # y is distributed over most of the finite float range, excluding denormals.
+    x = np.random.uniform(-125.5, 125.5, size=10000).astype(np.float32)
+    y = 2.0**x
+    output = dsp.fast_log2(y)
+    self.assertTupleEqual(output.shape, x.shape)
+    self.assertEqual(output.dtype, np.float32)
+    max_abs_error = np.max(np.abs(output - x))
+    self.assertLess(max_abs_error, 0.003)
+
+  def test_fast_exp2_accuracy(self):
+    # An arbitrary spot check at x=4.2 with a scalar input.
+    output = dsp.fast_exp2(np.float32(4.2))
+    self.assertIsInstance(output, np.float32)
+    self.assertAlmostEqual(output / np.exp2(4.2), 1.0, delta=6e-4)
+
+    x = np.random.uniform(-125.5, 125.5, size=10000).astype(np.float32)
+    y = 2.0**x
+    output = dsp.fast_exp2(x)
+    self.assertTupleEqual(output.shape, x.shape)
+    self.assertEqual(output.dtype, np.float32)
+    max_rel_error = np.max(np.abs(output / y - 1.0))
+    self.assertLess(max_rel_error, 0.003)
+
+  def test_fast_pow_accuracy(self):
+    # Check x^y over a 2-D grid of points 0.1 <= x <= 50, -2 <= y <= 2.
+    x = (np.arange(1, 501, dtype=np.float32) * 0.1)[np.newaxis, :]
+    y = (np.arange(-20, 21, dtype=np.float32) * 0.1)[:, np.newaxis]
+
+    output = dsp.fast_pow(x, y)
+    self.assertTupleEqual(output.shape, (41, 500))
+    self.assertEqual(output.dtype, np.float32)
+    max_rel_error = np.max(np.abs(output / x**y - 1.0))
+    self.assertLess(max_rel_error, 0.005)
+
+  def test_fast_tanh_accuracy(self):
+    x = np.random.uniform(-12.0, 12.0, size=10000).astype(np.float32)
+
+    output = dsp.fast_tanh(x)
+    self.assertTupleEqual(output.shape, x.shape)
+    self.assertEqual(output.dtype, np.float32)
+    max_abs_error = np.max(np.abs(output - np.tanh(x)))
+    self.assertLess(max_abs_error, 0.0008)
+
+    # Check large arguments.
+    self.assertEqual(dsp.fast_tanh(np.float32(0.0)), 0.0)
+    self.assertEqual(dsp.fast_tanh(np.float32(1000.0)), 1.0)
+    self.assertEqual(dsp.fast_tanh(np.float32(-1000.0)), -1.0)
+
+
 # Tested resampling sample rates in Hz.
 RATES = (12000, 16000, 32000, 44100, 48000, 16000 * np.sqrt(2))
 

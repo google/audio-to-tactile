@@ -1,4 +1,4 @@
-# Copyright 2020 Google LLC
+# Copyright 2020-2021 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -40,8 +40,8 @@ cc_binary(
 )
 
 cc_binary(
-    name = "rational_factor_resampler_benchmark",
-    srcs = ["rational_factor_resampler_benchmark.cpp"],
+    name = "q_resampler_benchmark",
+    srcs = ["q_resampler_benchmark.cpp"],
     copts = C_OPTS,
     deps = [
         "//:dsp",

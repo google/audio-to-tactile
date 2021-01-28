@@ -1,4 +1,4 @@
-/* Copyright 2020 Google LLC
+/* Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include "dsp/rational_factor_resampler.h"
+#include "dsp/q_resampler.h"
 
 #include <assert.h>
 #include <math.h>
@@ -21,17 +21,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "dsp/rational_factor_resampler_kernel.h"
+#include "dsp/q_resampler_kernel.h"
 
-const RationalFactorResamplerOptions kRationalFactorResamplerDefaultOptions = {
-  /*max_denominator=*/1000,
-  /*rational_approximation_options=*/NULL,
-  /*filter_radius_factor=*/5.0f,
-  /*cutoff_proportion=*/0.9f,
-  /*kaiser_beta=*/5.658f,
+const QResamplerOptions kQResamplerDefaultOptions = {
+    /*max_denominator=*/1000,
+    /*rational_approximation_options=*/NULL,
+    /*filter_radius_factor=*/5.0f,
+    /*cutoff_proportion=*/0.9f,
+    /*kaiser_beta=*/5.658f,
 };
 
-struct RationalFactorResampler {
+struct QResampler {
   /* Buffer of delayed input samples with capacity for num_taps frames. When
    * calling to ProcessSamples(), unconsumed input samples are stored in this
    * buffer so that they are available in the next call to ProcessSamples().
@@ -75,26 +75,26 @@ struct RationalFactorResampler {
   int phase;
 };
 
-RationalFactorResampler* RationalFactorResamplerMake(
-    float input_sample_rate_hz,
-    float output_sample_rate_hz,
-    int num_channels,
-    int max_input_frames,
-    const RationalFactorResamplerOptions* options) {
-  if (!options) { options = &kRationalFactorResamplerDefaultOptions; }
-  RationalFactorResamplerKernel kernel;
-  if (!RationalFactorResamplerKernelInit(
+QResampler* QResamplerMake(float input_sample_rate_hz,
+                           float output_sample_rate_hz,
+                           int num_channels,
+                           int max_input_frames,
+                           const QResamplerOptions* options) {
+  if (!options) {
+    options = &kQResamplerDefaultOptions;
+  }
+  QResamplerKernel kernel;
+  if (!QResamplerKernelInit(
           &kernel, input_sample_rate_hz, output_sample_rate_hz,
           /*filter_radius_factor=*/options->filter_radius_factor,
           /*cutoff_proportion=*/options->cutoff_proportion,
           /*kaiser_beta=*/options->kaiser_beta) ||
-      num_channels <= 0 ||
-      max_input_frames <= 0 ||
+      num_channels <= 0 || max_input_frames <= 0 ||
       options->max_denominator <= 0) {
     return NULL;
   }
 
-  const int radius = (int) ceil(kernel.radius);
+  const int radius = (int)ceil(kernel.radius);
   /* We create the polyphase filters h_p by sampling the kernel h(x) as
    *
    *   h_p[k] := h(p/b + k),  p = 0, 1, ..., b - 1,
@@ -116,11 +116,9 @@ RationalFactorResampler* RationalFactorResamplerMake(
   /* Approximate resampling factor as a rational number, > 1 if downsampling. */
   int factor_numerator;
   int factor_denominator;
-  RationalApproximation(kernel.factor,
-                        options->max_denominator,
+  RationalApproximation(kernel.factor, options->max_denominator,
                         options->rational_approximation_options,
-                        &factor_numerator,
-                        &factor_denominator);
+                        &factor_numerator, &factor_denominator);
   /* For flushing, max_input_frames must be at least num_taps - 1. */
   if (num_taps - 1 > max_input_frames) {
     max_input_frames = num_taps - 1;
@@ -131,8 +129,7 @@ RationalFactorResampler* RationalFactorResamplerMake(
              factor_numerator - 1) /
             factor_numerator);
 
-  RationalFactorResampler* resampler = (RationalFactorResampler*) malloc(
-      sizeof(RationalFactorResampler));
+  QResampler* resampler = (QResampler*)malloc(sizeof(QResampler));
   if (resampler == NULL) {
     return NULL;
   }
@@ -142,13 +139,13 @@ RationalFactorResampler* RationalFactorResamplerMake(
   resampler->output = NULL;
 
   /* Allocate internal buffers. */
-  if (!(resampler->filters = (float*) malloc(
-          sizeof(float) * factor_denominator * num_taps)) ||
-      !(resampler->delayed_input = (float*) malloc(
-          sizeof(float) * num_taps * num_channels)) ||
-      !(resampler->output = (float*) malloc(
-          sizeof(float) * max_output_frames * num_channels))) {
-    RationalFactorResamplerFree(resampler);
+  if (!(resampler->filters =
+            (float*)malloc(sizeof(float) * factor_denominator * num_taps)) ||
+      !(resampler->delayed_input =
+            (float*)malloc(sizeof(float) * num_taps * num_channels)) ||
+      !(resampler->output =
+            (float*)malloc(sizeof(float) * max_output_frames * num_channels))) {
+    QResamplerFree(resampler);
     return NULL;
   }
 
@@ -167,21 +164,20 @@ RationalFactorResampler* RationalFactorResamplerMake(
   float* coeffs = resampler->filters;
   int phase;
   for (phase = 0; phase < factor_denominator; ++phase) {
-    const double offset = ((double) phase) / factor_denominator;
+    const double offset = ((double)phase) / factor_denominator;
     int k;
     for (k = -radius; k <= radius; ++k) {
       /* Store filter backwards so that convolution becomes a dot product. */
-      coeffs[radius - k] = (float) RationalFactorResamplerKernelEval(
-          &kernel, offset + k);
+      coeffs[radius - k] = (float)QResamplerKernelEval(&kernel, offset + k);
     }
     coeffs += num_taps;
   }
 
-  RationalFactorResamplerReset(resampler);
+  QResamplerReset(resampler);
   return resampler;
 }
 
-void RationalFactorResamplerFree(RationalFactorResampler* resampler) {
+void QResamplerFree(QResampler* resampler) {
   if (resampler) {
     free(resampler->output);
     free(resampler->delayed_input);
@@ -190,7 +186,7 @@ void RationalFactorResamplerFree(RationalFactorResampler* resampler) {
   }
 }
 
-void RationalFactorResamplerReset(RationalFactorResampler* resampler) {
+void QResamplerReset(QResampler* resampler) {
   assert(resampler != NULL);
   int i;
   for (i = 0; i < resampler->radius * resampler->num_channels; ++i) {
@@ -201,9 +197,9 @@ void RationalFactorResamplerReset(RationalFactorResampler* resampler) {
   resampler->delayed_input_frames = resampler->radius;
 }
 
-void RationalFactorResamplerGetRationalFactor(
-    const RationalFactorResampler* resampler,
-    int* factor_numerator, int* factor_denominator) {
+void QResamplerGetRationalFactor(const QResampler* resampler,
+                                 int* factor_numerator,
+                                 int* factor_denominator) {
   assert(resampler != NULL);
   assert(factor_numerator != NULL);
   assert(factor_denominator != NULL);
@@ -211,27 +207,23 @@ void RationalFactorResamplerGetRationalFactor(
   *factor_denominator = resampler->factor_denominator;
 }
 
-float* RationalFactorResamplerOutput(const RationalFactorResampler* resampler) {
+float* QResamplerOutput(const QResampler* resampler) {
   return resampler->output;
 }
 
-int RationalFactorResamplerNumChannels(
-    const RationalFactorResampler* resampler) {
+int QResamplerNumChannels(const QResampler* resampler) {
   return resampler->num_channels;
 }
 
-int RationalFactorResamplerMaxInputFrames(
-    const RationalFactorResampler* resampler) {
+int QResamplerMaxInputFrames(const QResampler* resampler) {
   return resampler->max_input_frames;
 }
 
-int RationalFactorResamplerMaxOutputFrames(
-    const RationalFactorResampler* resampler) {
+int QResamplerMaxOutputFrames(const QResampler* resampler) {
   return resampler->max_output_frames;
 }
 
-int RationalFactorResamplerFlushFrames(
-    const RationalFactorResampler* resampler) {
+int QResamplerFlushFrames(const QResampler* resampler) {
   assert(resampler != NULL);
   /* ProcessSamples() continues until there are less than num_taps input frames.
    * By appending (num_taps - 1) zeros to the input, we guarantee that after the
@@ -246,23 +238,24 @@ int RationalFactorResamplerFlushFrames(
   return resampler->num_taps - 1;
 }
 
-int RationalFactorResamplerNextNumOutputFrames(
-    const RationalFactorResampler* resampler, int num_input_frames) {
+int QResamplerNextNumOutputFrames(const QResampler* resampler,
+                                  int num_input_frames) {
   assert(resampler != NULL);
   assert(num_input_frames >= 0);
   const int min_consumed_input = 1 + num_input_frames +
                                  resampler->delayed_input_frames -
                                  resampler->num_taps;
-  if (min_consumed_input <= 0) { return 0; }
+  if (min_consumed_input <= 0) {
+    return 0;
+  }
 
-  return (int) ((((int64_t) min_consumed_input) * resampler->factor_denominator
-                 - resampler->phase + resampler->factor_numerator - 1)
-                / resampler->factor_numerator);
+  return (int)((((int64_t)min_consumed_input) * resampler->factor_denominator -
+                resampler->phase + resampler->factor_numerator - 1) /
+               resampler->factor_numerator);
 }
 
-int RationalFactorResamplerProcessSamples(RationalFactorResampler* resampler,
-                                          const float* input,
-                                          int num_input_frames) {
+int QResamplerProcessSamples(QResampler* resampler, const float* input,
+                             int num_input_frames) {
   assert(resampler != NULL);
   assert(input != NULL);
   assert(num_input_frames >= 0);
@@ -281,7 +274,7 @@ int RationalFactorResamplerProcessSamples(RationalFactorResampler* resampler,
     /* Reset the resampler so that state before the drop does not influence
      * output produced after the drop.
      */
-    RationalFactorResamplerReset(resampler);
+    QResamplerReset(resampler);
     input += excess_input * num_channels;
     num_input_frames -= excess_input;
   }
@@ -298,7 +291,7 @@ int RationalFactorResamplerProcessSamples(RationalFactorResampler* resampler,
 
   float* output = resampler->output;
   const int num_output_frames =
-      RationalFactorResamplerNextNumOutputFrames(resampler, num_input_frames);
+      QResamplerNextNumOutputFrames(resampler, num_input_frames);
 
   const float* filters = resampler->filters;
   const int factor_denominator = resampler->factor_denominator;
@@ -435,7 +428,7 @@ int RationalFactorResamplerProcessSamples(RationalFactorResampler* resampler,
   assert(i <= num_input_frames);
   resampler->delayed_input_frames = num_input_frames - i;
   memcpy(delayed_input, input + i * num_channels,
-      sizeof(float) * resampler->delayed_input_frames * num_channels);
+         sizeof(float) * resampler->delayed_input_frames * num_channels);
   resampler->phase = phase;
   return num_output_frames;
 }

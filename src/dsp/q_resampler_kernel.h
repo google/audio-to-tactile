@@ -1,4 +1,4 @@
-/* Copyright 2020 Google LLC
+/* Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
  * limitations under the License.
  *
  *
- * Resampling kernel for RationalFactorResampler, a Kaiser-windowed sinc.
+ * Resampling kernel for QResampler, a Kaiser-windowed sinc.
  *
  * For a cutoff frequency of B, the ideal brick-wall lowpass filter is the sinc
  *
@@ -67,19 +67,18 @@ typedef struct {
   double normalization;
   /* Kaiser window beta parameter. */
   double kaiser_beta;
-} RationalFactorResamplerKernel;
+} QResamplerKernel;
 
 /* Initialize resampler kernel. Returns 1 on success, 0 on failure. */
-int RationalFactorResamplerKernelInit(RationalFactorResamplerKernel* kernel,
-                                      float input_sample_rate_hz,
-                                      float output_sample_rate_hz,
-                                      float filter_radius_factor,
-                                      float cutoff_proportion,
-                                      float kaiser_beta);
+int QResamplerKernelInit(QResamplerKernel* kernel,
+                         float input_sample_rate_hz,
+                         float output_sample_rate_hz,
+                         float filter_radius_factor,
+                         float cutoff_proportion,
+                         float kaiser_beta);
 
 /* Evaluate the kernel at x, where x is in units of input samples. */
-double RationalFactorResamplerKernelEval(
-    const RationalFactorResamplerKernel* kernel, double x);
+double QResamplerKernelEval(const QResamplerKernel* kernel, double x);
 
 #ifdef __cplusplus
 }  /* extern "C" */

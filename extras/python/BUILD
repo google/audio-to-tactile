@@ -1,4 +1,4 @@
-# Copyright 2020 Google LLC
+# Copyright 2020-2021 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -29,7 +29,8 @@ py_library(
     srcs = ["dsp.py"],
     srcs_version = "PY3",
     deps = [
-        ":rational_factor_resampler_python_bindings",
+        ":fast_fun_python_bindings",
+        ":q_resampler_python_bindings",
         ":wav_io_python_bindings",
     ],
 )
@@ -45,8 +46,17 @@ py_test(
 )
 
 py_extension(
-    name = "rational_factor_resampler_python_bindings",
-    srcs = ["rational_factor_resampler_python_bindings.c"],
+    name = "fast_fun_python_bindings",
+    srcs = ["fast_fun_python_bindings.c"],
+    visibility = ["//visibility:private"],
+    deps = [
+        "//:dsp",
+    ],
+)
+
+py_extension(
+    name = "q_resampler_python_bindings",
+    srcs = ["q_resampler_python_bindings.c"],
     visibility = ["//visibility:private"],
     deps = [
         "//:dsp",

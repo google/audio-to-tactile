@@ -1,4 +1,4 @@
-# Copyright 2019 Google LLC
+# Copyright 2019-2021 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -104,14 +104,14 @@ c_test(
 )
 
 c_test(
-    name = "rational_factor_resampler_test",
-    srcs = ["rational_factor_resampler_test.c"],
+    name = "q_resampler_test",
+    srcs = ["q_resampler_test.c"],
     deps = ["//:dsp"],
 )
 
 c_test(
-    name = "rational_factor_resampler_kernel_test",
-    srcs = ["rational_factor_resampler_kernel_test.c"],
+    name = "q_resampler_kernel_test",
+    srcs = ["q_resampler_kernel_test.c"],
     deps = ["//:dsp"],
 )
 

@@ -1,4 +1,4 @@
-# Copyright 2020 Google LLC
+# Copyright 2020-2021 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -11,7 +11,6 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations under
 # the License.
-
 """Python bindings for dsp."""
 
 import fractions
@@ -20,12 +19,85 @@ from typing import Any, IO, Iterable, Optional, Tuple, Union
 
 import numpy as np
 
-from extras.python import rational_factor_resampler_python_bindings
+from extras.python import fast_fun_python_bindings
+from extras.python import q_resampler_python_bindings
 from extras.python import wav_io_python_bindings
 
 
+def fast_log2(x):
+  """Fast log base 2. Wraps `FastLog2()` in the C library.
+
+  An approximation of log2() is accurate to about 0.003 max abs error.
+
+  Limitations:
+   - x is assumed to be positive and finite.
+   - If x is a denormal, i.e. a small value less than about 1e-38, the result
+     is less accurate.
+
+  Args:
+    x: Scalar or numpy array of np.float32 dtype.
+  Returns:
+    np.float32 or numpy array of the same shape.
+  """
+  return fast_fun_python_bindings.fast_log2_impl(x)
+
+
+def fast_exp2(x):
+  """Fast 2^x. Wraps `FastExp2()` in the C library.
+
+  An approximation of exp2() accurate to about 0.3% relative error.
+
+  Limitations:
+    - Assumes |x| <= 126. (Otherwise, result may be nonsensical.)
+
+  Args:
+    x: Scalar or numpy array of np.float32 dtype.
+  Returns:
+    np.float32 or numpy array of the same shape.
+  """
+  return fast_fun_python_bindings.fast_exp2_impl(x)
+
+
+def fast_pow(x, y):
+  """Fast power x^y for x > 0. Reproduces `FastPow()` in the C library.
+
+  An approximation of x^y with about 0.5% relative error.
+
+  Limitations:
+   - Assumes x is positive and finite.
+   - Assumes 1e-37 <= |x^y| <= 1e37, i.e. that the exact result would be
+     neither very large nor very close to zero.
+
+  Otherwise, result may be nonsensical.
+
+  Args:
+    x: Scalar or numpy array of np.float32 dtype.
+    y: Scalar or numpy array of np.float32 dtype.
+  Returns:
+    np.float32 or numpy array of the same shape.
+  """
+  # Reproduce the computation used in the C library:
+  #   float FastPow(float x, float y) { return FastExp2(FastLog2(x) * y); }
+  return fast_fun_python_bindings.fast_exp2_impl(
+      fast_fun_python_bindings.fast_log2_impl(x) * np.asarray(y, np.float32))
+
+
+def fast_tanh(x):
+  """Fast tanh(x). Wraps `FastTanh()` in the C library.
+
+  An approximation of tanh() accurate to about 0.0008 max abs error.
+  The result is valid for non-NaN x, even for large x.
+
+  Args:
+    x: Scalar or numpy array of np.float32 dtype.
+  Returns:
+    np.float32 or numpy array of the same shape.
+  """
+  return fast_fun_python_bindings.fast_tanh_impl(x)
+
+
 class Resampler:
-  """Python bindings for RationalFactorResampler."""
+  """Python bindings for QResampler."""
 
   def __init__(self,
                input_sample_rate_hz: float,
@@ -38,14 +110,14 @@ class Resampler:
                cutoff_proportion: float = 0.9,
                kaiser_beta: float = 5.658,
                max_input_size: int = 1024):
-    """Constructor, wraps `RationalFactorResamplerMake()` in the C library.
+    """Constructor, wraps `QResamplerMake()` in the C library.
 
     Args:
       input_sample_rate_hz: Float, input audio sample rate in Hz.
       output_sample_rate_hz: Float, output audio sample rate in Hz.
       num_channels: Integer, number of channels.
-      max_denominator: Integer, determines the max allowed denominator, which
-        is also the max number of filters.
+      max_denominator: Integer, determines the max allowed denominator, which is
+        also the max number of filters.
       rational_approximation_max_terms: Integer, in approximating the resampling
         factor with a rational, the max number of continued fraction terms used.
       rational_approximation_convergence_tolerance: Float. Truncate continued
@@ -53,20 +125,21 @@ class Resampler:
       filter_radius_factor: Float, scales the nonzero support radius of the
         resampling kernel. Larger radius improves filtering quality but
         increases computation and memory cost.
-      cutoff_proportion: Float, antialiasing cutoff frequency as a proportion
-        of min(input_sample_rate_hz, output_sample_rate_hz) / 2. The default
-        is 0.9, meaning the cutoff is at 90% of the input Nyquist frequency or
-        the output Nyquist frequency, whichever is smaller.
+      cutoff_proportion: Float, antialiasing cutoff frequency as a proportion of
+        min(input_sample_rate_hz, output_sample_rate_hz) / 2. The default is
+        0.9, meaning the cutoff is at 90% of the input Nyquist frequency or the
+        output Nyquist frequency, whichever is smaller.
       kaiser_beta: Float, the positive beta parameter for the Kaiser window
         shape, where larger value yields a wider transition band and stronger
         attenuation. The default 5.658 gives a stopband of -60 dB.
       max_input_size: Integer, max input size for internal buffering. Input
         exceeding this size is passed over multiple calls to the C library.
+
     Raises:
       ValueError: if parameters are invalid. (In this case, the C library may
         write additional details to stderr.)
     """
-    self._impl = rational_factor_resampler_python_bindings.ResamplerImpl(
+    self._impl = q_resampler_python_bindings.ResamplerImpl(
         input_sample_rate_hz,
         output_sample_rate_hz,
         num_channels=num_channels,
@@ -89,6 +162,7 @@ class Resampler:
     Args:
       samples: 2D numpy array with np.float32 dtype of input samples with
         num_channels columns. The array may be 1D if num_channels = 1.
+
     Returns:
       2D numpy array of resampled output. Or if num_channels = 1 and `samples`
       is 1D, then the output is 1D.
@@ -112,7 +186,7 @@ class Resampler:
 
 
 class ResamplerKernel:
-  """Python bindings for RationalFactorResamplerKernel, Kaiser-windowed sinc."""
+  """Python bindings for QResamplerKernel, Kaiser-windowed sinc."""
 
   def __init__(self,
                input_sample_rate_hz: float,
@@ -120,7 +194,7 @@ class ResamplerKernel:
                filter_radius_factor: float = 5.0,
                cutoff_proportion: float = 0.9,
                kaiser_beta: float = 5.658):
-    """Constructor, wraps `RationalFactorResamplerKernelInit()`.
+    """Constructor, wraps `QResamplerKernelInit()`.
 
     See Resampler.__init__ for details.
 
@@ -131,7 +205,7 @@ class ResamplerKernel:
       cutoff_proportion: Float, antialiasing cutoff frequency.
       kaiser_beta: Float, Kaiser window beta parameter.
     """
-    self._impl = rational_factor_resampler_python_bindings.KernelImpl(
+    self._impl = q_resampler_python_bindings.KernelImpl(
         input_sample_rate_hz,
         output_sample_rate_hz,
         filter_radius_factor=filter_radius_factor,
@@ -143,6 +217,7 @@ class ResamplerKernel:
 
     Args:
       x: Scalar or numpy array.
+
     Returns:
       Numpy array of the same shape, kernel evaluated at x.
     """
@@ -193,6 +268,7 @@ def read_wav_file(filename: Union[str, IO[bytes]],
   Args:
     filename: String or open file-like object.
     dtype: Numpy dtype, or None to return samples without conversion.
+
   Returns:
     (samples, sample_rate_hz) 2-tuple.
   """
@@ -203,15 +279,14 @@ def read_wav_file(filename: Union[str, IO[bytes]],
     return wav_io_python_bindings.read_wav_impl(filename, dtype)
 
 
-def write_wav_file(filename: Union[str, IO[bytes]],
-                   samples: Iterable[Any],
+def write_wav_file(filename: Union[str, IO[bytes]], samples: Iterable[Any],
                    sample_rate_hz: int) -> None:
   """Writes a 16-bit WAV audio file.
 
   Args:
     filename: String or open writeable file-like object.
-    samples: 2D array of shape [num_frames, num_channels] and np.int16 dtype.
-      If samples is 1D, it is interpreted as a single channel.
+    samples: 2D array of shape [num_frames, num_channels] and np.int16 dtype. If
+      samples is 1D, it is interpreted as a single channel.
     sample_rate_hz: Integer, sample rate in Hz.
   """
   sample_rate_hz = int(sample_rate_hz)
@@ -231,6 +306,7 @@ def read_wav_from_bytes(
   Args:
     wav_bytes: Bytes object.
     dtype: Numpy dtype, or None to return samples without conversion.
+
   Returns:
     (samples, sample_rate_hz) 2-tuple.
   """
@@ -241,9 +317,10 @@ def write_wav_to_bytes(samples: Iterable[Any], sample_rate_hz: int) -> bytes:
   """Writes a 16-bit WAV to bytes.
 
   Args:
-    samples: 2D array of shape [num_frames, num_channels] and np.int16 dtype.
-      If samples is 1D, it is interpreted as a single channel.
+    samples: 2D array of shape [num_frames, num_channels] and np.int16 dtype. If
+      samples is 1D, it is interpreted as a single channel.
     sample_rate_hz: Integer, sample rate in Hz.
+
   Returns:
     Bytes object.
   """

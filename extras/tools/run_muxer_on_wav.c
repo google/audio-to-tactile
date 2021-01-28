@@ -1,4 +1,4 @@
-/* Copyright 2020 Google LLC
+/* Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@
 
 #include "extras/tools/util.h"
 #include "src/dsp/convert_sample.h"
-#include "src/dsp/rational_factor_resampler.h"
+#include "src/dsp/q_resampler.h"
 #include "src/dsp/read_wav_file.h"
 #include "src/dsp/write_wav_file.h"
 #include "src/mux/muxer.h"
@@ -42,8 +42,8 @@ int main(int argc, char** argv) {
   int output_sample_rate = kMuxMuxedRate;
   FILE* f_in = NULL;
   FILE* f_out = NULL;
-  RationalFactorResampler* resampler = NULL;
-  RationalFactorResampler* output_resampler = NULL;
+  QResampler* resampler = NULL;
+  QResampler* output_resampler = NULL;
   Muxer* muxer = NULL;
   int16_t* buffer_int16 = NULL;
   float* buffer_float = NULL;
@@ -98,14 +98,13 @@ int main(int argc, char** argv) {
   const int max_in_frames = 1024;
 
   /* Prepare to resample from the WAV file sample rate to kMuxTactileRate. */
-  resampler = RationalFactorResamplerMake(input_sample_rate_hz, kMuxTactileRate,
-                                          input_channels, max_in_frames, NULL);
+  resampler = QResamplerMake(input_sample_rate_hz, kMuxTactileRate,
+                             input_channels, max_in_frames, NULL);
   if (resampler == NULL) {
     fprintf(stderr, "Error constructing resampler.\n");
     goto done;
   }
-  const int max_resampled_frames =
-      RationalFactorResamplerMaxOutputFrames(resampler);
+  const int max_resampled_frames = QResamplerMaxOutputFrames(resampler);
 
   /* Construct muxer. */
   muxer = MuxerMake();
@@ -116,14 +115,13 @@ int main(int argc, char** argv) {
   const int max_muxed_samples = kMuxRateFactor * max_resampled_frames;
 
   /* Prepare to resample to output_sample_rate. */
-  output_resampler = RationalFactorResamplerMake(kMuxMuxedRate, output_sample_rate,
-                                          1, max_muxed_samples, NULL);
+  output_resampler = QResamplerMake(kMuxMuxedRate, output_sample_rate, 1,
+                                    max_muxed_samples, NULL);
   if (output_resampler == NULL) {
     fprintf(stderr, "Error constructing output resampler.\n");
     goto done;
   }
-  const int max_output_samples =
-      RationalFactorResamplerMaxOutputFrames(output_resampler);
+  const int max_output_samples = QResamplerMaxOutputFrames(output_resampler);
 
   /* Begin writing output WAV file. */
   f_out = fopen(output_wav, "wb");
@@ -153,11 +151,11 @@ int main(int argc, char** argv) {
   /* Compute how many frames are needed to flush the resamplers and muxer. */
   int factor_numerator;
   int factor_denominator;
-  RationalFactorResamplerGetRationalFactor(
-      resampler, &factor_numerator, &factor_denominator);
+  QResamplerGetRationalFactor(resampler, &factor_numerator,
+                              &factor_denominator);
   int num_flush_frames =
-      RationalFactorResamplerFlushFrames(resampler) +
-      ((64 + RationalFactorResamplerFlushFrames(output_resampler)) *
+      QResamplerFlushFrames(resampler) +
+      ((64 + QResamplerFlushFrames(output_resampler)) *
        factor_denominator + factor_numerator - 1) / factor_numerator;
 
   const size_t max_read = max_in_frames * input_channels;
@@ -184,13 +182,13 @@ int main(int argc, char** argv) {
     ConvertSampleArrayInt16ToFloat(buffer_int16, num_read, buffer_float);
 
     /* Resample to kMuxTactileRate. */
-    const int num_resampled_frames = RationalFactorResamplerProcessSamples(
+    const int num_resampled_frames = QResamplerProcessSamples(
         resampler, buffer_float, num_in_frames);
 
     /* Copy resampled output of `input_channels` channels to `resampled_signals`
      * with `kMuxChannels` channels, filling unused channels with zero.
      */
-    const float* src = RationalFactorResamplerOutput(resampler);
+    const float* src = QResamplerOutput(resampler);
     float* dest = resampled_signals;
     int i;
     for (i = 0; i < num_resampled_frames; ++i) {
@@ -208,12 +206,12 @@ int main(int argc, char** argv) {
         muxer, resampled_signals, num_resampled_frames, buffer_float);
 
     /* Resample to output_sample_rate. */
-    const int num_output_samples = RationalFactorResamplerProcessSamples(
+    const int num_output_samples = QResamplerProcessSamples(
         output_resampler, buffer_float, num_muxed_samples);
 
     /* Convert float -> int16. */
     ConvertSampleArrayFloatToInt16(
-        RationalFactorResamplerOutput(output_resampler), num_output_samples,
+        QResamplerOutput(output_resampler), num_output_samples,
         buffer_int16);
 
     /* Write to output WAV. */
@@ -242,8 +240,8 @@ done:
   free(resampled_signals);
   free(buffer_float);
   free(buffer_int16);
-  RationalFactorResamplerFree(output_resampler);
+  QResamplerFree(output_resampler);
   MuxerFree(muxer);
-  RationalFactorResamplerFree(resampler);
+  QResamplerFree(resampler);
   return status;
 }
