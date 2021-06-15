@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ enum {
 };
 
 /* Test that constants have the correct values. */
-void TestConstants() {
+static void TestConstants() {
   puts("TestConstants");
   CHECK(fabs(M_E - exp(1.0)) < 1e-16);
   CHECK(fabs(M_LN2 - log(2.0)) < 1e-16);

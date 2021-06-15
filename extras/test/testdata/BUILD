@@ -28,6 +28,13 @@ filegroup(
 )
 
 filegroup(
+    name = "tactile_pattern_wavs",
+    srcs = glob([
+        "tactile_pattern_*.wav",
+    ]),
+)
+
+filegroup(
     name = "ivfs",
     srcs = glob([
         "*.ivf",

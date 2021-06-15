@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 
 #include "src/dsp/logging.h"
 
-void TestDenseLayers() {
+static void TestDenseLayers() {
   puts("TestDenseLayers");
   float* in = (float*) CHECK_NOTNULL(malloc(3 * sizeof(float)));
   float* out = (float*) CHECK_NOTNULL(malloc(2 * sizeof(float)));
@@ -64,7 +64,7 @@ static void FillRandomValues(float* x, int size) {
   }
 }
 
-void TestConv1DReluLayer(int in_channels, int out_channels) {
+static void TestConv1DReluLayer(int in_channels, int out_channels) {
   printf("TestConv1DReluLayer(%d, %d)\n", in_channels, out_channels);
   const int kInFrames = 5;
   const int kKernelSize = 3;
@@ -116,7 +116,7 @@ void TestConv1DReluLayer(int in_channels, int out_channels) {
   free(in);
 }
 
-void TestMaxPool1DLayer() {
+static void TestMaxPool1DLayer() {
   puts("TestMaxPool1DLayer");
   /* Input with 7 frames and 2 channels. */
   static const float in[7 * 2] = {-2.1f, 3.9f,
@@ -141,7 +141,7 @@ void TestMaxPool1DLayer() {
   free(out);
 }
 
-void TestSoftmax() {
+static void TestSoftmax() {
   puts("TestSoftmax");
   float x[4] = {-0.2f, -1200.0f, 0.0f, 0.1f};
 

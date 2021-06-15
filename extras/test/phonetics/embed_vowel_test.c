@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@
 #define kBlockSize 64
 
 /* Tests that target lookup functions work. */
-void TestTargetLookup() {
+static void TestTargetLookup() {
   puts("TestTargetLookup");
   int i;
   for (i = 0; i < kEmbedVowelNumTargets; ++i) {
@@ -43,7 +43,7 @@ void TestTargetLookup() {
 /* Runs CarlFrontend + EmbedVowel on a short WAV recording of a pure phone, and
  * checks that the output coordinate is usually near the correct target.
  */
-void TestPhone(const char* phone) {
+static void TestPhone(const char* phone) {
   printf("TestPhone(\"%s\")\n", phone);
   char wav_file[1024];
   sprintf(wav_file,

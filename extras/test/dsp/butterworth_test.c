@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,7 +92,7 @@ static void ExpandPolynomialForm(const BiquadFilterCoeffs* coeffs,
 /* Design lowpass filters with randomly chosen parameters and check the
  * frequency response.
  */
-void TestLowpassResponse() {
+static void TestLowpassResponse() {
   puts("TestLowpassResponse");
   BiquadFilterCoeffs coeffs;
   int trial;
@@ -133,7 +133,7 @@ void TestLowpassResponse() {
 }
 
 /* Compare with lowpass filters designed by scipy.signal.butter. */
-void TestLowpassCompareWithScipy() {
+static void TestLowpassCompareWithScipy() {
   puts("TestLowpassCompareWithScipy");
   BiquadFilterCoeffs coeffs;
   CHECK(DesignButterworthOrder2Lowpass(2800.0, 8000.0, &coeffs));
@@ -156,7 +156,7 @@ void TestLowpassCompareWithScipy() {
 }
 
 /* Check that invalid arguments are rejected. */
-void TestLowpassInvalidArgs() {
+static void TestLowpassInvalidArgs() {
   puts("TestLowpassInvalidArgs");
   BiquadFilterCoeffs coeffs;
   CHECK(!DesignButterworthOrder2Lowpass(0.0, 1000.0, &coeffs));
@@ -167,7 +167,7 @@ void TestLowpassInvalidArgs() {
 /* Design highpass filters with randomly choosen parameters and check the
  * frequency response.
  */
-void TestHighpassResponse() {
+static void TestHighpassResponse() {
   puts("TestHighpassResponse");
   BiquadFilterCoeffs coeffs;
   int trial;
@@ -208,7 +208,7 @@ void TestHighpassResponse() {
 }
 
 /* Compare with highpass filters designed by scipy.signal.butter. */
-void TestHighpassCompareWithScipy() {
+static void TestHighpassCompareWithScipy() {
   puts("TestHighpassCompareWithScipy");
   BiquadFilterCoeffs coeffs;
   CHECK(DesignButterworthOrder2Highpass(2800.0, 8000.0, &coeffs));
@@ -231,7 +231,7 @@ void TestHighpassCompareWithScipy() {
 }
 
 /* Check that invalid arguments are rejected. */
-void TestHighpassInvalidArgs() {
+static void TestHighpassInvalidArgs() {
   puts("TestHighpassInvalidArgs");
   BiquadFilterCoeffs coeffs;
   CHECK(!DesignButterworthOrder2Highpass(0.0, 1000.0, &coeffs));
@@ -242,7 +242,7 @@ void TestHighpassInvalidArgs() {
 /* Design bandpass filters with randomly choosen parameters and check the
  * frequency response.
  */
-void TestBandpassResponse() {
+static void TestBandpassResponse() {
   puts("TestBandpassResponse");
   BiquadFilterCoeffs coeffs[2];
   int trial;
@@ -301,7 +301,7 @@ void TestBandpassResponse() {
 }
 
 /* Compare with bandpass filters designed by scipy.signal.butter. */
-void TestBandpassCompareWithScipy() {
+static void TestBandpassCompareWithScipy() {
   puts("TestBandpassCompareWithScipy");
   BiquadFilterCoeffs coeffs[2];
   float b[5];
@@ -341,7 +341,7 @@ void TestBandpassCompareWithScipy() {
 }
 
 /* Check that invalid arguments are rejected. */
-void TestBandpassInvalidArgs() {
+static void TestBandpassInvalidArgs() {
   puts("TestBandpassInvalidArgs");
   BiquadFilterCoeffs coeffs[2];
   CHECK(!DesignButterworthOrder2Bandpass(-1.0, 100.0, 1000.0, coeffs));

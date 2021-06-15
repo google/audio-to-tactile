@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,12 +43,15 @@
 const EnergyEnvelopeParams kEnergyEnvelopeBasebandParams = {
   /*bpf_low_edge_hz=*/80.0f,
   /*bpf_high_edge_hz=*/500.0f,
-  /*energy_smoother_cutoff_hz=*/500.0f,
-  /*pcen_time_constant_s=*/0.3f,
-  /*pcen_alpha=*/0.5f,
-  /*pcen_beta=*/0.25f,
-  /*pcen_gamma=*/1e-8f,
-  /*pcen_delta=*/5e-3f,
+  /*energy_cutoff_hz=*/500.0f,
+  /*energy_tau_s=*/0.01f,
+  /*noise_tau_s=*/0.4f,
+  /*agc_strength=*/0.7f,
+  /*denoise_thresh_factor=*/12.0f,
+  /*gain_tau_attack_s=*/0.002f,
+  /*gain_tau_release_s=*/0.15f,
+  /*compressor_exponent=*/0.25f,
+  /*compressor_delta=*/0.01f,
   /*output_gain=*/1.0f,
 };
 
@@ -56,12 +59,15 @@ const EnergyEnvelopeParams kEnergyEnvelopeBasebandParams = {
 const EnergyEnvelopeParams kEnergyEnvelopeVowelParams = {
   /*bpf_low_edge_hz=*/500.0f,
   /*bpf_high_edge_hz=*/3500.0f,
-  /*energy_smoother_cutoff_hz=*/500.0f,
-  /*pcen_time_constant_s=*/0.3f,
-  /*pcen_alpha=*/0.5f,
-  /*pcen_beta=*/0.25f,
-  /*pcen_gamma=*/1e-8f,
-  /*pcen_delta=*/1.5e-4f,
+  /*energy_cutoff_hz=*/500.0f,
+  /*energy_tau_s=*/0.01f,
+  /*noise_tau_s=*/0.4f,
+  /*agc_strength=*/0.7f,
+  /*denoise_thresh_factor=*/8.0f,
+  /*gain_tau_attack_s=*/0.002f,
+  /*gain_tau_release_s=*/0.15f,
+  /*compressor_exponent=*/0.25f,
+  /*compressor_delta=*/0.01f,
   /*output_gain=*/1.0f,
 };
 
@@ -75,12 +81,15 @@ const EnergyEnvelopeParams kEnergyEnvelopeVowelParams = {
 const EnergyEnvelopeParams kEnergyEnvelopeShFricativeParams = {
   /*bpf_low_edge_hz=*/2500.0f,
   /*bpf_high_edge_hz=*/3500.0f,
-  /*energy_smoother_cutoff_hz=*/500.0f,
-  /*pcen_time_constant_s=*/0.3f,
-  /*pcen_alpha=*/0.5f,
-  /*pcen_beta=*/0.5f,
-  /*pcen_gamma=*/1e-8f,
-  /*pcen_delta=*/1.5e-4f,
+  /*energy_cutoff_hz=*/500.0f,
+  /*energy_tau_s=*/0.01f,
+  /*noise_tau_s=*/0.4f,
+  /*agc_strength=*/0.7f,
+  /*denoise_thresh_factor=*/8.0f,
+  /*gain_tau_attack_s=*/0.002f,
+  /*gain_tau_release_s=*/0.15f,
+  /*compressor_exponent=*/0.25f,
+  /*compressor_delta=*/0.01f,
   /*output_gain=*/1.0f,
 };
 
@@ -91,12 +100,15 @@ const EnergyEnvelopeParams kEnergyEnvelopeShFricativeParams = {
 const EnergyEnvelopeParams kEnergyEnvelopeFricativeParams = {
   /*bpf_low_edge_hz=*/4000.0f,
   /*bpf_high_edge_hz=*/6000.0f,
-  /*energy_smoother_cutoff_hz=*/500.0f,
-  /*pcen_time_constant_s=*/0.3f,
-  /*pcen_alpha=*/0.5f,
-  /*pcen_beta=*/0.5f,
-  /*pcen_gamma=*/1e-8f,
-  /*pcen_delta=*/1.5e-4f,
+  /*energy_cutoff_hz=*/500.0f,
+  /*energy_tau_s=*/0.01f,
+  /*noise_tau_s=*/0.4f,
+  /*agc_strength=*/0.7f,
+  /*denoise_thresh_factor=*/8.0f,
+  /*gain_tau_attack_s=*/0.002f,
+  /*gain_tau_release_s=*/0.15f,
+  /*compressor_exponent=*/0.25f,
+  /*compressor_delta=*/0.01f,
   /*output_gain=*/1.0f,
 };
 
@@ -108,37 +120,49 @@ int EnergyEnvelopeInit(EnergyEnvelope* state,
     fprintf(stderr, "EnergyEnvelopeInit: Null argument.\n");
     return 0;
   } else if (!(input_sample_rate_hz > 0.0f) ||
-          !(params->pcen_time_constant_s > 0.0f) ||
-          !(0.0f <= params->pcen_alpha && params->pcen_alpha <= 1.0f) ||
-          !(params->pcen_beta > 0.0f) ||
-          !(params->pcen_gamma > 0.0f) ||
-          !(params->pcen_delta > 0.0f) ||
-          !(params->output_gain >= 0.0f) ||
-          !(decimation_factor > 0)) {
+             !(params->energy_tau_s >= 0.0f) ||
+             !(params->noise_tau_s >= 0.0f) ||
+             !(0.0f <= params->agc_strength && params->agc_strength <= 1.0f) ||
+             !(params->denoise_thresh_factor >= 0.0f) ||
+             !(params->gain_tau_attack_s >= 0.0f) ||
+             !(params->gain_tau_release_s >= 0.0f) ||
+             !(params->compressor_exponent > 0.0f) ||
+             !(params->compressor_delta > 0.0f) ||
+             !(params->output_gain >= 0.0f) ||
+             !(decimation_factor > 0)) {
     fprintf(stderr, "EnergyEnvelopeInit: Invalid EnergyEnvelopeParams.\n");
     return 0;
   } else if (!DesignButterworthOrder2Bandpass(
-      params->bpf_low_edge_hz, params->bpf_high_edge_hz,
-      input_sample_rate_hz, state->bpf_biquad_coeffs)) {
+                 params->bpf_low_edge_hz, params->bpf_high_edge_hz,
+                 input_sample_rate_hz, state->bpf_biquad_coeffs)) {
     fprintf(stderr, "EnergyEnvelopeInit: Failed to design bandpass filter.\n");
     return 0;
-  } else if (!DesignButterworthOrder2Lowpass(
-      params->energy_smoother_cutoff_hz,
-      input_sample_rate_hz, &state->energy_biquad_coeffs)) {
+  } else if (!DesignButterworthOrder2Lowpass(params->energy_cutoff_hz,
+                                             input_sample_rate_hz,
+                                             &state->energy_biquad_coeffs)) {
     fprintf(stderr, "EnergyEnvelopeInit: Failed to design energy smoother.\n");
     return 0;
   }
 
+  state->input_sample_rate_hz = input_sample_rate_hz;
   state->decimation_factor = decimation_factor;
-  state->pcen_smoother_coeff = (float)(1.0 - exp(-decimation_factor
-      / (params->pcen_time_constant_s * input_sample_rate_hz)));
-  state->pcen_alpha = params->pcen_alpha;
-  state->pcen_beta = params->pcen_beta;
-  state->pcen_gamma = params->pcen_gamma;
-  state->pcen_delta = params->pcen_delta;
-  state->pcen_offset = FastPow(params->pcen_delta, params->pcen_beta);
+
+  state->energy_smoother_coeff =
+      EnergyEnvelopeSmootherCoeff(state, params->energy_tau_s);
+  state->noise_smoother_coeff =
+      EnergyEnvelopeSmootherCoeff(state, params->noise_tau_s);
+  state->gain_smoother_coeffs[0] =
+      EnergyEnvelopeSmootherCoeff(state, params->gain_tau_attack_s);
+  state->gain_smoother_coeffs[1] =
+      EnergyEnvelopeSmootherCoeff(state, params->gain_tau_release_s);
+  state->agc_exponent = -params->agc_strength;
+  state->denoise_thresh_factor = params->denoise_thresh_factor;
+
+  state->compressor_exponent = params->compressor_exponent;
+  state->compressor_delta = params->compressor_delta;
   state->output_gain = params->output_gain;
 
+  EnergyEnvelopeUpdatePrecomputedParams(state);
   EnergyEnvelopeReset(state);
   return 1;
 }
@@ -147,7 +171,47 @@ void EnergyEnvelopeReset(EnergyEnvelope* state) {
   BiquadFilterInitZero(&state->bpf_biquad_state[0]);
   BiquadFilterInitZero(&state->bpf_biquad_state[1]);
   BiquadFilterInitZero(&state->energy_biquad_state);
-  state->pcen_denom = 10 * state->pcen_gamma;
+  state->smoothed_energy = 1e-6f;
+  state->log2_noise = -19.932f; /* = log2(1e-6). */
+  state->smoothed_gain = 0.0f;
+}
+
+void EnergyEnvelopeUpdatePrecomputedParams(EnergyEnvelope* state) {
+  /* Precompute `delta^exponent`. */
+  state->compressor_offset =
+      FastPow(state->compressor_delta, state->compressor_exponent);
+  /* Precompute `(1/output_gain + delta^exponent)^(1/exponent) - delta`. */
+  state->agc_max_output =
+      FastPow(1.0f / state->output_gain + state->compressor_offset,
+              1.0f / state->compressor_exponent) -
+      state->compressor_delta;
+}
+
+/* Computes the AGC gain with noise gating, in which `x` is the smoothed energy:
+ *
+ *   gain = 0                  if x <= thresh,
+ *   gain ~= x^agc_exponent    if x >> thresh,
+ *
+ * with a smooth transition from zero to x^agc_exponent for x near thresh.
+ */
+static float ComputeGain(float x, float agc_exponent, float thresh) {
+  const float y = x - thresh;
+  if (y <= 1e-8f) {
+    return 0.0f; /* Gain of zero if x <= thresh. */
+  }
+  /* We create a smooth transition with this function (for some constant c > 0):
+   *
+   *   y^2 / (y^2 + c),
+   *
+   * which is zero at y = 0 and asymptotically one as y -> infinity. We set c
+   * to 3 * thresh^2 so that the inflection is at x = 2 thresh or y = thresh. So
+   * the gain is
+   *
+   *   gain = x^agc_exponent * (y^2 / (y^2 + c))
+   *        = x^agc_exponent / (1 + 3 * (thresh / y)^2).
+   */
+  const float ratio = thresh / y;
+  return FastPow(1e-12f + x, agc_exponent) / (1.0f + 3.0f * ratio * ratio);
 }
 
 void EnergyEnvelopeProcessSamples(EnergyEnvelope* state,
@@ -156,12 +220,16 @@ void EnergyEnvelopeProcessSamples(EnergyEnvelope* state,
                                   float* output,
                                   int output_stride) {
   const int decimation_factor = state->decimation_factor;
-  const float pcen_smoother_coeff = state->pcen_smoother_coeff;
+  float smoothed_energy = state->smoothed_energy;
+  float log2_noise = state->log2_noise;
+  float smoothed_gain = state->smoothed_gain;
   float energy = 0.0f;
   int i;
+
   for (i = decimation_factor - 1; i < num_samples; i += decimation_factor) {
     int j;
     for (j = 0; j < decimation_factor; ++j) {
+      /* Bandpass energy computation. *****************************************/
       /* Apply bandpass filter. */
       float sample = BiquadFilterProcessOneSample(
           &state->bpf_biquad_coeffs[0], &state->bpf_biquad_state[0], input[j]);
@@ -171,23 +239,57 @@ void EnergyEnvelopeProcessSamples(EnergyEnvelope* state,
       /* Half-wave rectification and squaring. */
       energy = (sample > 0.0f) ? sample * sample : 0.0f;
 
-      /* Lowpass filter to smooth the energy envelope. */
+      /* Lowpass filter the energy envelope. */
       energy = BiquadFilterProcessOneSample(
           &state->energy_biquad_coeffs, &state->energy_biquad_state, energy);
     }
 
-    state->pcen_denom += pcen_smoother_coeff * (energy - state->pcen_denom);
+    /* Ensure energy > 0 to avoid problems with log-space filtering below. */
+    if (energy < 1e-8f) { energy = 1e-8f; }
 
-    /* Modified PCEN formula,
-     *   agc_out = energy / (gamma + smoothed_energy)^alpha,
-     *   out = (agc_out^2 + delta)^beta - delta^beta.
+    /* Automatic gain control with noise gating. ******************************/
+    /* Update noise envelope estimate. */
+    smoothed_energy +=
+        state->energy_smoother_coeff * (energy - smoothed_energy);
+    log2_noise +=
+        state->noise_smoother_coeff * (FastLog2(smoothed_energy) - log2_noise);
+
+    /* Set noise gate threshold as a multiple of the estimate noise envelope. */
+    const float noise_gate_threshold =
+        state->denoise_thresh_factor * FastExp2(log2_noise);
+    /* Compute (unsmoothed) AGC gain from smoothed energy and threshold. */
+    const float gain = ComputeGain(
+        smoothed_energy, state->agc_exponent, noise_gate_threshold);
+    /* Update smoothed AGC gain with asymmetric smoother. */
+    smoothed_gain += state->gain_smoother_coeffs[gain < smoothed_gain] *
+                     (gain - smoothed_gain);
+    float normalized_energy = smoothed_gain * energy;
+    /* If needed, reduce smoothed_gain so that final output <= 1, which implies
+     *
+     *   normalized_energy
+     *      <= (1/output_gain + delta^exponent)^(1/exponent) - delta
+     *      =  agc_max_output.
      */
-    const float agc_out = energy *
-        FastPow(state->pcen_gamma + state->pcen_denom, -state->pcen_alpha);
-    *output = (FastPow(agc_out * agc_out + state->pcen_delta,
-          state->pcen_beta) - state->pcen_offset) * state->output_gain;
+    if (normalized_energy > state->agc_max_output) {
+      smoothed_gain = state->agc_max_output / energy;
+      normalized_energy = state->agc_max_output;
+    }
+
+    /* Power law compression. *************************************************/
+    /* Compress with a power law and multiply by `output_gain` as
+     *
+     *   output_gain * ((normalized_energy + delta)^exponent - delta^exponent).
+     */
+    *output = state->output_gain *
+              (FastPow(normalized_energy + state->compressor_delta,
+                       state->compressor_exponent) -
+               state->compressor_offset);
 
     output += output_stride;
     input += decimation_factor;
   }
+
+  state->smoothed_energy = smoothed_energy;
+  state->log2_noise = log2_noise;
+  state->smoothed_gain = smoothed_gain;
 }

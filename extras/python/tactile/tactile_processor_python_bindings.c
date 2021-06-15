@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -123,10 +123,10 @@ static int TactileProcessorObjectInit(TactileProcessorObject* self,
           &cutoff_hz)) {
     return -1;  /* PyArg_ParseTupleAndKeywords failed. */
   }
-  params.baseband_channel_params.energy_smoother_cutoff_hz = cutoff_hz;
-  params.vowel_channel_params.energy_smoother_cutoff_hz = cutoff_hz;
-  params.sh_fricative_channel_params.energy_smoother_cutoff_hz = cutoff_hz;
-  params.fricative_channel_params.energy_smoother_cutoff_hz = cutoff_hz;
+  params.baseband_channel_params.energy_cutoff_hz = cutoff_hz;
+  params.vowel_channel_params.energy_cutoff_hz = cutoff_hz;
+  params.sh_fricative_channel_params.energy_cutoff_hz = cutoff_hz;
+  params.fricative_channel_params.energy_cutoff_hz = cutoff_hz;
 
   self->tactile_processor = TactileProcessorMake(&params);
   if (self->tactile_processor == NULL) {
@@ -310,7 +310,7 @@ static struct PyModuleDef kModule = {
     NULL,                /* m_free */
 };
 
-PyMODINIT_FUNC PyInit_tactile_processor() {
+PyMODINIT_FUNC PyInit_tactile_processor(void) {
   import_array();
   PyObject* m = PyModule_Create(&kModule);
   InitModule(m);

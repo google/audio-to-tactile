@@ -63,7 +63,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "src/dsp/math_constants.h"
+#include "dsp/math_constants.h"
 
 #ifdef __cplusplus
 extern "C" {

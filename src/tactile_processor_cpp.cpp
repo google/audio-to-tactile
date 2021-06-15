@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC
+// Copyright 2020-2021 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -64,19 +64,8 @@ float* TactileProcessorWrapper::ProcessSamples(float* audio_input) {
   return tactile_output_;
 }
 
-float TactileProcessorWrapper::SetOutputGain(int value) {
-  float value_db = TuningSetOutputGain(tactile_processor_, value);
-  return value_db;
-}
-
-float TactileProcessorWrapper::SetDenoising(int value) {
-  float value_delta = TuningSetDenoising(tactile_processor_, value);
-  return value_delta;
-}
-
-float TactileProcessorWrapper::SetCompression(int value) {
-  float value_beta = TuningSetCompression(tactile_processor_, value);
-  return value_beta;
+void TactileProcessorWrapper::ApplyTuning(const TuningKnobs& tuning_knobs) {
+  ::TactileProcessorApplyTuning(tactile_processor_, &tuning_knobs);
 }
 
 }  // namespace audio_tactile

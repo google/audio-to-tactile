@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ static double GammaFilterFrequencyMagnitudeResponse(
 }
 
 /* Tests CarlFrontend filter design. */
-void TestDesign() {
+static void TestDesign() {
   puts("TestDesign");
   CarlFrontendParams params = kCarlFrontendDefaultParams;
   CarlFrontend* frontend = CHECK_NOTNULL(CarlFrontendMake(&params));
@@ -115,7 +115,7 @@ static float FindMax(const float* values, int size, int* max_index) {
 }
 
 /* Tests response to sine wave inputs. */
-void TestResponse() {
+static void TestResponse() {
   puts("TestResponse");
   CarlFrontendParams params = kCarlFrontendDefaultParams;
   CarlFrontend* frontend = CHECK_NOTNULL(CarlFrontendMake(&params));
@@ -183,7 +183,7 @@ void TestResponse() {
 }
 
 /* Spot checks that invalid parameters are correctly rejected. */
-void TestInvalidParameters() {
+static void TestInvalidParameters() {
   puts("TestInvalidParameters");
   { /* Invalid pole range, highest pole above input Nyquist. */
     CarlFrontendParams params = kCarlFrontendDefaultParams;

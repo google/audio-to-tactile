@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,8 @@
 #include "src/dsp/logging.h"
 
 /* Test serialization / deserialization of uint16_t. */
-void TestU16() {
+static void TestU16() {
+  puts("TestU16");
   uint8_t buffer[sizeof(uint16_t)];
   LittleEndianWriteS16(0x0102, buffer);
   CHECK(buffer[0] == 0x02);
@@ -44,7 +45,8 @@ void TestU16() {
 }
 
 /* Test serialization / deserialization of uint32_t. */
-void TestU32() {
+static void TestU32() {
+  puts("TestU32");
   uint8_t buffer[sizeof(uint32_t)];
   LittleEndianWriteU32(UINT32_C(0x01020304), buffer);
   CHECK(buffer[0] == 0x04);
@@ -72,7 +74,8 @@ void TestU32() {
 }
 
 /* Test serialization / deserialization of uint64_t. */
-void TestU64() {
+static void TestU64() {
+  puts("TestU64");
   uint8_t buffer[sizeof(uint64_t)];
   LittleEndianWriteU64(UINT64_C(0x0102030405060708), buffer);
   CHECK(buffer[0] == 0x08);
@@ -108,7 +111,8 @@ void TestU64() {
 }
 
 /* Test serialization / deserialization of int16_t. */
-void TestS16() {
+static void TestS16() {
+  puts("TestS16");
   uint8_t buffer[sizeof(int16_t)];
   LittleEndianWriteS16(-2, buffer);  /* -2 in two's complement is 0xfffe. */
   CHECK(buffer[0] == 0xfe);
@@ -132,7 +136,8 @@ void TestS16() {
 }
 
 /* Test serialization / deserialization of int32_t. */
-void TestS32() {
+static void TestS32() {
+  puts("TestS32");
   uint8_t buffer[sizeof(int32_t)];
   LittleEndianWriteS32(-2, buffer);
   CHECK(buffer[0] == 0xfe);
@@ -160,7 +165,8 @@ void TestS32() {
 }
 
 /* Test serialization / deserialization of int64_t. */
-void TestS64() {
+static void TestS64() {
+  puts("TestS64");
   uint8_t buffer[sizeof(int64_t)];
   LittleEndianWriteS64(-2, buffer);
   CHECK(buffer[0] == 0xfe);
@@ -196,7 +202,8 @@ void TestS64() {
 }
 
 /* Test serialization / deserialization of 32-bit float. */
-void TestF32() {
+static void TestF32() {
+  puts("TestF32");
   uint8_t buffer[sizeof(float)];
   /* Check round trip of serializing and deserializing some test values. */
   static const float kTestValues[] = {0.0f, 3.71f, -3.71f, 2.5e-6f, 2.5e6f};
@@ -212,7 +219,8 @@ void TestF32() {
 }
 
 /* Test serialization / deserialization of 64-bit double. */
-void TestF64() {
+static void TestF64() {
+  puts("TestF64");
   uint8_t buffer[sizeof(double)];
   /* Check round trip of serializing and deserializing some test values. */
   static const double kTestValues[] = {0.0, 3.71, -3.71, 2.5e-6, 2.5e6};
@@ -227,6 +235,108 @@ void TestF64() {
   }
 }
 
+/* A "naive" implementation of Fletcher-8 with modulo by 15 on every step. */
+static uint8_t Fletcher8Naive(const uint8_t* data, size_t size) {
+  int sum1 = 1;
+  int sum2 = 0;
+  size_t i;
+  for (i = 0; i < size; ++i) {
+    sum1 = (sum1 + data[i]) % 15;
+    sum2 = (sum2 + sum1) % 15;
+  }
+  return (uint8_t)((sum2 << 4) | sum1);
+}
+
+/* Test Fletcher-8 checksum. */
+static void TestFletcher8() {
+  puts("TestFletcher8");
+  /* A short 3-byte input where we can compute the checksum by hand:
+   *
+   *   step   data    sum1   sum2
+   *   init              1      0
+   *      0     10      11     11
+   *      1     20      31     42
+   *      2     30      61    103
+   *
+   *   sum % 15 = 1, sum2 % 15 = 13
+   *   => checksum: 0xd1
+   */
+  const uint8_t kTestShort[] = {10, 20, 30};
+  CHECK(Fletcher8(kTestShort, sizeof(kTestShort), 1) == 0xd1);
+
+  const int size = 8192;
+  uint8_t* data = (uint8_t*)CHECK_NOTNULL(malloc(size));
+
+  /* Compare with naive implementation on 8 KB of random data. */
+  int trial;
+  for(trial = 0; trial < 3; ++trial) {
+    int i;
+    for (i = 0; i < size; ++i) {
+      data[i] = rand() % 256;
+    }
+    CHECK(Fletcher8(data, size, 1) == Fletcher8Naive(data, size));
+  }
+
+  /* Check that streaming computation across multiple calls agrees. */
+  const uint8_t nonstreaming = Fletcher8(data, size, 1);
+
+  uint8_t streaming = 1;
+  int start;
+  for (start = 0; start < size;) {
+    int block_size = rand() % 500;
+    if (size - start < block_size) { block_size = size - start; }
+    streaming = Fletcher8(data + start, block_size, streaming);
+    start += block_size;
+  }
+  CHECK(streaming == nonstreaming);
+
+  free(data);
+}
+
+/* A "naive" implementation of Fletcher-16 with modulo by 255 on every step. */
+static uint16_t Fletcher16Naive(const uint8_t* data, size_t size) {
+  int32_t sum1 = 1;
+  int32_t sum2 = 0;
+  size_t i;
+  for (i = 0; i < size; ++i) {
+    sum1 = (sum1 + data[i]) % 255;
+    sum2 = (sum2 + sum1) % 255;
+  }
+  return (uint16_t)((sum2 << 8) | sum1);
+}
+
+/* Test Fletcher-16 checksum. */
+static void TestFletcher16() {
+  puts("TestFletcher16");
+  const int size = 8192;
+  uint8_t* data = (uint8_t*)CHECK_NOTNULL(malloc(size));
+
+  /* Compare with naive implementation on 8 KB of random data. */
+  int trial;
+  for(trial = 0; trial < 3; ++trial) {
+    int i;
+    for (i = 0; i < size; ++i) {
+      data[i] = rand() % 256;
+    }
+    CHECK(Fletcher16(data, size, 1) == Fletcher16Naive(data, size));
+  }
+
+  /* Check that streaming computation across multiple calls agrees. */
+  const uint16_t nonstreaming = Fletcher16(data, size, 1);
+
+  uint16_t streaming = 1;
+  int start;
+  for (start = 0; start < size;) {
+    int block_size = rand() % 500;
+    if (size - start < block_size) { block_size = size - start; }
+    streaming = Fletcher16(data + start, block_size, streaming);
+    start += block_size;
+  }
+  CHECK(streaming == nonstreaming);
+
+  free(data);
+}
+
 int main(int argc, char** argv) {
   srand(0);
   TestU16();
@@ -237,6 +347,8 @@ int main(int argc, char** argv) {
   TestS64();
   TestF32();
   TestF64();
+  TestFletcher8();
+  TestFletcher16();
 
   puts("PASS");
   return EXIT_SUCCESS;

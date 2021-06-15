@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@
 
 #include "extras/references/taps/tactile_player.h"
 #include "extras/references/taps/tactophone_lesson.h"
-#include "extras/tools/channel_map.h"
+#include "extras/tools/channel_map_tui.h"
 #include "extras/tools/util.h"
 #include "ncurses.h"
 #include "portaudio.h"
@@ -163,9 +163,9 @@ void TactophonePlayWinBuzz(TactophoneEngine* engine);
 /* Draws a visualization of tactor activity with upper-left corner (y, x). */
 void TactophoneVisualizeTactors(TactophoneEngine* engine, int y, int x);
 /* Sets color for row 0 to make a title bar. */
-void TactophoneFormatTitle();
+void TactophoneFormatTitle(void);
 /* Moves cursor and refreshes ncurses. */
-void TactophoneRefresh();
+void TactophoneRefresh(void);
 
 #ifdef __cplusplus
 } /* extern "C" */

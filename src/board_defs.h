@@ -22,14 +22,21 @@
 // Define which board is programmed.
 #define SLEEVE_BOARD 1
 #define PUCK_BOARD 0
+#define SLIM_BOARD 0
 
-#if (SLEEVE_BOARD)
-#define kLedPin 12
+#if SLEEVE_BOARD
+#define kLedPinBlue 12
 #define kThermistorPin 3
 #endif
 
-#if (PUCK_BOARD)
-#define kLedPin 19
+#if PUCK_BOARD
+#define kLedPinBlue 19
+#endif
+
+#if SLIM_BOARD
+#define kLedPinBlue 45
+#define kLedPinGreen 36
+#define kThermistorPin 3
 #endif
 
 #endif  // AUDIO_TO_TACTILE_SRC_BOARD_DEFS_H_

@@ -1,4 +1,4 @@
-# Copyright 2020 Google LLC
+# Copyright 2020-2021 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -20,7 +20,6 @@ import unittest
 import numpy as np
 
 from extras.python.tactile import energy_envelope
-from extras.python.tactile import post_processor
 
 
 def taper(t: np.ndarray, t_min: float, t_max: float) -> np.ndarray:
@@ -54,8 +53,6 @@ class EnergyEnvelopeTest(unittest.TestCase):
         output_frames = int(0.3 * output_rate)
         num_samples = output_frames * decimation_factor
         num_channels = len(envelopes)
-        post = post_processor.PostProcessor(output_rate, num_channels,
-                                            mid_gain=1.0, high_gain=1.0)
 
         for c, test_frequency in enumerate((80.0, 1500.0, 5000.0)):
           radians_per_second = 2 * np.pi * test_frequency
@@ -66,23 +63,34 @@ class EnergyEnvelopeTest(unittest.TestCase):
 
           for envelope in envelopes:
             envelope.reset()
-          post.reset()
 
-          output = np.column_stack([envelope.process_samples(input_samples)
-                                    for envelope in envelopes])
-          output = post.process_samples(output)
+          output = np.stack([
+              envelope.process_samples(input_samples) for envelope in envelopes
+          ])
 
           # For t < 0.05, all output is close to zero.
           for i in range(num_channels):
-            energy_i = compute_energy(output[:, i], [0.0, 0.05], output_rate)
+            energy_i = compute_energy(output[i], [0.0, 0.05], output_rate)
             self.assertLess(energy_i, 0.005)
 
           # For t > 0.05, channel c is strongest.
-          energy_c = compute_energy(output[:, c], [0.07, 0.28], output_rate)
+          energy_c = compute_energy(output[c], [0.07, 0.28], output_rate)
+          self.assertGreater(energy_c, 0.001)
           for i in range(num_channels):
             if i != c:
-              energy_i = compute_energy(output[:, i], [0.07, 0.28], output_rate)
-              self.assertGreater(energy_c, 4.0 * energy_i)
+              energy_i = compute_energy(output[i], [0.07, 0.28], output_rate)
+              self.assertGreater(energy_c, 1.1 * energy_i)
+
+        for i in range(num_channels):
+          debug_out = {}
+          envelopes[i].reset()
+          np.testing.assert_array_equal(
+              output[i], envelopes[i].process_samples(input_samples,
+                                                      debug_out=debug_out))
+          # debug_out is nonempty and has array entries of the expected shape.
+          self.assertGreater(len(debug_out), 0)
+          for _, v in debug_out.items():
+            self.assertTupleEqual(v.shape, output[0].shape)
 
 
 if __name__ == '__main__':

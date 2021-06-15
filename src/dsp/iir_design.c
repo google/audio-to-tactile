@@ -1,4 +1,4 @@
-/* Copyright 2020 Google LLC
+/* Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -249,7 +249,6 @@ void ZpkAnalogPrototypeToHighpass(Zpk* zpk, double cutoff_rad_s) {
       zpk->zeros[i] = ComplexDoubleMake(0.0, 0.0);
     }
     zpk->num_zeros = zpk->num_poles;
-
   }
 }
 
@@ -771,7 +770,8 @@ int DesignChebyshev2Highpass(int order,
                              int max_biquads) {
   Zpk zpk;
   if (!Chebyshev2AnalogPrototype(order, stopband_ripple_db, &zpk)) { return 0; }
-  return ZpkDesignHighpass(&zpk, cutoff_hz, sample_rate_hz, coeffs, max_biquads);
+  return ZpkDesignHighpass(&zpk, cutoff_hz, sample_rate_hz, coeffs,
+                           max_biquads);
 }
 
 int DesignChebyshev2Bandpass(int order,

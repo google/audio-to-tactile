@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ static float ComputeVowelEnergy(const float* x, float t_start, float t_end,
 }
 
 /* Runs TactileProcessor on a sequence of tones. */
-void TestTones(float sample_rate_hz, int decimation_factor) {
+static void TestTones(float sample_rate_hz, int decimation_factor) {
   printf("TestTones(%g, %d)\n", sample_rate_hz, decimation_factor);
   float output_rate = sample_rate_hz / decimation_factor;
   const int output_size = 0.5f * output_rate;
@@ -140,7 +140,7 @@ void TestTones(float sample_rate_hz, int decimation_factor) {
 /* Tests TactileProcessorReset by comparing the results from processing an
  * input, resetting, and then processing the input a second time.
  */
-void TestReset(float sample_rate_hz, int decimation_factor) {
+static void TestReset(float sample_rate_hz, int decimation_factor) {
   printf("TestReset(%g, %d)\n", sample_rate_hz, decimation_factor);
   float output_rate = sample_rate_hz / decimation_factor;
   const int output_size = 0.2f * output_rate;
@@ -198,7 +198,7 @@ void TestReset(float sample_rate_hz, int decimation_factor) {
 /* Runs TactileProcessor on a short WAV recording of a pure phone, and
  * checks that the intended tactor is the most active.
  */
-void TestPhone(const char* phone, int intended_tactor) {
+static void TestPhone(const char* phone, int intended_tactor) {
   printf("TestPhone(%s)\n", phone);
   char wav_file[1024];
   sprintf(wav_file,

@@ -40,7 +40,7 @@ int FindPortAudioDevice(
     const char* name, int min_input_channels, int min_output_channels);
 
 /* Prints a list of all PortAudio devices to stdout. */
-void PrintPortAudioDevices();
+void PrintPortAudioDevices(void);
 
 #ifdef __cplusplus
 }  /* extern "C" */

@@ -1,4 +1,4 @@
-/* Copyright 2020 Google LLC
+/* Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@
 
 static double RandUniform() { return (double)rand() / RAND_MAX; }
 
-void TestSineTable() {
+static void TestSineTable() {
   puts("TestSineTable");
   const int table_size = 1 << kPhase32TableBits;
   CHECK(kPhase32SinTable[0] == 0.0f);
@@ -40,7 +40,7 @@ void TestSineTable() {
   }
 }
 
-void TestPhaseConversion() {
+static void TestPhaseConversion() {
   puts("TestPhaseConversion");
   Phase32 p = Phase32FromFloat(0.0f);
   CHECK(p == 0);
@@ -72,7 +72,7 @@ void TestPhaseConversion() {
   }
 }
 
-void TestOscillatorSamples(float frequency_cycles_per_sample) {
+static void TestOscillatorSamples(float frequency_cycles_per_sample) {
   printf("TestOscillatorSamples(%g)\n", frequency_cycles_per_sample);
   Oscillator oscillator;
   OscillatorInit(&oscillator, frequency_cycles_per_sample);

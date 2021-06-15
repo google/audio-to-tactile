@@ -39,16 +39,16 @@ void TemperatureMonitor::StartMonitoringTemperature() {
       (LPCOMP_REFSEL_REFSEL_Ref11_16Vdd << LPCOMP_REFSEL_REFSEL_Pos);
 
   // Set reference input source to analog in (AIN) pin 1.
-  nrf_lpcomp_input_select(NRF_LPCOMP_INPUT_1);
+  nrf_lpcomp_input_select(NRF_LPCOMP, NRF_LPCOMP_INPUT_1);
 
   // Enable and start the low power comparator.
-  nrf_lpcomp_enable();
-  nrf_lpcomp_task_trigger(NRF_LPCOMP_TASK_START);
+  nrf_lpcomp_enable(NRF_LPCOMP);
+  nrf_lpcomp_task_trigger(NRF_LPCOMP, NRF_LPCOMP_TASK_START);
 }
 
 void TemperatureMonitor::StopMonitoringTemperature() {
   // Disable the low power comparator.
-  nrf_lpcomp_disable();
+  nrf_lpcomp_disable(NRF_LPCOMP);
   // Disable the interrupt handler.
   NVIC_DisableIRQ(LPCOMP_IRQn);
   NVIC_ClearPendingIRQ(LPCOMP_IRQn);
@@ -59,8 +59,8 @@ int16_t TemperatureMonitor::TakeAdcSample() {
   // https://github.com/adafruit/Adafruit_nRF52_Arduino/blob/master/cores/nRF5/wiring_analog_nRF52.c
   static int16_t value = 0;
 
-  nrf_saadc_enable();
-  nrf_saadc_resolution_set(NRF_SAADC_RESOLUTION_12BIT);
+  nrf_saadc_enable(NRF_SAADC);
+  nrf_saadc_resolution_set(NRF_SAADC, NRF_SAADC_RESOLUTION_12BIT);
 
   // Use ADC channel 0. Configure the channel here.
   // Set the acquisition time to 3 us, since output impedance is about 10 kOhms.
@@ -72,35 +72,36 @@ int16_t TemperatureMonitor::TakeAdcSample() {
       .reference = NRF_SAADC_REFERENCE_INTERNAL,
       .acq_time = NRF_SAADC_ACQTIME_3US,
       .mode = NRF_SAADC_MODE_SINGLE_ENDED,
-      .burst = NRF_SAADC_BURST_DISABLED,
-      .pin_p = NRF_SAADC_INPUT_AIN1,
-      .pin_n = NRF_SAADC_INPUT_DISABLED};
+      .burst = NRF_SAADC_BURST_DISABLED};
 
-  nrf_saadc_channel_init(0, &channel_config);
+  nrf_saadc_channel_input_set(NRF_SAADC, 0, NRF_SAADC_INPUT_AIN1,
+                              NRF_SAADC_INPUT_DISABLED);
+
+  nrf_saadc_channel_init(NRF_SAADC, 0, &channel_config);
 
   // Initiate EasyDMA buffer. Will give a hardfault if we start adc without a
   // buffer.
-  nrf_saadc_buffer_init(&value, 1);
+  nrf_saadc_buffer_init(NRF_SAADC, &value, 1);
 
   // Trigger immediate ADC sampling.
-  nrf_saadc_task_trigger(NRF_SAADC_TASK_START);
+  nrf_saadc_task_trigger(NRF_SAADC, NRF_SAADC_TASK_START);
 
   while (!NRF_SAADC->EVENTS_STARTED) {
   }
 
-  nrf_saadc_event_clear(NRF_SAADC_EVENT_STARTED);
-  nrf_saadc_task_trigger(NRF_SAADC_TASK_SAMPLE);
+  nrf_saadc_event_clear(NRF_SAADC, NRF_SAADC_EVENT_STARTED);
+  nrf_saadc_task_trigger(NRF_SAADC, NRF_SAADC_TASK_SAMPLE);
 
   while (!NRF_SAADC->EVENTS_END) {
   }
 
-  nrf_saadc_event_clear(NRF_SAADC_EVENT_END);
-  nrf_saadc_task_trigger(NRF_SAADC_TASK_STOP);
+  nrf_saadc_event_clear(NRF_SAADC, NRF_SAADC_EVENT_END);
+  nrf_saadc_task_trigger(NRF_SAADC, NRF_SAADC_TASK_STOP);
 
   while (!NRF_SAADC->EVENTS_STOPPED) {
   }
 
-  nrf_saadc_event_clear(NRF_SAADC_EVENT_STOPPED);
+  nrf_saadc_event_clear(NRF_SAADC, NRF_SAADC_EVENT_STOPPED);
 
   // Sometimes ADC values can be negative, just make them 0.
   if (value < 0) {
@@ -108,7 +109,7 @@ int16_t TemperatureMonitor::TakeAdcSample() {
   }
 
   // Disable the ADC.
-  nrf_saadc_disable();
+  nrf_saadc_disable(NRF_SAADC);
 
   return value;
 }
@@ -178,27 +179,7 @@ float TemperatureMonitor::ConvertAdcSampleToTemperature(
 TemperatureMonitor SleeveTemperatureMonitor;
 
 void TemperatureMonitor::OnOverheatingEventListener(void (*function)(void)) {
-  callback_ = function;
-}
-
-// Interrupt handler for the low power comparator redirects to IrqHandler.
-extern "C" {
-void LPCOMP_COMP_IRQHandler() { SleeveTemperatureMonitor.IrqHandler(); }
-}
-
-void TemperatureMonitor::IrqHandler() {
-  // Clear event.
-  nrf_lpcomp_event_clear(NRF_LPCOMP_EVENT_CROSS);
-
-  // Sample the LPCOMP stores its state in the RESULT register.
-  // RESULT==0 means lower than reference voltage,
-  // RESULT==1 means higher than reference voltage.
-  nrf_lpcomp_task_trigger(NRF_LPCOMP_TASK_SAMPLE);
-  event_ = NRF_LPCOMP->RESULT;
-
-  if (callback_) {
-    callback_();
-  }
+  on_lpcomp_trigger(function);
 }
 
 }  // namespace audio_tactile

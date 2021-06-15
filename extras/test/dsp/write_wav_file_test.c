@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,29 @@
 #include <string.h>
 
 #include "src/dsp/logging.h"
+#include "src/dsp/write_wav_file_generic.h"
 
+/*
+ * Instructions for generating arrays below:
+ * Wav data can be generated using python.
+ * import scipy.io.wavfile as wavefile
+ * import numpy as np
+ * wavefile.write("test16.wav", 48000, np.array([7, -2, 32767, -32768],
+ *                                              dtype=np.int16))
+ *
+ * Convert to 24 bit using SoX.
+ * sox test16.wav -b 24 test24.wav
+ *
+ * Or convert to floating point.
+ * sox test16.wav -b 32 -e floating-point testfp.wav
+ *
+ * Return to python and view the bits.
+ * wavdata = open("test24.wav", 'rb').read()
+ * print(map(ord, wavdata))
+ *
+ * or alternatively, view them using xxd:
+ * xxd -i this_is_a_test.wav
+ */
 /* A 48kHz mono WAV file with int16_t samples {7, -2, INT16_MAX, INT16_MIN}. */
 static const uint8_t kTestMonoWavFile[52] = {
     82,  73,  70, 70,  44, 0, 0, 0,   87,  65,  86,  69,  102,
@@ -34,6 +56,22 @@ static const uint8_t kTest3ChannelWavFile[92] = {
     4,  0,  0,  0,  2,   0,   0,  0,   100, 97, 116, 97,  12,  0,   0,   0,
     0,  0,  1,  0,  2,   0,   3,  0,   4,   0,  5,   0};
 
+/* A 48kHz mono WAV file with int24 samples made from
+ * int16 samples {7, -2, INT16_MAX, INT16_MIN} using SoX. SoX scales up the
+ * data up by 2^8, and we shift by another 8 bits to get it into the most
+ * significant bits of the 32-bit container.
+ */
+static const uint8_t kTest24BitMonoWavFile[92] = {
+/*  R   I   F   F                      W    A    V    E    f    m    t    _  */
+    82, 73, 70, 70, 84,  0,   0,  0,   87,  65,  86,  69,  102, 109, 116, 32,
+    40, 0,  0,  0,  254, 255, 1,  0,   128, 187, 0,   0,   128, 50,  2,   0,
+    3,  0,  24, 0,  22,  0,   24, 0,   4,   0,   0,   0,   1,   0,   0,   0,
+/*                                                         f    a    c    t  */
+    0,  0,  16, 0,  128, 0,   0,  170, 0,   56,  155, 113, 102, 97,  99,  116,
+/*                                       d    a    t    a  */
+    4,  0,  0,  0,   4,   0,   0,   0,   100, 97,  116, 97,  12,  0,   0,   0,
+    0,  7,  0,  0,   254, 255, 0,   255, 127, 0,   0,   128};
+
 static void CheckFileBytes(const char* file_name, const uint8_t* expected_bytes,
                            size_t num_bytes) {
   uint8_t* bytes = CHECK_NOTNULL((uint8_t *) malloc(num_bytes + 1));
@@ -44,11 +82,11 @@ static void CheckFileBytes(const char* file_name, const uint8_t* expected_bytes,
   free(bytes);
 }
 
-void TestWriteMonoWav() {
+static void TestWriteMonoWav() {
+  puts("TestWriteMonoWav");
   static const int16_t kSamples[4] = {7, -2, INT16_MAX, INT16_MIN};
   const char* wav_file_name = NULL;
 
-  puts("Running TestWriteMonoWav");
   wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
   CHECK(WriteWavFile(wav_file_name, kSamples, 4, 48000, 1));
 
@@ -56,11 +94,11 @@ void TestWriteMonoWav() {
   remove(wav_file_name);
 }
 
-void TestWriteMonoWavStreaming() {
+static void TestWriteMonoWavStreaming() {
+  puts("TestWriteMonoWavStreaming");
   static const int16_t kSamples[4] = {7, -2, INT16_MAX, INT16_MIN};
   const char* wav_file_name = NULL;
 
-  puts("Running TestWriteMonoWavStreaming");
   wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
   FILE* f = NULL;
   CHECK(f = fopen(wav_file_name, "wb"));
@@ -75,14 +113,33 @@ void TestWriteMonoWavStreaming() {
   remove(wav_file_name);
 }
 
-void TestWrite3ChannelWav() {
+static void TestWrite3ChannelWav() {
+  puts("TestWrite3ChannelWav");
   static const int16_t kSamples[6] = {0, 1, 2, 3, 4, 5};
   const char* wav_file_name = NULL;
 
-  puts("Running TestWrite3ChannelWav");
   wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
   CHECK(WriteWavFile(wav_file_name, kSamples, 6, 16000, 3));
   CheckFileBytes(wav_file_name, kTest3ChannelWavFile, 92);
+  remove(wav_file_name);
+}
+
+static void TestWriteMono24BitWav() {
+  puts("TestWriteMono24BitWav");
+  /* << 8 accounts for the 16 to 24 bit conversion as described in the process
+   * for generating the WAV file above. The remaining << 8 accounts for our
+   * convention that the full range of int32 is utilized, not just the
+   * lowest 24 bits. */
+  static const int32_t kSamples[4] = {7 << 16,
+                                      -(2 << 16),
+                                      INT16_MAX << 16,
+                                      INT16_MIN * (1 << 16)};
+  const char* wav_file_name = NULL;
+
+  wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
+  CHECK(WriteWavFile24Bit(wav_file_name, kSamples, 4, 48000, 1));
+
+  CheckFileBytes(wav_file_name, kTest24BitMonoWavFile, 92);
   remove(wav_file_name);
 }
 
@@ -90,6 +147,7 @@ int main(int argc, char** argv) {
   TestWriteMonoWav();
   TestWriteMonoWavStreaming();
   TestWrite3ChannelWav();
+  TestWriteMono24BitWav();
 
   puts("PASS");
   return EXIT_SUCCESS;

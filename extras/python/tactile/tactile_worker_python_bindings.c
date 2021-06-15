@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -175,14 +175,14 @@ static int TactileWorkerObjectInit(TactileWorkerObject* self, PyObject* args,
 
   params.tactile_processor_params.frontend_params.input_sample_rate_hz =
       sample_rate_hz;
-  params.tactile_processor_params.baseband_channel_params
-      .energy_smoother_cutoff_hz = cutoff_hz;
-  params.tactile_processor_params.vowel_channel_params
-      .energy_smoother_cutoff_hz = cutoff_hz;
-  params.tactile_processor_params.sh_fricative_channel_params
-      .energy_smoother_cutoff_hz = cutoff_hz;
-  params.tactile_processor_params.fricative_channel_params
-      .energy_smoother_cutoff_hz = cutoff_hz;
+  params.tactile_processor_params.baseband_channel_params.energy_cutoff_hz =
+      cutoff_hz;
+  params.tactile_processor_params.vowel_channel_params.energy_cutoff_hz =
+      cutoff_hz;
+  params.tactile_processor_params.sh_fricative_channel_params.energy_cutoff_hz =
+      cutoff_hz;
+  params.tactile_processor_params.fricative_channel_params.energy_cutoff_hz =
+      cutoff_hz;
 
   params.post_processor_params.mid_gain =
       DecibelsToAmplitudeRatio(mid_gain_db);
@@ -384,7 +384,7 @@ static struct PyModuleDef kModule = {
     NULL,             /* m_free */
 };
 
-PyMODINIT_FUNC PyInit_tactile_worker() {
+PyMODINIT_FUNC PyInit_tactile_worker(void) {
   import_array();
   PyObject* m = PyModule_Create(&kModule);
   InitModule(m);

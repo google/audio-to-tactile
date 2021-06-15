@@ -23,6 +23,8 @@
 // threshold can be adjusted. LPCOMP module hardware is described here:
 // https://infocenter.nordicsemi.com/index.jsp?topic=%2Fcom.nordic.infocenter.nrf52832.ps.v1.1%2Flpcomp.html
 // To measure the analog battery voltage, SAADC was used.
+// Note: the low power comparator can run only for one of the battery monitor or
+// temperature monitor at a time
 //
 // We use a 10K NTC thermistor (NTCG103JF103FT1), as described here:
 // https://product.tdk.com/info/en/catalog/datasheets/503021/tpd_commercial_ntc-thermistor_ntcg_en.pdf
@@ -34,6 +36,7 @@
 
 #include <cstdint>
 
+#include "lpcomp_common.h"  // NOLINT(build/include)
 #include "nrf_lpcomp.h"  // NOLINT(build/include)
 #include "nrf_saadc.h"   // NOLINT(build/include)
 

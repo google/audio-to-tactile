@@ -38,8 +38,8 @@
  * see [https://numpy.org/doc/stable/user/c-info.ufunc-tutorial.html].
  */
 
-static void ArrayFastLog2(char** args, npy_intp* dimensions,
-                          npy_intp* steps, void* unused_data) {
+static void ArrayFastLog2(char** args, npy_intp const* dimensions,
+                          npy_intp const* steps, void* unused_data) {
   char* in = args[0];
   char* out = args[1];
   const npy_intp n = dimensions[0];
@@ -54,8 +54,8 @@ static void ArrayFastLog2(char** args, npy_intp* dimensions,
   }
 }
 
-static void ArrayFastExp2(char** args, npy_intp* dimensions,
-                          npy_intp* steps, void* unused_data) {
+static void ArrayFastExp2(char** args, npy_intp const* dimensions,
+                          npy_intp const* steps, void* unused_data) {
   char* in = args[0];
   char* out = args[1];
   const npy_intp n = dimensions[0];
@@ -70,8 +70,8 @@ static void ArrayFastExp2(char** args, npy_intp* dimensions,
   }
 }
 
-static void ArrayFastTanh(char** args, npy_intp* dimensions,
-                          npy_intp* steps, void* unused_data) {
+static void ArrayFastTanh(char** args, npy_intp const* dimensions,
+                          npy_intp const* steps, void* unused_data) {
   char* in = args[0];
   char* out = args[1];
   const npy_intp n = dimensions[0];
@@ -86,9 +86,12 @@ static void ArrayFastTanh(char** args, npy_intp* dimensions,
   }
 }
 
-static PyUFuncGenericFunction kFastLog2Funs[1] = {&ArrayFastLog2};
-static PyUFuncGenericFunction kFastExp2Funs[1] = {&ArrayFastExp2};
-static PyUFuncGenericFunction kFastTanhFuns[1] = {&ArrayFastTanh};
+static PyUFuncGenericFunction kFastLog2Funs[1] = {
+    (PyUFuncGenericFunction)&ArrayFastLog2};
+static PyUFuncGenericFunction kFastExp2Funs[1] = {
+    (PyUFuncGenericFunction)&ArrayFastExp2};
+static PyUFuncGenericFunction kFastTanhFuns[1] = {
+    (PyUFuncGenericFunction)&ArrayFastTanh};
 
 static PyMethodDef kModuleMethods[] = {
   {NULL, NULL, 0, NULL}
@@ -126,7 +129,7 @@ static struct PyModuleDef kModule = {
     NULL,                        /* m_free */
 };
 
-PyMODINIT_FUNC PyInit_fast_fun_python_bindings() {
+PyMODINIT_FUNC PyInit_fast_fun_python_bindings(void) {
   import_array();
   import_umath();
 

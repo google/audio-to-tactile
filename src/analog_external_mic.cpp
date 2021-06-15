@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC
+// Copyright 2020-2021 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ void AnalogMic::Initialize() {
   // Turn on the microphone amplifier.
   nrf_gpio_pin_write(kMicShutDownPin, 1);
 
-  nrf_saadc_resolution_set(NRF_SAADC_RESOLUTION_12BIT);
+  nrf_saadc_resolution_set(NRF_SAADC, NRF_SAADC_RESOLUTION_12BIT);
 
   // Configure the ADC channel.
   nrf_saadc_channel_config_t channel_config = {
@@ -41,15 +41,15 @@ void AnalogMic::Initialize() {
       .mode = NRF_SAADC_MODE_DIFFERENTIAL,
       .burst = NRF_SAADC_BURST_DISABLED};
 
-  nrf_saadc_channel_init(0, &channel_config);
+  nrf_saadc_channel_init(NRF_SAADC, 0, &channel_config);
 
   // Connect to the pins.
-  nrf_saadc_channel_pos_input_set(0, NRF_SAADC_INPUT_AIN4);
+  nrf_saadc_channel_pos_input_set(NRF_SAADC, 0, (nrf_saadc_input_t)kMicAdcPin);
 
   // Set SAADC to continuous sampling using the internal timer SAADC timer.
   // Sample Rate is 16 MHz / CC register.
   // Setting CC to 1024 gives 15625 Hz sampling rate.
-  nrf_saadc_continuous_mode_enable(1024);
+  nrf_saadc_continuous_mode_enable(NRF_SAADC, 1024);
 
   // Enable SAADC global interrupt.
   NVIC_DisableIRQ(SAADC_IRQn);
@@ -58,36 +58,36 @@ void AnalogMic::Initialize() {
   NVIC_EnableIRQ(SAADC_IRQn);
 
   // Enable specific interrupts. Don't care about other ones.
-  nrf_saadc_int_enable(NRF_SAADC_INT_END);
-  nrf_saadc_int_enable(NRF_SAADC_INT_STOPPED);
+  nrf_saadc_int_enable(NRF_SAADC, NRF_SAADC_INT_END);
+  nrf_saadc_int_enable(NRF_SAADC, NRF_SAADC_INT_STOPPED);
 
   // Set the buffer for EASY DMA transfer.
-  nrf_saadc_buffer_init(adc_buffer_, kAdcDataSize);
+  nrf_saadc_buffer_init(NRF_SAADC, adc_buffer_, kAdcDataSize);
 
   // Enable SAADC.
-  nrf_saadc_enable();
+  nrf_saadc_enable(NRF_SAADC);
 
   // Start SAADC.
-  nrf_saadc_task_trigger(NRF_SAADC_TASK_START);
+  nrf_saadc_task_trigger(NRF_SAADC, NRF_SAADC_TASK_START);
 
   // Wait until its ready to go.
   while (!NRF_SAADC->EVENTS_STARTED) {
   }
-  nrf_saadc_event_clear(NRF_SAADC_EVENT_STARTED);
+  nrf_saadc_event_clear(NRF_SAADC, NRF_SAADC_EVENT_STARTED);
 
   // Start sampling, from now SAADC is handled by the interrupt routine.
-  nrf_saadc_task_trigger(NRF_SAADC_TASK_SAMPLE);
+  nrf_saadc_task_trigger(NRF_SAADC, NRF_SAADC_TASK_SAMPLE);
 }
 
 void AnalogMic::Disable() {
-  nrf_saadc_disable();
+  nrf_saadc_disable(NRF_SAADC);
   NVIC_DisableIRQ(SAADC_IRQn);
   nrf_gpio_pin_write(kMicShutDownPin, 0);
 }
 
 void AnalogMic::Enable() {
   nrf_gpio_pin_write(kMicShutDownPin, 1);
-  nrf_saadc_enable();
+  nrf_saadc_enable(NRF_SAADC);
   NVIC_EnableIRQ(SAADC_IRQn);
 }
 
@@ -107,21 +107,21 @@ void SAADC_IRQHandler() { ExternalAnalogMic.IrqHandler(); }
 void AnalogMic::IrqHandler() {
   bool event;
   // Triggered when data points are collected,
-  if (nrf_saadc_event_check(NRF_SAADC_EVENT_END)) {
-    nrf_saadc_event_clear(NRF_SAADC_EVENT_END);
-    nrf_saadc_buffer_init(adc_buffer_, kAdcDataSize);
-    nrf_saadc_task_trigger(NRF_SAADC_TASK_START);
+  if (nrf_saadc_event_check(NRF_SAADC, NRF_SAADC_EVENT_END)) {
+    nrf_saadc_event_clear(NRF_SAADC, NRF_SAADC_EVENT_END);
+    nrf_saadc_buffer_init(NRF_SAADC, adc_buffer_, kAdcDataSize);
+    nrf_saadc_task_trigger(NRF_SAADC, NRF_SAADC_TASK_START);
   }
 
   // Triggered when data is trasfered to RAM with Easy DMA.
-  if (nrf_saadc_event_check(NRF_SAADC_EVENT_DONE)) {
-    nrf_saadc_event_clear(NRF_SAADC_EVENT_DONE);
+  if (nrf_saadc_event_check(NRF_SAADC, NRF_SAADC_EVENT_DONE)) {
+    nrf_saadc_event_clear(NRF_SAADC, NRF_SAADC_EVENT_DONE);
     event = true;
   }
 
   // Triggered after ADC is stopped.
-  if (nrf_saadc_event_check(NRF_SAADC_EVENT_STOPPED)) {
-    nrf_saadc_event_clear(NRF_SAADC_EVENT_STOPPED);
+  if (nrf_saadc_event_check(NRF_SAADC, NRF_SAADC_EVENT_STOPPED)) {
+    nrf_saadc_event_clear(NRF_SAADC, NRF_SAADC_EVENT_STOPPED);
   }
 
   // Pass the event if new data is collected.

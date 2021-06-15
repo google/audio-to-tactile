@@ -1,4 +1,4 @@
-# Copyright 2019 Google LLC
+# Copyright 2019, 2021 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -93,7 +93,7 @@ c_library(
         ":tactile_player",
         ":tactophone_lesson",
         "//:dsp",
-        "//extras/tools:channel_map",
+        "//extras/tools:channel_map_tui",
         "//extras/tools:util",
     ],
 )

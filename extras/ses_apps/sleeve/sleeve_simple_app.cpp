@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC
+// Copyright 2020-2021 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -61,306 +61,311 @@
 //   4: iy        9: fricative                 (2)-(3)   fricative
 //                                          vowel cluster
 
+// NOLINTBEGIN(build/include)
+
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
 
 // Hardware drivers.
-#include "Lp5012.h"
-#include "board_defs.h"              // NOLINT(build/include)
-#include "pwm_sleeve.h"              // NOLINT(build/include)
-#include "serial_puck_sleeve.h"      // NOLINT(build/include)
-#include "temperature_monitor.h"     // NOLINT(build/include)
-#include "two_wire.h"                // NOLINT(build/include)
-#include "classify_phenome_param.h"  // NOLINT(build/include)
-#include "tactile_processor_cpp.h"   // NOLINT(build/include)
-#include "post_processor_cpp.h"      // NOLINT(build/include)
-#include "look_up.h"                 // NOLINT(build/include)
+#include "analog_external_mic.h"
+#include "board_defs.h"
+#include "lp5012.h"
+#include "pwm_sleeve.h"
+#include "serial_com.h"
+
+// TODO: There is build error for temperature_monitor and
+// battery_monitor, as they use the same LPCOMP_COMP_IRQHandler.
+// Should find a way to resolve it.
+
+#include "look_up.h"
+#include "post_processor_cpp.h"
+#include "dsp/channel_map.h"
+#include "tactile/tactile_pattern.h"
+#include "tactile_processor_cpp.h"
+#include "two_wire.h"
 
 // FreeRTOS libraries.
 #include "FreeRTOS.h"
-#include "timers.h"  // NOLINT(build/include)
+#include "timers.h"
 
 // nRF libraries.
-#include "app_error.h"                 // NOLINT(build/include)
-#include "nrf.h"                       // NOLINT(build/include)
-#include "nrf_delay.h"                 // NOLINT(build/include)
-#include "nrf_log.h"                   // NOLINT(build/include)
-#include "nrf_log_ctrl.h"              // NOLINT(build/include)
-#include "nrf_log_default_backends.h"  // NOLINT(build/include)
+#include "app_error.h"
+#include "nrf.h"
+#include "nrf_delay.h"
+#include "nrf_log.h"
+#include "nrf_log_ctrl.h"
+#include "nrf_log_default_backends.h"
+#include "nrf_uarte.h"
+
+// NOLINTEND
 
 using namespace audio_tactile;  // NOLINT(build/namespaces)
 
-const int kMicSamples = 64;
-static_assert(kMicSamples <= (kTxDataSize / 2),
-              "Mic data is larger than Tx buffer size");
+const int kPwmSamplesAllChannels = kNumPwmValues * kNumTotalPwm;
 
-const int kPwmSamples = 8;
-static_assert(kPwmSamples <= kNumPwmValues,
-              "Number of pwm samples is larger than pwm buffer size");
+// Audio samples per CARL block. Must be no more than kSaadcFramesPerPeriod.
+const int kCarlBlockSize = 64;
+// Decimation factor in audio-to-tactile processing. Tactile signals are
+// bandlimited below 500 Hz, so e.g. 8x decimation is reasonable.
+const int kTactileDecimationFactor = 8;
+// Number of tactile frames per CARL block.
+const int kTactileFramesPerCarlBlock =
+    kCarlBlockSize / kTactileDecimationFactor;
 
-const int kPwmSamplesAllChannels = kPwmSamples * kNumTotalPwm;
+static TaskHandle_t g_tactile_processor_task_handle;
 
-static TaskHandle_t m_tactor_task_handle;
-static TaskHandle_t audio_processor_task_handle;
+// Buffer of received mic audio as int16 samples.
+static int16_t g_mic_audio_int16[kAdcDataSize];
+// Buffer of mic audio converted to floats in [-1, 1].
+static float g_mic_audio_float[kAdcDataSize];
 
-static int16_t received_mic_data[kMicSamples];
+static uint16_t pwm_rx[kNumPwmValues];
 
-// Buffer of input audio as floats in [-1, 1].
-static float audio_input[kMicSamples];
+// True when serial is streaming tactile playback.
+static bool g_streaming_tactile_playback = true;
+// True when serial is receiving mic audio (kLoadMicDataOpCode).
+static bool g_receiving_audio = false;
+static bool g_led_initialized = false;
 
-static uint16_t pwm_rx[kPwmSamples];
+// TactileProcessor, turns audio into tactile signals.
+TactileProcessorWrapper g_tactile_processor;
+// Tuning knobs for configuring tactile processing.
+TuningKnobs g_tuning_knobs;
+// TactilePostprocessor, does equalization and limiting on tactile signals.
+PostProcessorWrapper g_post_processor;
+// Channel to tactor mapping and final output gains.
+ChannelMap g_channel_map;
 
-static uint16_t pwm_all_rx[kPwmSamples * kNumPwmChannels];
+// Tactile pattern synthesizer.
+TactilePattern g_tactile_pattern;
+// Buffer for holding the tactile pattern string to play.
+char g_tactile_pattern_buffer[16];
 
-static uint8_t which_pwm_module_triggered;
+// Pointer to the tactile output buffer of g_tactile_processor.
+static float* g_tactile_output;
 
-static bool continous_play_back = true;
+// Buffer for streaming tactile playback.
+uint8_t g_all_tactor_streaming_buffer[kPwmSamplesAllChannels];
 
-static bool tactor_processor_on = false;
+static void OnSerialEvent();
+static void LogInit();
+void OnPwmSequenceEnd();
+void OnOverheating();
+static void TactileProcessorTaskFun(void* pvParameter);
 
-static bool led_initialized = false;
+void OnPwmSequenceEnd() {
+  const int which_pwm_module_triggered = SleeveTactors.GetEvent();
+  // All modules are used together, so only take action on the module 0 trigger.
+  if (which_pwm_module_triggered != 0) { return; }
 
-static int gain;
-static int denoising;
-static int compression;
-
-TactileProcessorWrapper AudioClassifier;
-PostProcessorWrapper AudioPostProcessor;
-
-static float* src;
-
-uint8_t all_tactor_streaming_buffer[kPwmSamplesAllChannels];
-
-void on_PWM_sequence_end() {
-  which_pwm_module_triggered = SleeveTactors.GetEvent();
-
-  if (continous_play_back) {
-    if (which_pwm_module_triggered == 0) {
-      SleeveTactors.UpdatePwmAllChannelsByte(all_tactor_streaming_buffer);
-
+  if (g_streaming_tactile_playback) {
+      SleeveTactors.UpdatePwmAllChannelsByte(g_all_tactor_streaming_buffer);
+      // Transmit one byte to synchronize.
       uint8_t tx_byte[1];
-      tx_byte[0] = kRequestMoreData;
-      PuckSleeveSerialPort.SendDataRaw(tx_byte, 1);
-    }
-  }
+      tx_byte[0] = static_cast<uint8_t>(MessageType::kRequestMoreData);
+      SerialCom.SendRaw(Slice<uint8_t, 1>(tx_byte));
+  } else {
+    constexpr int kNumChannels = 10;
+    // Hardware channel `c` plays logical channel kHwToLogical[c].
+    constexpr static int kHwToLogical[kNumChannels] = {5, 8, 0, 6, 4,
+                                                       7, 2, 1, 9, 3};
 
-  if (tactor_processor_on && which_pwm_module_triggered == 0) {
-    float pwm_channel[kPwmSamples];
-
-    // Send samples to the tactors. I don't use loops now, since we might
-    // adjust the tactor order.
-    for (int i = 0; i < kTactileFramesPerCarlBlock; ++i) {
-      pwm_channel[i] = src[i * kTactileProcessorNumTactors];
+    // There are two levels of mapping:
+    // 1. Hardware channel `c` plays logical channel kHwToLogical[c],
+    //      hw[c] = logical[kHwToLogical[c]].
+    // 2. g_channel_map maps tactile channels to logical channels,
+    //      logical[c] = channel_map.gains[c] * tactile[channel_map.sources[c]].
+    //
+    // We compose this into a single step of copying as
+    //   hw[c] = channel_map.gains[logical_c]
+    //           * tactile[channel_map.sources[logical_c]].
+    // with logical_c = kHwToLogical[c].
+    for (int c = 0; c < kNumChannels; ++c) {
+      const int logical_c = kHwToLogical[c];
+      const float gain = g_channel_map.gains[logical_c];
+      const float* src = g_tactile_output + g_channel_map.sources[logical_c];
+      SleeveTactors.UpdateChannelWithGain(c, gain, src,
+                                          kTactileProcessorNumTactors);
     }
-    SleeveTactors.UpdatePwmModuleChannelFloat(pwm_channel, 0, 2);
-
-    for (int i = 0; i < kTactileFramesPerCarlBlock; ++i) {
-      pwm_channel[i] = src[(i * kTactileProcessorNumTactors) + 1];
-    }
-    SleeveTactors.UpdatePwmModuleChannelFloat(pwm_channel, 1, 3);
-
-    for (int i = 0; i < kTactileFramesPerCarlBlock; ++i) {
-      pwm_channel[i] = src[(i * kTactileProcessorNumTactors) + 2];
-    }
-    SleeveTactors.UpdatePwmModuleChannelFloat(pwm_channel, 1, 2);
-
-    for (int i = 0; i < kTactileFramesPerCarlBlock; ++i) {
-      pwm_channel[i] = src[(i * kTactileProcessorNumTactors) + 3];
-    }
-    SleeveTactors.UpdatePwmModuleChannelFloat(pwm_channel, 2, 1);
-
-    for (int i = 0; i < kTactileFramesPerCarlBlock; ++i) {
-      pwm_channel[i] = src[(i * kTactileProcessorNumTactors) + 4];
-    }
-    SleeveTactors.UpdatePwmModuleChannelFloat(pwm_channel, 1, 0);
-
-    for (int i = 0; i < kTactileFramesPerCarlBlock; ++i) {
-      pwm_channel[i] = src[(i * kTactileProcessorNumTactors) + 5];
-    }
-    SleeveTactors.UpdatePwmModuleChannelFloat(pwm_channel, 0, 0);
-
-    for (int i = 0; i < kTactileFramesPerCarlBlock; ++i) {
-      pwm_channel[i] = src[(i * kTactileProcessorNumTactors) + 6];
-    }
-    SleeveTactors.UpdatePwmModuleChannelFloat(pwm_channel, 0, 3);
-
-    for (int i = 0; i < kTactileFramesPerCarlBlock; ++i) {
-      pwm_channel[i] = src[(i * kTactileProcessorNumTactors) + 7];
-    }
-    SleeveTactors.UpdatePwmModuleChannelFloat(pwm_channel, 1, 1);
-
-    for (int i = 0; i < kTactileFramesPerCarlBlock; ++i) {
-      pwm_channel[i] = src[(i * kTactileProcessorNumTactors) + 8];
-    }
-    SleeveTactors.UpdatePwmModuleChannelFloat(pwm_channel, 0, 1);
-
-    for (int i = 0; i < kTactileFramesPerCarlBlock; ++i) {
-      pwm_channel[i] = src[(i * kTactileProcessorNumTactors) + 9];
-    }
-    SleeveTactors.UpdatePwmModuleChannelFloat(pwm_channel, 2, 0);
   }
 }
 
-void on_new_serial_data() {
-  switch (PuckSleeveSerialPort.GetEvent()) {
-    case kLoadMicDataOpCode:
-      tactor_processor_on = true;
-      continous_play_back = false;
-      PuckSleeveSerialPort.GetMicrophoneData(received_mic_data, kMicSamples);
+void HandleMessage(const Message& message) {
+  switch (message.type()) {
+    case MessageType::kAudioSamples: {
+      g_receiving_audio = true;
+      g_streaming_tactile_playback = false;
+      message.ReadAudioSamples(
+          Slice<int16_t, kAdcDataSize>(g_mic_audio_int16));
       // Unblock the audio processing task.
       BaseType_t xHigherPriorityTaskWoken;
       xHigherPriorityTaskWoken = pdFALSE;
-      vTaskNotifyGiveFromISR(audio_processor_task_handle,
+      vTaskNotifyGiveFromISR(g_tactile_processor_task_handle,
                              &xHigherPriorityTaskWoken);
       portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
-      break;
-    case kLoadTactorL1:
-      tactor_processor_on = false;
-      PuckSleeveSerialPort.GetPlayOneTactorData(pwm_rx, kPwmSamples);
-      SleeveTactors.UpdatePwmModuleChannel(pwm_rx, 0, 0);
-      break;
-    case kLoadTactorR1:
-      tactor_processor_on = false;
-      PuckSleeveSerialPort.GetPlayOneTactorData(pwm_rx, kPwmSamples);
-      SleeveTactors.UpdatePwmModuleChannel(pwm_rx, 0, 1);
-      // this tactor for teseting.
-      break;
-    case kLoadTactorL2:
-      tactor_processor_on = false;
-      PuckSleeveSerialPort.GetPlayOneTactorData(pwm_rx, kPwmSamples);
-      SleeveTactors.UpdatePwmModuleChannel(pwm_rx, 0, 2);
-      break;
-    case kLoadTactorR2:
-      tactor_processor_on = false;
-      PuckSleeveSerialPort.GetPlayOneTactorData(pwm_rx, kPwmSamples);
-      SleeveTactors.UpdatePwmModuleChannel(pwm_rx, 0, 3);
-      break;
-    case kLoadTactorL3:
-      tactor_processor_on = false;
-      PuckSleeveSerialPort.GetPlayOneTactorData(pwm_rx, kPwmSamples);
-      SleeveTactors.UpdatePwmModuleChannel(pwm_rx, 1, 0);
-      break;
-    case kLoadTactorR3:
-      tactor_processor_on = false;
-      PuckSleeveSerialPort.GetPlayOneTactorData(pwm_rx, kPwmSamples);
-      SleeveTactors.UpdatePwmModuleChannel(pwm_rx, 1, 1);
-      break;
-    case kLoadTactorL4:
-      tactor_processor_on = false;
-      PuckSleeveSerialPort.GetPlayOneTactorData(pwm_rx, kPwmSamples);
-      SleeveTactors.UpdatePwmModuleChannel(pwm_rx, 1, 2);
-      break;
-    case kLoadTactorR4:
-      tactor_processor_on = false;
-      PuckSleeveSerialPort.GetPlayOneTactorData(pwm_rx, kPwmSamples);
-      SleeveTactors.UpdatePwmModuleChannel(pwm_rx, 1, 3);
-      break;
-    case kLoadTactorL5:
-      tactor_processor_on = false;
-      PuckSleeveSerialPort.GetPlayOneTactorData(pwm_rx, kPwmSamples);
-      SleeveTactors.UpdatePwmModuleChannel(pwm_rx, 2, 0);
-      break;
-    case kLoadTactorR5:
-      tactor_processor_on = false;
-      PuckSleeveSerialPort.GetPlayOneTactorData(pwm_rx, kPwmSamples);
-      SleeveTactors.UpdatePwmModuleChannel(pwm_rx, 2, 1);
-      break;
-    case kTurnOffAmplifiers:
+    } break;
+    case MessageType::kTactor1Samples:
+    case MessageType::kTactor2Samples:
+    case MessageType::kTactor3Samples:
+    case MessageType::kTactor4Samples:
+    case MessageType::kTactor5Samples:
+    case MessageType::kTactor6Samples:
+    case MessageType::kTactor7Samples:
+    case MessageType::kTactor8Samples:
+    case MessageType::kTactor9Samples:
+    case MessageType::kTactor10Samples:
+    case MessageType::kTactor11Samples:
+    case MessageType::kTactor12Samples: {
+      int channel;
+      if (message.ReadSingleTactorSamples(
+              &channel, Slice<uint16_t, kNumPwmValues>(pwm_rx))) {
+        SleeveTactors.UpdateChannel(channel - 1, pwm_rx);
+      }
+    } break;
+    case MessageType::kDisableAmplifiers:
       SleeveTactors.DisableAmplifiers();
       break;
-    case kTurnOnAmplifiers:
+    case MessageType::kEnableAmplifiers:
       SleeveTactors.EnableAmplifiers();
       break;
-    case kSetOutputGain:
-      gain = PuckSleeveSerialPort.GetTuningParameters();
-      AudioClassifier.SetOutputGain(gain);
-      if (!led_initialized) {
-        LedArray.Initialize();
-        led_initialized = true;
+    case MessageType::kTuning: {
+      if (message.ReadTuning(&g_tuning_knobs)) {
+        g_tactile_processor.ApplyTuning(g_tuning_knobs);
+        if (!g_led_initialized) {
+          LedArray.Initialize();
+          g_led_initialized = true;
+        }
+        LedArray.Clear();
+        LedArray.LedBar(g_tuning_knobs.values[kKnobOutputGain], 20);
+
+        // Play "confirm" pattern as UI feedback when new settings are applied.
+        TactilePatternStart(&g_tactile_pattern, kTactilePatternConfirm);
       }
-      LedArray.Clear();
-      LedArray.LedBar(gain, 20);
-      break;
-    case kSetDenoising:
-      denoising = PuckSleeveSerialPort.GetTuningParameters();
-      AudioClassifier.SetDenoising(denoising);
-      if (!led_initialized) {
-        LedArray.Initialize();
-        led_initialized = true;
+    } break;
+    case MessageType::kTactilePattern:
+      if (message.ReadTactilePattern(g_tactile_pattern_buffer)) {
+        TactilePatternStart(&g_tactile_pattern, g_tactile_pattern_buffer);
       }
-      LedArray.Clear();
-      LedArray.SetOneLed(10, 100);
-      LedArray.LedBar(denoising, 20);
       break;
-    case kSetCompression:
-      compression = PuckSleeveSerialPort.GetTuningParameters();
-      AudioClassifier.SetCompression(compression);
-      if (!led_initialized) {
-        LedArray.Initialize();
-        led_initialized = true;
+    case MessageType::kChannelMap:
+      message.ReadChannelMap(&g_channel_map,
+                             kTactileProcessorNumTactors,
+                             kTactileProcessorNumTactors);
+      break;
+    case MessageType::kChannelGainUpdate: {
+      int test_channels[2];
+      if (message.ReadChannelGainUpdate(&g_channel_map, test_channels,
+                                        kTactileProcessorNumTactors,
+                                        kTactileProcessorNumTactors)) {
+        TactilePatternStartCalibrationTones(&g_tactile_pattern,
+                                            test_channels[0], test_channels[1]);
       }
-      LedArray.Clear();
-      LedArray.SetOneLed(11, 100);
-      LedArray.LedBar(compression, 20);
+    } break;
+    case MessageType::kStreamDataStart:
+      SleeveTactors.DisableAmplifiers();  // Should this be Enable?
+      g_streaming_tactile_playback = true;
       break;
-    case kStreamDataStart:
-      SleeveTactors.DisableAmplifiers();
-      continous_play_back = true;
+    case MessageType::kStreamDataStop:
+      SleeveTactors.EnableAmplifiers();  // Should this be Disable?
+      g_streaming_tactile_playback = false;
       break;
-    case kStreamDataStop:
-      SleeveTactors.EnableAmplifiers();
-      continous_play_back = false;
-      break;
-    case kPlayAllChannels:
-      PuckSleeveSerialPort.GetPlayAllTactorsData(all_tactor_streaming_buffer,
-                                                 kPwmSamplesAllChannels);
-      continous_play_back = true;
-    case kCommError:
-      // Maybe reset if there are errors. Serial coms are not always reliable.
-      break;
-    case kTimeOutError:
-      NVIC_SystemReset();
+    case MessageType::kAllTactorsSamples:
+      if (message.ReadAllTactorsSamples(
+              Slice<uint8_t, kNumTotalPwm * kNumPwmValues>(
+                  g_all_tactor_streaming_buffer))) {
+        g_streaming_tactile_playback = true;
+      }
       break;
     default:
       // Handle an unknown op code event.
-      NRF_LOG_RAW_INFO("== UNKNOWN OPCODE ==\n");
+      NRF_LOG_RAW_INFO("== UNKNOWN MESSAGE TYPE ==\n");
+      NRF_LOG_FLUSH();
+      break;
+  }
+}
+
+static void OnSerialEvent() {
+  g_receiving_audio = false;
+  switch (SerialCom.event()) {
+    case SerialEvent::kMessageReceived:
+      HandleMessage(SerialCom.rx_message());
+      break;
+    case SerialEvent::kCommError:
+      // Maybe reset if there are errors. Serial coms are not always reliable.
+      break;
+    case SerialEvent::kTimeOutError:
+      // Disable task auto-restarting.
+      nrf_uarte_shorts_disable(NRF_UARTE0, NRF_UARTE_SHORT_ENDRX_STARTRX);
+      // Stop UARTE Rx task.
+      nrf_uarte_task_trigger(NRF_UARTE0, NRF_UARTE_TASK_STOPRX);
+      nrf_delay_ms(8);  // Wait a couple frames.
+      // Re-enable auto-restarting.
+      nrf_uarte_shorts_enable(NRF_UARTE0, NRF_UARTE_SHORT_ENDRX_STARTRX);
+      // Start UARTE Rx task.
+      nrf_uarte_task_trigger(NRF_UARTE0, NRF_UARTE_TASK_STARTRX);
+      break;
+    default:
+      NRF_LOG_RAW_INFO("== UNKNOWN SERIAL EVENT ==\n");
       NRF_LOG_FLUSH();
       break;
   }
 }
 
 // This interrupt is triggered on overheating.
-void on_overheating() { nrf_gpio_pin_toggle(kLedPin); }
+void OnOverheating() { nrf_gpio_pin_toggle(kLedPinBlue); }
 
-static void audio_processor_task_function(void* pvParameter) {
+static void TactileProcessorTaskFun(void*) {
   for (;;) {
     // Block the task until interrupt is triggered, when new data is collected.
     // https://www.freertos.org/xTaskNotifyGive.html
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-    nrf_gpio_pin_write(kLedPin, 1);
+    nrf_gpio_pin_write(kLedPinBlue, 1);
 
-    // Convert ADC values to floats in range of [-1, 1].
-    // The raw values are centered around 1500, so to zero them we need to
-    // subtract 1500. The raw ADC values can swing from -2048 to 2048, so we
-    // scale to that value.
-    for (int i = 0; i < kMicSamples; ++i) {
-      audio_input[i] = ((float)(received_mic_data[i]) - 1500.0f) / 2048.0f;
+    // Play synthesized tactile pattern if either a pattern is active or if the
+    // sleeve is not receiving audio, for instance because of a timeout error.
+    // If the pattern isn't active, the pattern synthesizer produces silence.
+    if (!g_receiving_audio || TactilePatternIsActive(&g_tactile_pattern)) {
+      TactilePatternSynthesize(
+          &g_tactile_pattern, g_tactile_processor.GetOutputBlockSize(),
+          g_tactile_processor.GetOutputNumberTactileChannels(),
+          g_tactile_output);
+    } else {
+      // Convert ADC values to floats. The raw ADC values can swing from -2048
+      // to 2048, so we scale by that value.
+      const float scale = TuningGetInputGain(&g_tuning_knobs) / 2048.0f;
+      for (int i = 0; i < kAdcDataSize; ++i) {
+        g_mic_audio_float[i] = scale * g_mic_audio_int16[i];
+      }
+      // Process samples.
+      g_tactile_output = g_tactile_processor.ProcessSamples(g_mic_audio_float);
     }
 
-    // Process samples.
-    src = AudioClassifier.ProcessSamples(audio_input);
-    AudioPostProcessor.PostProcessSamples(src);
+    g_post_processor.PostProcessSamples(g_tactile_output);
 
-    nrf_gpio_pin_write(kLedPin, 0);
+    nrf_gpio_pin_write(kLedPinBlue, 0);
   }
+}
+
+static void LogInit(void) {
+  ret_code_t err_code = NRF_LOG_INIT(nullptr);
+  APP_ERROR_CHECK(err_code);
+  NRF_LOG_DEFAULT_BACKENDS_INIT();
 }
 
 int main() {
   // Initialize log, allows to print to the console with seggers j-link.
-  log_init();
+  LogInit();
   NRF_LOG_RAW_INFO("== SLEEVE START ==\n");
+
+  const int kPwmFramesPerPeriod = 64;
+  // SAADC sample rate in Hz.
+  const int kSaadcSampleRateHz = 15625;
+  // To simplify buffering logic, we determine kSaadcFramesPerPeriod so that the
+  // SAADC update period is equal to the PWM update period.
+  const float kSaadcFramesPerPeriod =
+      ((2 * kSaadcSampleRateHz * 512 * kPwmFramesPerPeriod) / 16000000L);
 
   // Print important constants.
   const float update_period_s =
@@ -368,13 +373,13 @@ int main() {
   NRF_LOG_RAW_INFO(
       "%d us period \n %d mic samples \n %d tactile samples \n %d PWM samples "
       "\n",
-      (int)(1e6f * update_period_s + 0.5f), kMicSamples,
-      kPwmSamples * kTactileDecimationFactor, kPwmSamples);
+      (int)(1e6f * update_period_s + 0.5f), kAdcDataSize,
+      kNumPwmValues * kTactileDecimationFactor, kNumPwmValues);
 
   NRF_LOG_FLUSH();
 
   // Set the indicator led pin to output.
-  nrf_gpio_cfg_output(kLedPin);
+  nrf_gpio_cfg_output(kLedPinBlue);
 
   // Initialize LED driver.
   // For unknown reason LED driver need to be initialized again in the loop.
@@ -383,36 +388,39 @@ int main() {
   LedArray.SetOneLed(1, 10);
 
   // Initialize tactor driver.
+  SleeveTactors.OnSequenceEnd(OnPwmSequenceEnd);
   SleeveTactors.Initialize();
   SleeveTactors.SetUpsamplingFactor(kTactileDecimationFactor);
-  SleeveTactors.OnSequenceEnd(on_PWM_sequence_end);
   SleeveTactors.StartPlayback();
 
   // Initialize temperature monitor.
-  SleeveTemperatureMonitor.StartMonitoringTemperature();
-  SleeveTemperatureMonitor.OnOverheatingEventListener(on_overheating);
+  // SleeveTemperatureMonitor.StartMonitoringTemperature();
+  // SleeveTemperatureMonitor.OnOverheatingEventListener(OnOverheating);
 
   // Initialize the tactile processor.
-  AudioClassifier.Init(kSaadcSampleRateHz, kCarlBlockSize,
-                       kTactileDecimationFactor);
+  g_tactile_processor.Init(kSaadcSampleRateHz, kCarlBlockSize,
+                           kTactileDecimationFactor);
 
   const float kDefaultGain = 4.0f;
-  AudioPostProcessor.Init(AudioClassifier.GetOutputSampleRate(),
-                          AudioClassifier.GetOutputBlockSize(),
-                          AudioClassifier.GetOutputNumberTactileChannels(),
-                          kDefaultGain);
+  g_post_processor.Init(g_tactile_processor.GetOutputSampleRate(),
+                        g_tactile_processor.GetOutputBlockSize(),
+                        g_tactile_processor.GetOutputNumberTactileChannels(),
+                        kDefaultGain);
+  ChannelMapInit(&g_channel_map, kTactileProcessorNumTactors);
+
+  TactilePatternInit(&g_tactile_pattern,
+                     g_tactile_processor.GetOutputSampleRate());
+  TactilePatternStart(&g_tactile_pattern, kTactilePatternSilence);
 
   NRF_LOG_RAW_INFO("== TACTILE PROCESSOR SETUP DONE ==\n");
   NRF_LOG_FLUSH();
 
   // Initialize serial port.
-  PuckSleeveSerialPort.InitializeSleeve();
-  PuckSleeveSerialPort.OnSerialDataReceived(on_new_serial_data);
+  SerialCom.InitSleeve(OnSerialEvent);
 
   // Start freeRTOS.
-  xTaskCreate(audio_processor_task_function, "audio",
-              configMINIMAL_STACK_SIZE + 500, NULL, 2,
-              &audio_processor_task_handle);
+  xTaskCreate(TactileProcessorTaskFun, "audio", configMINIMAL_STACK_SIZE + 500,
+              nullptr, 2, &g_tactile_processor_task_handle);
   vTaskStartScheduler();
   // App should go into tasks naw, and not reach the code below. Reset the
   // system if it does.
@@ -427,10 +435,4 @@ void HardFault_Handler(void) {
   NRF_LOG_FLUSH();
   while (true) {
   }
-}
-
-static void log_init(void) {
-  ret_code_t err_code = NRF_LOG_INIT(NULL);
-  APP_ERROR_CHECK(err_code);
-  NRF_LOG_DEFAULT_BACKENDS_INIT();
 }

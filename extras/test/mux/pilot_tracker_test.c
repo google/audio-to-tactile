@@ -1,4 +1,4 @@
-/* Copyright 2020 Google LLC
+/* Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,8 @@ static double RandUniform() { return (double)rand() / RAND_MAX; }
 /* Test tracking of a steady tone plus a little noise:
  *   amplitude * exp(2i * pi * frequency_hz * t + initial_phase) + noise.
  */
-void TestSteadyTone(float amplitude, float frequency_hz, float initial_phase) {
+static void TestSteadyTone(float amplitude, float frequency_hz,
+                           float initial_phase) {
   printf("TestSteadyTone(%g, %g, %g)\n",
          amplitude, frequency_hz, initial_phase);
   PilotTrackerCoeffs tracker_coeffs;
@@ -61,7 +62,7 @@ void TestSteadyTone(float amplitude, float frequency_hz, float initial_phase) {
 }
 
 /* Test tracking of a warbling tone that varies in frequency. */
-void TestWarblingTone() {
+static void TestWarblingTone() {
   puts("TestWarblingTone");
   const float kMinFrequency = 295.0f;
   const float kMaxFrequency = 305.0f;

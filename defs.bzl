@@ -1,4 +1,4 @@
-# Copyright 2019 Google LLC
+# Copyright 2019, 2021 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -21,8 +21,8 @@ like their cc_* counterparts, but compile with C89 standard compatibility.
 """
 
 PYTHON_INCLUDE_DIRS = [
-    "/usr/include/python3.8",
-    "/usr/include/x86_64-linux-gnu/python3.8",
+    "/usr/include/python3.9",
+    "/usr/include/x86_64-linux-gnu/python3.9",
 ]
 
 def py_extension(name = None, srcs = None, data = None, visibility = None, deps = None):

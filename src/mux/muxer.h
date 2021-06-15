@@ -30,7 +30,7 @@ struct Muxer; /* Forward declaration. See muxer.c for definition. */
 typedef struct Muxer Muxer;
 
 /* Makes a Muxer. Returns NULL on failure. */
-Muxer* MuxerMake();
+Muxer* MuxerMake(void);
 
 /* Frees a Muxer. */
 void MuxerFree(Muxer* muxer);

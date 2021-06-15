@@ -27,7 +27,7 @@ static const float kRates[] = {
 static const int kNumRates = sizeof(kRates) / sizeof(*kRates);
 
 /* Test properties of ResamplerKernel over various sample rates and radii. */
-void TestKernel(float filter_radius_factor) {
+static void TestKernel(float filter_radius_factor) {
   printf("TestKernel(%g)\n", filter_radius_factor);
   const float kCutoff = 0.9f;
   const float kBeta = 5.658f;

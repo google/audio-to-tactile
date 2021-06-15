@@ -1,4 +1,4 @@
-/* Copyright 2020 Google LLC
+/* Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -156,7 +156,7 @@ static float* SimulateDistortion(float* signal, int num_samples,
 /* Test mux + demux round trip with a time delay and added noise. This test
  * that time synchronization in demuxing works robustly.
  */
-void TestRoundTrip(float delay_in_samples, float noise_stddev) {
+static void TestRoundTrip(float delay_in_samples, float noise_stddev) {
   printf("TestRoundTrip(%g, %g)\n", delay_in_samples, noise_stddev);
   const int kNumFrames = 1000;
   /* Make random tactile test signals.*/
@@ -205,7 +205,7 @@ void TestRoundTrip(float delay_in_samples, float noise_stddev) {
 /* Same as TestRoundTrip but with odd channels equal to zero. This checks for
  * interference from pilot signals and neighboring channels.
  */
-void TestZeroOddChannelsRoundTrip() {
+static void TestZeroOddChannelsRoundTrip() {
   puts("TestZeroOddChannelsRoundTrip");
   const int kNumFrames = 1000;
   float* tactile_signals = MakeTactileTestSignals(kNumFrames);
@@ -256,7 +256,7 @@ void TestZeroOddChannelsRoundTrip() {
   free(tactile_signals);
 }
 
-void TestMuxerStreaming() {
+static void TestMuxerStreaming() {
   puts("TestMuxerStreaming");
   const int kNumFrames = 250;
   float* tactile_signals = MakeTactileTestSignals(kNumFrames);
@@ -309,7 +309,7 @@ void TestMuxerStreaming() {
   free(tactile_signals);
 }
 
-void TestDemuxerStreaming() {
+static void TestDemuxerStreaming() {
   puts("TestDemuxerStreaming");
   const int kNumFrames = 250;
   const int kNumMuxedSamples = kNumFrames * kMuxRateFactor;

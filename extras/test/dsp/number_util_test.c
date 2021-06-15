@@ -1,4 +1,4 @@
-/* Copyright 2020 Google LLC
+/* Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@
 #define kGoldenRatio 1.618033988749894903  /* = (1 + sqrt(5)) / 2. */
 
 /* Check RoundUpToMultiple() function. */
-void TestRoundUpToMultiple() {
+static void TestRoundUpToMultiple() {
   puts("TestRoundUpToMultiple");
   CHECK(RoundUpToMultiple(33, 5) == 35);
   CHECK(RoundUpToMultiple(-33, 5) == -30);
@@ -44,7 +44,7 @@ void TestRoundUpToMultiple() {
 }
 
 /* Check GreatestCommonDivisor() function. */
-void TestGreatestCommonDivisor() {
+static void TestGreatestCommonDivisor() {
   puts("TestGreatestCommonDivisor");
   CHECK(25 == GreatestCommonDivisor(200, 75));
   CHECK(25 == GreatestCommonDivisor(75, 200));
@@ -57,7 +57,7 @@ void TestGreatestCommonDivisor() {
 }
 
 /* RationalApproximation() represents ratios of small integers exactly. */
-void TestRationalApproximationOfSimpleRatios() {
+static void TestRationalApproximationOfSimpleRatios() {
   puts("TestRationalApproximationOfSimpleRatios");
   int a;
   for (a = 1; a <= 12; ++a) {
@@ -83,7 +83,7 @@ void TestRationalApproximationOfSimpleRatios() {
 }
 
 /* Similar to the previous test, but with perturbation in the ratios. */
-void TestRationalApproximationOfPerturbedRatios() {
+static void TestRationalApproximationOfPerturbedRatios() {
   puts("TestRationalApproximationOfPerturbedRatios");
 
   static const int kTestRatios[][2] = {{1, 1}, {1, 3}, {1, 12}, {2, 3}, {7, 5},
@@ -115,7 +115,7 @@ void TestRationalApproximationOfPerturbedRatios() {
  * giving many chances to check the special-case behavior with
  * n = continued_fraction_term / 2 semiconvergents.
  */
-void TestRationalApproximationOfSqrt2() {
+static void TestRationalApproximationOfSqrt2() {
   puts("TestRationalApproximationOfSqrt2");
   static const int kBestRationalApproximations[][2] = {
         {1, 1},   /* Convergent [1;].                      */
@@ -149,7 +149,7 @@ void TestRationalApproximationOfSqrt2() {
   }
 }
 
-void TestRationalApproximationOfPi() {
+static void TestRationalApproximationOfPi() {
   puts("TestRationalApproximationOfPi");
   static const int kBestRationalApproximations[][2] = {
         {3, 1},     /* Convergent [3;].           */
@@ -185,7 +185,7 @@ void TestRationalApproximationOfPi() {
  * Furthermore, it has no semiconvergents since all of its continued fraction
  * terms are one. The convergents are ratios of consecutive Fibonacci numbers.
  */
-void TestRationalApproximationOfGoldenRatio() {
+static void TestRationalApproximationOfGoldenRatio() {
   puts("TestRationalApproximationOfGoldenRatio");
   int fibonacci_prev = 1;
   int fibonacci = 2;
@@ -209,7 +209,7 @@ void TestRationalApproximationOfGoldenRatio() {
 /* Find the best rational approximation a/b of `value` by exhaustively testing
  * each possible denominator 0 < b <= max_denominator.
  */
-void ExhaustiveFindBestRationalApproximation(
+static void ExhaustiveFindBestRationalApproximation(
     double value, int max_denominator,
     int* out_numerator, int* out_denominator) {
   int best_numerator = (int) floor(value + 0.5);
@@ -231,7 +231,7 @@ void ExhaustiveFindBestRationalApproximation(
 }
 
 /* Check that RationalApproximation() produces best rational approximations. */
-void TestRationalApproximationIsOptimal(int max_denominator) {
+static void TestRationalApproximationIsOptimal(int max_denominator) {
   printf("TestRationalApproximationIsOptimal(%d)\n", max_denominator);
   const int kNumTrials = 20;
   int trial;
@@ -256,7 +256,7 @@ void TestRationalApproximationIsOptimal(int max_denominator) {
   }
 }
 
-void TestRationalApproximationMaxTerms() {
+static void TestRationalApproximationMaxTerms() {
   puts("TestRationalApproximationMaxTerms");
   int numerator;
   int denominator;
@@ -293,7 +293,7 @@ typedef struct {
  *   print(fractions.Fraction(math.pi).limit_denominator(1000000))
  *   # Prints: 3126535/995207
  */
-void TestLargeArguments() {
+static void TestLargeArguments() {
   puts("TestLargeArguments");
 
   static const TestCase kTestCases[] = {

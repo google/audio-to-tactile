@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,8 @@ static float ComputeEnergy(const float* x, float t_start, float t_end,
   return accum / sample_rate_hz;
 }
 
-void TestBasic(float sample_rate_hz, int decimation_factor) {
+static void TestBasic(float sample_rate_hz, int decimation_factor) {
+  printf("TestBasic(%g, %d)\n", sample_rate_hz, decimation_factor);
   srand(0);
   const float output_rate = sample_rate_hz / decimation_factor;
   const int output_size = 0.5f * output_rate;
@@ -119,7 +120,8 @@ void TestBasic(float sample_rate_hz, int decimation_factor) {
   free(input);
 }
 
-void TestStreaming(int decimation_factor) {
+static void TestStreaming(int decimation_factor) {
+  printf("TestStreaming(%d)\n", decimation_factor);
   srand(0);
   const float sample_rate_hz = 16000.0f;
   const int output_size = 100;

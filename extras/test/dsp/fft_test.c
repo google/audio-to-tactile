@@ -1,4 +1,4 @@
-/* Copyright 2020 Google LLC
+/* Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ static void FillRandomValues(int size, ComplexFloat* output) {
 }
 
 /* Check the size-4 transform of {1, 2, 3, 4} against golden data. */
-void TestForwardTransformSize4() {
+static void TestForwardTransformSize4() {
   puts("TestForwardTransformSize4");
   const int kTransformSize = 4;
   ComplexFloat data[4] = {{1.0, 0.0}, {2.0, 0.0}, {3.0, 0.0}, {4.0, 0.0}};
@@ -52,7 +52,7 @@ void TestForwardTransformSize4() {
   }
 }
 
-void TestScrambling(int transform_size) {
+static void TestScrambling(int transform_size) {
   printf("TestScrambling(%d)\n", transform_size);
   ComplexFloat* data =
       CHECK_NOTNULL(malloc(sizeof(ComplexFloat) * transform_size));
@@ -96,7 +96,7 @@ static void FillDirichletKernel(int radius, int size, ComplexFloat* output) {
 /* Check the forward FFT of a Dirichlet kernel, which has closed-form transform
  * equal to 1 for k <= radius or k >= transform_size - radius and zero othewise.
  */
-void TestForwardTransformOfDirichletKernel(int transform_size) {
+static void TestForwardTransformOfDirichletKernel(int transform_size) {
   printf("TestForwardTransformOfDirichletKernel(%d)\n", transform_size);
   ComplexFloat* data =
       CHECK_NOTNULL(malloc(sizeof(ComplexFloat) * transform_size));
@@ -122,7 +122,7 @@ void TestForwardTransformOfDirichletKernel(int transform_size) {
  * Note that the expected inverse transform is the same as for the forward
  * transform because the input sequence is symmetric about index 0.
  */
-void TestInverseTransformOfDirichletKernel(int transform_size) {
+static void TestInverseTransformOfDirichletKernel(int transform_size) {
   printf("TestInverseTransformOfDirichletKernel(%d)\n", transform_size);
   ComplexFloat* data =
       CHECK_NOTNULL(malloc(sizeof(ComplexFloat) * transform_size));
@@ -147,7 +147,7 @@ void TestInverseTransformOfDirichletKernel(int transform_size) {
 /* Perform periodic convolution using scrambled FFTs, and check that it matches
  * direct time-domain convolution.
  */
-void TestFftBasedConvolution(int transform_size) {
+static void TestFftBasedConvolution(int transform_size) {
   printf("TestFftBasedConvolution(%d)\n", transform_size);
   const int num_bytes = sizeof(ComplexFloat) * transform_size;
   ComplexFloat* signal = CHECK_NOTNULL(malloc(num_bytes));
@@ -197,7 +197,7 @@ void TestFftBasedConvolution(int transform_size) {
 /* Check that MicroFftForwardScrambledTransform followed by
  * MicroFftInverseScrambledTransform and normalization recovers the original.
  */
-void TestRoundTrips(int transform_size) {
+static void TestRoundTrips(int transform_size) {
   printf("TestRoundTrips(%d)\n", transform_size);
   const int kNumTrials = 5;
   const int num_bytes = sizeof(ComplexFloat) * transform_size;
@@ -229,7 +229,7 @@ void TestRoundTrips(int transform_size) {
 }
 
 /* Checks that attempting an unsupport transform size has no effect. */
-void TestUnsupportedSize(int transform_size) {
+static void TestUnsupportedSize(int transform_size) {
   printf("TestUnsupportedSize(%d)\n", transform_size);
   const int num_bytes = sizeof(ComplexFloat) * transform_size;
   ComplexFloat* data = CHECK_NOTNULL(malloc(num_bytes));

@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,8 @@ static int ComplexIsApproximatelyEqual(ComplexDouble actual,
 }
 
 /* Compare EllipticK to known values. */
-void TestEllipticK() {
+static void TestEllipticK() {
+  puts("TestEllipticK");
   CHECK(fabs(EllipticK(0.0) - M_PI / 2) < 1e-15);
 
   /* Compare with values verified with scipy and WolframAlpha (e.g. for m = 0.1,
@@ -57,7 +58,8 @@ void TestEllipticK() {
  * F(0.6|0.1), scipy.special.ellipkinc(0.6, 0.1) and EllipticF[0.6, 0.1]; note
  * that scipy's implementation doesn't support complex phi).
  */
-void TestEllipticF() {
+static void TestEllipticF() {
+  puts("TestEllipticF");
   /* Test that F(0|m) = 0. */
   CHECK(ComplexIsApproximatelyEqual(
       EllipticF(ComplexDoubleMake(0.0, 0.0), 0.7),
@@ -93,7 +95,8 @@ void TestEllipticF() {
 }
 
 /* JacobiAmplitude should be the inverse of EllipticF. */
-void TestJacobiAmplitude() {
+static void TestJacobiAmplitude() {
+  puts("TestJacobiAmplitude");
   int trial;
   for (trial = 0; trial < 100; ++trial) {
     const ComplexDouble phi = ComplexDoubleMake(M_PI * (RandUnif() - 0.5),

@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@
 #include "src/tactile/energy_envelope.h"
 #include "extras/references/bratakos2001/bratakos2001.h"
 #include "extras/references/yuan2005/yuan2005.h"
-#include "extras/tools/channel_map.h"
+#include "extras/tools/channel_map_tui.h"
 #include "extras/tools/portaudio_device.h"
 #include "extras/tools/util.h"
 #include "portaudio.h"
@@ -119,7 +119,7 @@ void UpdateVolumeMeters(const float* output, int frames_per_buffer) {
 
 #define kVolumeMeterWidth 4
 
-void PrintVolumeMeters() {
+static void PrintVolumeMeters() {
   const int num_tactors = engine.channel_map.num_input_channels;
   char bar[3 * kVolumeMeterWidth + 1];
   int c;
@@ -293,7 +293,7 @@ int main(int argc, char** argv) {
 
   const float global_gain = DecibelsToAmplitudeRatio(global_gain_db);
   for (i = 0; i < engine.channel_map.num_output_channels; ++i) {
-    engine.channel_map.channels[i].gain *= global_gain;
+    engine.channel_map.gains[i] *= global_gain;
   }
 
   /* Find PortAudio devices. */

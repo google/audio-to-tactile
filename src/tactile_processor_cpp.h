@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC
+// Copyright 2020-2021 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
 #define AUDIO_TO_TACTILE_SRC_TACTILE_PROCESSOR_CPP_H_
 
 #include "tactile/tactile_processor.h"
+#include "tactile/tuning.h"
 
 namespace audio_tactile {
 
@@ -42,17 +43,8 @@ class TactileProcessorWrapper {
   // send to the PWM hardware module.
   float* ProcessSamples(float* audio_input);
 
-  // Set output gain from 0 to 255 (arbitrary units). Can be called anytime.
-  // Returns gain in dB.
-  float SetOutputGain(int value);
-
-  // Set denoising from 0 to 255 (arbitrary units) . Can be called anytime.
-  // Returns denoising parameter in delta.
-  float SetDenoising(int value);
-
-  // Set compression from 0 to 255 (arbitrary units). Can be called anytime.
-  // Returns compression parameter: beta.
-  float SetCompression(int value);
+  // Applies tuning settings. Can be called anytime.
+  void ApplyTuning(const TuningKnobs& tuning_knobs);
 
   // Returns the sampling rate after decimation (reduced).
   float GetOutputSampleRate() const {

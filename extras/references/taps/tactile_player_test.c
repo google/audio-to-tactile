@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,8 @@
 #define M_1_SQRT2 0.70710678118654752440
 #endif /* M_1_SQRT2 */
 
-void TestStreaming() {
+static void TestStreaming() {
+  puts("TestStreaming");
   const int kNumChannels = 4;
   const float kSampleRateHz = 44100.0f;
   const int kBufferFrames = 5;
@@ -84,7 +85,8 @@ void TestStreaming() {
 static float SignalA(int c, float t) { return sin((15 + c) * 1000 * t); }
 static float SignalB(int c, float t) { return sin((5 + c) * 1000 * t); }
 
-void TestInterruptedPlayback() {
+static void TestInterruptedPlayback() {
+  puts("TestInterruptedPlayback");
   const int kNumChannels = 4;
   const float kSampleRateHz = 8000.0f;
   const int kBufferFrames = 64;
@@ -144,7 +146,8 @@ void TestInterruptedPlayback() {
 float EnvelopeChannel0(float t) { return 30 * t; }
 float EnvelopeChannel1(float t) { return 1.3 - cos(400 * t); }
 
-void TestGetRms() {
+static void TestGetRms() {
+  puts("TestGetRms");
   const int kNumChannels = 2;
   const float kSampleRateHz = 16000.0f;
   const int kBufferFrames = 32;
@@ -195,7 +198,7 @@ struct MockPlaybackInfo {
 };
 typedef struct MockPlaybackInfo MockPlaybackInfo;
 
-void* MockPlayback(void* arg) {
+static void* MockPlayback(void* arg) {
   MockPlaybackInfo* info = (MockPlaybackInfo*)arg;
   float buffer[4];
   int keep_running = 1;
@@ -217,7 +220,8 @@ void* MockPlayback(void* arg) {
   return NULL;
 }
 
-void TestPlaybackThread() {
+static void TestPlaybackThread() {
+  puts("TestPlaybackThread");
   const int kNumChannels = 1;
   const float kSampleRateHz = 8000.0f;
 

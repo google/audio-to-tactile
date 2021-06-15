@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -102,12 +102,12 @@ static void WriteBytesAsFile(const char* file_name,
   fclose(f);
 }
 
-void TestReadMonoWav() {
+static void TestReadMonoWav() {
+  puts("TestReadMonoWav");
   const char* wav_file_name = NULL;
   FILE* f;
   ReadWavInfo info;
 
-  puts("Running TestReadMonoWavStreaming");
   wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
   WriteBytesAsFile(wav_file_name, kTest16BitMonoWavFile, 52);
 
@@ -125,12 +125,12 @@ void TestReadMonoWav() {
   fclose(f);
 }
 
-void TestNonstandardWavFile() {
+static void TestNonstandardWavFile() {
+  puts("TestNonstandardWavFile");
   const char* wav_file_name = NULL;
   FILE* f;
   ReadWavInfo info;
 
-  puts("Running TestNonstandardWavFile");
   wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
   WriteBytesAsFile(wav_file_name, kNonStandardWavFile, 56);
 

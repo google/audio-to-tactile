@@ -1,4 +1,4 @@
-# Copyright 2020 Google LLC
+# Copyright 2020, 2021 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -118,7 +118,8 @@ def main():
   terminator = port_string.index(' ')
   port_string = port_string[:terminator]
   print('Connecting to port: ', port_string)
-  ser = serial.Serial(port_string)
+  # Add timeout to avoid infinite loop, while waiting for end of line.
+  ser = serial.Serial(port_string, timeout=0.1)
 
   # Counter to keep track of how many frames already played.
   frame_playback_counter = 0
@@ -127,13 +128,24 @@ def main():
   # Send the first frame to kickstart the synchronization.
   ser.write(get_next_audio_frames_in_byte_array(wav))
 
+  retry_index = 0
+
   # Loop for checking if there is a request for new frames.
   while True:
+    retry_index = retry_index + 1
     read_raw = ser.readline()
     read_out = read_raw.decode('ascii')
     read_out = read_out.replace('\n', '')
     read_out = read_out.replace('\r', '')
     print('received<' + read_out + '>')
+    # If the serial port times out waiting for a endline, force asking for a
+    # packet to start transmission again.
+    # Serial port is not always 100% reliable, and has occasional errors on
+    # physical layer.
+    if retry_index > 2:
+      ser.write(get_next_audio_frames_in_byte_array(wav))
+      frame_playback_counter = (
+          frame_playback_counter + PWM_VALUES_IN_TACTILE_FRAME)
     if read_out == 'buffer_copied':
 
       frame_playback_counter = (
@@ -143,6 +155,7 @@ def main():
 
       try:
         ser.write(get_next_audio_frames_in_byte_array(wav))
+        retry_index = 0
       except SerialException:
         print('error sending')
 

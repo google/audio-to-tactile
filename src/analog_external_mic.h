@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC
+// Copyright 2020-2021 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,21 +37,39 @@
 #ifndef AUDIO_TO_TACTILE_SRC_ANALOG_EXTERNAL_MIC_H_
 #define AUDIO_TO_TACTILE_SRC_ANALOG_EXTERNAL_MIC_H_
 
+// NOLINTBEGIN(build/include)
+
 #include <stdint.h>
 #include <string.h>
 
-#include "nrf_gpio.h"   // NOLINT(build/include)
-#include "nrf_saadc.h"  // NOLINT(build/include)
+#include "board_defs.h"
+#include "nrf_gpio.h"
+#include "nrf_saadc.h"
+#include "cpp/constants.h"
+
+// NOLINTEND
 
 namespace audio_tactile {
 
-// Hardware constants.
+// Hardware definitions.
 enum {
-  kSaadcIrqPriority = 7,  // lowest priority
-  kMicShutDownPin = 46    // On P1.14, which maps to 32 + 14 = 46
+  kSaadcIrqPriority = 7,  // Lowest priority interrupt.
 };
 
-const uint16_t kAdcDataSize = 64;
+// Pin definitions.
+#if PUCK_BOARD
+enum {
+  kMicShutDownPin = 46,              // On P1.14, which maps to 32 + 14 = 46
+  kMicAdcPin = NRF_SAADC_INPUT_AIN4  // Analog input 4.
+};
+#endif
+
+#if SLIM_BOARD
+enum {
+  kMicShutDownPin = 37,              // on P1.05, maps to 32 + 5 = 37
+  kMicAdcPin = NRF_SAADC_INPUT_AIN7  // Analog input 7.
+};
+#endif
 
 class AnalogMic {
  public:

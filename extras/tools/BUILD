@@ -1,4 +1,4 @@
-# Copyright 2019 Google LLC
+# Copyright 2019, 2021 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -23,19 +23,20 @@ package(
 )
 
 c_library(
-    name = "channel_map",
-    srcs = ["channel_map.c"],
-    hdrs = ["channel_map.h"],
+    name = "channel_map_tui",
+    srcs = ["channel_map_tui.c"],
+    hdrs = ["channel_map_tui.h"],
     deps = [
         ":util",
+        "//:dsp",
     ],
 )
 
 c_test(
-    name = "channel_map_test",
-    srcs = ["channel_map_test.c"],
+    name = "channel_map_tui_test",
+    srcs = ["channel_map_tui_test.c"],
     deps = [
-        ":channel_map",
+        ":channel_map_tui",
         ":util",
         "//:dsp",
     ],
@@ -106,7 +107,7 @@ c_binary(
     name = "run_tactile_methods",
     srcs = ["run_tactile_methods.c"],
     deps = [
-        ":channel_map",
+        ":channel_map_tui",
         ":portaudio_device",
         ":util",
         "//:dsp",
@@ -120,7 +121,7 @@ c_binary(
     name = "run_tactile_processor",
     srcs = ["run_tactile_processor.c"],
     deps = [
-        ":channel_map",
+        ":channel_map_tui",
         ":portaudio_device",
         ":run_tactile_processor_assets",
         ":util",

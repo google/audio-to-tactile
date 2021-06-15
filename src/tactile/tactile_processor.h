@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,6 +51,7 @@
 #include "frontend/carl_frontend.h"
 #include "phonetics/embed_vowel.h"
 #include "tactile/energy_envelope.h"
+#include "tactile/tuning.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -115,6 +116,10 @@ void TactileProcessorReset(TactileProcessor* processor);
  */
 void TactileProcessorProcessSamples(TactileProcessor* processor,
     const float* input, float* output);
+
+/* Applies tuning specified by `knobs`. May be called at any time. */
+void TactileProcessorApplyTuning(TactileProcessor* processor,
+                                 const TuningKnobs* tuning_knobs);
 
 #ifdef __cplusplus
 }  /* extern "C" */

@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -112,7 +112,7 @@ struct Engine {
 } engine;
 
 /* Initializes buzzer to zero state. */
-void BuzzerInit(Buzzer* buzzer) {
+static void BuzzerInit(Buzzer* buzzer) {
   SDL_AtomicSet(&buzzer->frequency_hz_atomic, 0);
   SDL_AtomicSet(&buzzer->target_amplitude_atomic, 0);
   buzzer->rotator[0] = 1.0f;
@@ -124,7 +124,7 @@ void BuzzerInit(Buzzer* buzzer) {
 }
 
 /* Sets buzzer frequency safely through the atomic. */
-void BuzzerSetFrequency(Buzzer* buzzer, float frequency_hz) {
+static void BuzzerSetFrequency(Buzzer* buzzer, float frequency_hz) {
   /* Avoid overflow. */
   assert(frequency_hz / 16 < INT_MAX);
   /* Convert to fixed point with 4 fractional bits. */
@@ -133,7 +133,7 @@ void BuzzerSetFrequency(Buzzer* buzzer, float frequency_hz) {
 }
 
 /* Sets buzzer amplitude safely through the atomic. */
-void BuzzerSetAmplitude(Buzzer* buzzer, float target_amplitude) {
+static void BuzzerSetAmplitude(Buzzer* buzzer, float target_amplitude) {
   /* Avoid overflow. */
   assert(target_amplitude / 16384 < INT_MAX);
   /* Convert to fixed point with 14 fractional bits. */
@@ -142,10 +142,11 @@ void BuzzerSetAmplitude(Buzzer* buzzer, float target_amplitude) {
 }
 
 /* The portaudio callback, runs the sine wave oscillator. */
-int PortaudioCallback(const void* input_buffer, void* output_buffer,
-    unsigned long frames_per_buffer,
-    const PaStreamCallbackTimeInfo* time_info,
-    PaStreamCallbackFlags status_flags, void* user_data) {
+static int PortaudioCallback(const void* input_buffer, void* output_buffer,
+                             unsigned long frames_per_buffer,
+                             const PaStreamCallbackTimeInfo* time_info,
+                             PaStreamCallbackFlags status_flags,
+                             void* user_data) {
   float* output = (float*)output_buffer;
 
   Buzzer* buzzer = &engine.buzzer;
@@ -198,7 +199,7 @@ int PortaudioCallback(const void* input_buffer, void* output_buffer,
 }
 
 /* Starts portaudio. Returns 1 on success, 0 on failure. */
-int StartPortaudio() {
+static int StartPortaudio() {
   /* Initialize portaudio. */
   engine.pa_error = Pa_Initialize();
   if (engine.pa_error != paNoError) { return 0; }
@@ -242,7 +243,7 @@ int StartPortaudio() {
   return 1;
 }
 
-void CleanupPortaudio() {
+static void CleanupPortaudio() {
   if (engine.pa_error != paNoError) {  /* Print PA error if there is one. */
     fprintf(stderr, "Error: portaudio: %s\n", Pa_GetErrorText(engine.pa_error));
   }
@@ -252,7 +253,7 @@ void CleanupPortaudio() {
 }
 
 /* Starts SDL. Returns 1 on success, 0 on failure. */
-int StartSdl() {
+static int StartSdl() {
   /* Initialize SDL. */
   if (SDL_Init(SDL_INIT_VIDEO) != 0) {
     fprintf(stderr, "Error: Failed to initialize SDL\n");
@@ -272,7 +273,7 @@ int StartSdl() {
   return DrawTextInitFontTexture(engine.app.renderer);
 }
 
-void CleanupSdl() {
+static void CleanupSdl() {
   if (strlen(SDL_GetError())) {  /* Print SDL error if there is one. */
     fprintf(stderr, "Error: SDL: %s\n", SDL_GetError());
   }
@@ -283,7 +284,7 @@ void CleanupSdl() {
 }
 
 /* Draws a horizontal meter bar, where value`is in [0, 1]. */
-void DrawHBar(int x, int y, float value) {
+static void DrawHBar(int x, int y, float value) {
   const int kWidth = 200;
   const int kHeight = 20;
   const int value_pixels = (int)((kWidth - 2) * value);
@@ -309,7 +310,7 @@ void DrawHBar(int x, int y, float value) {
 }
 
 /* Draws a keytar key. */
-void DrawKey(int x, int y, const char* label, int pressed) {
+static void DrawKey(int x, int y, const char* label, int pressed) {
   const int kWidth = 48;
   const int kHeight = 85;
   SDL_SetRenderDrawColor(engine.app.renderer, 0x50, 0x50, 0x50, 0xff);
@@ -337,7 +338,7 @@ void DrawKey(int x, int y, const char* label, int pressed) {
 }
 
 /* Draws frequency and amplitude UI. */
-void DrawFrequencyAndAmplitudeMeters() {
+static void DrawFrequencyAndAmplitudeMeters() {
   DrawText(engine.app.renderer, 5, 30,
       "frequency: %5.0f Hz", engine.frequency_hz);
   DrawText(engine.app.renderer, 5, 55,
@@ -348,23 +349,23 @@ void DrawFrequencyAndAmplitudeMeters() {
 }
 
 /* Computes decibels from linear amplitude. */
-float DbFromAmplitude(float amplitude) {
+static float DbFromAmplitude(float amplitude) {
   return 20 * log(amplitude) / M_LN10;
 }
 
 /* Changes the current amplitude by `factor`. */
-void ChangeAmplitude(float factor) {
+static void ChangeAmplitude(float factor) {
   engine.amplitude *= factor;
   if (engine.amplitude > 1) { engine.amplitude = 1.0f; }
   if (engine.amplitude < kMinAmplitude) { engine.amplitude = kMinAmplitude; }
   engine.amplitude_db = DbFromAmplitude(engine.amplitude);
 }
 
-void BekesyFun(int first_call);
+static void BekesyFun(int first_call);
 
 /* Keytar mode ****************************************************************/
 
-void KeytarHandleKeyboard() {
+static void KeytarHandleKeyboard() {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
     if (event.type == SDL_QUIT ||
@@ -405,7 +406,7 @@ void KeytarHandleKeyboard() {
   }
 }
 
-void KeytarFun(int unused) {
+static void KeytarFun(int unused) {
   KeytarHandleKeyboard();
 
   /* Draw keytar keys. */
@@ -431,7 +432,7 @@ void KeytarFun(int unused) {
 
 /* Bekesy threshold mode ******************************************************/
 
-void BekesyReset() {
+static void BekesyReset() {
   engine.frequency_hz = kFrequenciesHz[engine.selected_frequency_index];
   engine.bekesy_prev_reversal_db = 0.0f;
   engine.bekesy_midpoint_db_sum = 0.0f;
@@ -442,7 +443,7 @@ void BekesyReset() {
 /* Prints a table to stderr of frequencies and amplitude thresholds, in CSV
  * format for convenient copying.
  */
-void BekesyPrintThresholds() {
+static void BekesyPrintThresholds() {
   int first = 1;
   int i;
   for (i = 0; i < kNumFrequencies; ++i) {
@@ -460,7 +461,7 @@ void BekesyPrintThresholds() {
   }
 }
 
-int BekesyHandleKeyboard() {
+static int BekesyHandleKeyboard() {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
     if (event.type == SDL_QUIT ||
@@ -507,7 +508,7 @@ int BekesyHandleKeyboard() {
   return space_pressed;
 }
 
-void BekesyFun(int first_call) {
+static void BekesyFun(int first_call) {
   if (first_call) {
     BekesyReset();
   }
@@ -567,12 +568,14 @@ void BekesyFun(int first_call) {
   DrawText(engine.app.renderer, 5, 280, "Esc       Quit program");
 
   DrawTextSetColor(0xb1, 0xd6, 0x31);
-  DrawText(engine.app.renderer, 5, 130, "Hold SPACE when you perceive the signal.");
+  DrawText(engine.app.renderer, 5, 130,
+           "Hold SPACE when you perceive the signal.");
 
   if (engine.bekesy_num_reversals >= 3) {
     /* Estimate the threshold from the average of the reversals. */
-    float threshold_db = (engine.bekesy_midpoint_db_sum + engine.amplitude_db/2) /
-      (engine.bekesy_num_reversals - 1.5f);
+    float threshold_db =
+        (engine.bekesy_midpoint_db_sum + engine.amplitude_db / 2) /
+        (engine.bekesy_num_reversals - 1.5f);
 
     engine.bekesy_thresholds_db[engine.selected_frequency_index] = threshold_db;
 

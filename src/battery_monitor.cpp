@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC
+// Copyright 2020-2021 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,14 +18,14 @@ namespace audio_tactile {
 
 BatteryMonitor::BatteryMonitor() {}
 
-void BatteryMonitor::Initialize() {
+void BatteryMonitor::InitializeLowVoltageInterrupt() {
   // Enable interrupt on LPCOMP CROSS event.
   NRF_LPCOMP->INTENSET = LPCOMP_INTENSET_CROSS_Msk;
 
   // Clear previous and enable interrupts. Set priority.
   NVIC_DisableIRQ(LPCOMP_IRQn);
   NVIC_ClearPendingIRQ(LPCOMP_IRQn);
-  NVIC_SetPriority(LPCOMP_IRQn, LPCOMP_IRQ_PRIORITY);
+  NVIC_SetPriority(LPCOMP_IRQn, kLowPowerCompIrqPriority);
   NVIC_EnableIRQ(LPCOMP_IRQn);
 
   // We want to trigger low battery warning around 3.5 V
@@ -33,14 +33,13 @@ void BatteryMonitor::Initialize() {
   // The trigger can only be one of the 16 values.
   // Theoretically, set input source to 6/8 of Vdd = ((3.0V) * (6/8))/0.71
   // = 3.55 V_battery. However, the high impedance from  the voltage divider
-  // seems to be loading the comparator. As a result, I had to change the
-  // threshold to 5/16, to set threshold around 3.45V. Reducing the loading is
-  // only possible with hardware by adding a buffer (voltage divider).
+  // can load the comparator, so threshold should be measured with a
+  // variable power supply to be sure.
   NRF_LPCOMP->REFSEL |=
-      (LPCOMP_REFSEL_REFSEL_Ref5_16Vdd << LPCOMP_REFSEL_REFSEL_Pos);
+      (LPCOMP_REFSEL_REFSEL_Ref6_8Vdd << LPCOMP_REFSEL_REFSEL_Pos);
 
-  // Set reference input source to AIN pin 6 (P0.30).
-  NRF_LPCOMP->PSEL |= (LPCOMP_PSEL_PSEL_AnalogInput6 << LPCOMP_PSEL_PSEL_Pos);
+  // Set reference input source to an analog input pin.
+  NRF_LPCOMP->PSEL |= (kLowPowerCompPin << LPCOMP_PSEL_PSEL_Pos);
 
   // Enable and start the low power comparator.
   NRF_LPCOMP->ENABLE = LPCOMP_ENABLE_ENABLE_Enabled;
@@ -63,14 +62,13 @@ int16_t BatteryMonitor::MeasureBatteryVoltage() {
   NRF_SAADC->RESOLUTION = SAADC_RESOLUTION_VAL_12bit;
   NRF_SAADC->ENABLE = (SAADC_ENABLE_ENABLE_Enabled << SAADC_ENABLE_ENABLE_Pos);
 
-  // Use ADC channel 1. Recall, that channel 0 is used by the microphone.
-  // Configure the channel here.
+  // Use ADC channel 0.
   // Set the acquisition time to 40 us (max), since the voltage divider has high
   // impedance. Select internal reference (0.6V), which gives us 3.6 V range.
-  NRF_SAADC->CH[1].CONFIG =
+  NRF_SAADC->CH[0].CONFIG =
       ((SAADC_CH_CONFIG_RESP_Bypass << SAADC_CH_CONFIG_RESP_Pos) &
        SAADC_CH_CONFIG_RESP_Msk) |
-      ((SAADC_CH_CONFIG_RESP_Bypass << SAADC_CH_CONFIG_RESN_Pos) &
+      ((SAADC_CH_CONFIG_RESN_Bypass << SAADC_CH_CONFIG_RESN_Pos) &
        SAADC_CH_CONFIG_RESN_Msk) |
       ((SAADC_CH_CONFIG_GAIN_Gain1_6 << SAADC_CH_CONFIG_GAIN_Pos) &
        SAADC_CH_CONFIG_GAIN_Msk) |
@@ -83,9 +81,9 @@ int16_t BatteryMonitor::MeasureBatteryVoltage() {
       ((SAADC_CH_CONFIG_BURST_Disabled << SAADC_CH_CONFIG_BURST_Pos) &
        SAADC_CH_CONFIG_BURST_Msk);
 
-  // Set the pin to analog 6.
+  // Set the pin to analog input.
   // PSELN has no effect for single ended mode.
-  NRF_SAADC->CH[1].PSELP = SAADC_CH_PSELP_PSELP_AnalogInput6;
+  NRF_SAADC->CH[0].PSELP = kLowPowerCompAdcPin;
 
   // Pointer to the ADC buffer for Easy DMA.
   NRF_SAADC->RESULT.PTR = (uint32_t)&value;
@@ -94,17 +92,20 @@ int16_t BatteryMonitor::MeasureBatteryVoltage() {
   // Trigger immediate  ADC sampling.
   NRF_SAADC->TASKS_START = 0x01UL;
 
-  while (!NRF_SAADC->EVENTS_STARTED) {}
+  while (!NRF_SAADC->EVENTS_STARTED) {
+  }
 
   NRF_SAADC->EVENTS_STARTED = 0x00UL;
   NRF_SAADC->TASKS_SAMPLE = 0x01UL;
 
-  while (!NRF_SAADC->EVENTS_END) {}
+  while (!NRF_SAADC->EVENTS_END) {
+  }
 
   NRF_SAADC->EVENTS_END = 0x00UL;
   NRF_SAADC->TASKS_STOP = 0x01UL;
 
-  while (!NRF_SAADC->EVENTS_STOPPED) {}
+  while (!NRF_SAADC->EVENTS_STOPPED) {
+  }
 
   NRF_SAADC->EVENTS_STOPPED = 0x00UL;
 
@@ -156,27 +157,7 @@ float BatteryMonitor::ConvertBatteryVoltageToFloat(
 BatteryMonitor PuckBatteryMonitor;
 
 void BatteryMonitor::OnLowBatteryEventListener(void (*function)(void)) {
-  callback_ = function;
-}
-
-// Interrupt handler for the low power comparator redirects to IrqHandler.
-extern "C" {
-void LPCOMP_COMP_IRQHandler() { PuckBatteryMonitor.IrqHandler(); }
-}
-
-void BatteryMonitor::IrqHandler() {
-  // Clear event.
-  NRF_LPCOMP->EVENTS_CROSS = 0;
-
-  // Sample the LPCOMP stores its state in the RESULT register.
-  // RESULT==0 means lower than reference voltage.
-  // RESULT==1 means higher than reference voltage.
-  NRF_LPCOMP->TASKS_SAMPLE = 1;
-  event_ = NRF_LPCOMP->RESULT;
-
-  if (callback_) {
-    callback_();
-  }
+  on_lpcomp_trigger(function);
 }
 
 }  // namespace audio_tactile

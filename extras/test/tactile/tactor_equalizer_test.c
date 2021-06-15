@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ static double Response(const BiquadFilterCoeffs* coeffs,
       );
 }
 
-void TestResponse(float sample_rate_hz) {
+static void TestResponse(float sample_rate_hz) {
   printf("TestResponse(%g)\n", sample_rate_hz);
   int mid_gain_db;
   for (mid_gain_db = -8; mid_gain_db <= 0; mid_gain_db += 2) {

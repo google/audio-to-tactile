@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ extern "C" {
 int DrawTextInitFontTexture(SDL_Renderer* renderer);
 
 /* Frees the font texture. */
-void DrawTextFreeFontTexture();
+void DrawTextFreeFontTexture(void);
 
 /* Draws formatted text to the current rendering target. The text is a
  * monospaced font with characters of size 12x20 (a decently large and readable

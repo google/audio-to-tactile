@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,10 +22,10 @@
 #include "src/dsp/logging.h"
 
 /* Set up an array to record a history of events. */
-char* g_events[16];
-int g_num_events = 0;
+static char* g_events[16];
+static int g_num_events = 0;
 
-void AddEvent(const char* event, ...) {
+static void AddEvent(const char* event, ...) {
   CHECK(g_num_events < sizeof(g_events) / sizeof(*g_events));
   g_events[g_num_events] = (char*)malloc(64);
   va_list args;
@@ -35,7 +35,7 @@ void AddEvent(const char* event, ...) {
   ++g_num_events;
 }
 
-void FreeEvents() {
+static void FreeEvents() {
   int i;
   for (i = 0; i < g_num_events; ++i) {
     free(g_events[i]);
@@ -43,7 +43,7 @@ void FreeEvents() {
   g_num_events = 0;
 }
 
-extern const TactophoneState kBar;
+static const TactophoneState kBar;
 
 /* "Foo" state. */
 
@@ -62,7 +62,7 @@ static void FooOnKeyPress(TactophoneEngine* engine, int c) {
 
 static void FooOnTick(TactophoneEngine* engine) { AddEvent("Foo tick"); }
 
-const TactophoneState kFoo = {
+static const TactophoneState kFoo = {
     FooOnEnterState,
     FooOnKeyPress,
     FooOnTick,
@@ -83,14 +83,15 @@ static void BarOnKeyPress(TactophoneEngine* engine, int c) {
 
 static void BarOnTick(TactophoneEngine* engine) { AddEvent("Bar tick"); }
 
-const TactophoneState kBar = {
+static const TactophoneState kBar = {
     BarOnEnterState,
     BarOnKeyPress,
     BarOnTick,
 };
 
 /* Test event handling in running with a couple states. */
-void TestEventHandling() {
+static void TestEventHandling() {
+  puts("TestEventHandling");
   TactophoneEngine engine;
   TactophoneEngineInit(&engine);
 
@@ -128,7 +129,8 @@ void TestEventHandling() {
 }
 
 /* Test lesson trial logic. */
-void TestLessonTrial() {
+static void TestLessonTrial() {
+  puts("TestLessonTrial");
   char lessons_file[L_tmpnam];
   CHECK_NOTNULL(tmpnam(lessons_file));
   { /* Write a short lessons file. */

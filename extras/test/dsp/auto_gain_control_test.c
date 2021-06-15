@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 
 #include "src/dsp/logging.h"
 
-float ComputeRmsValue(const float* signal, int num_samples) {
+static float ComputeRmsValue(const float* signal, int num_samples) {
   double accum = 0.0;
   int i;
   for (i = 0; i < num_samples; ++i) {
@@ -29,7 +29,7 @@ float ComputeRmsValue(const float* signal, int num_samples) {
   return (float)sqrt(accum / num_samples);
 }
 
-void TestBasic(float agc_strength) {
+static void TestBasic(float agc_strength) {
   printf("TestBasic(%g)\n", agc_strength);
   const int kSampleRateHz = 16000;
   AutoGainControlState state;

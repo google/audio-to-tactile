@@ -50,6 +50,12 @@ c_test(
 )
 
 c_test(
+    name = "datestamp_test",
+    srcs = ["datestamp_test.c"],
+    deps = ["//:dsp"],
+)
+
+c_test(
     name = "elliptic_fun_test",
     srcs = ["elliptic_fun_test.c"],
     deps = ["//:dsp"],

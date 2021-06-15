@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,8 @@ static float ComputeRms(const float* x, float t_start, float t_end,
   return sqrt(accum / (i_end - i_start + 1));
 }
 
-void TestBasic(float sample_rate_hz) {
+static void TestBasic(float sample_rate_hz) {
+  printf("TestBasic(%g)\n", sample_rate_hz);
   srand(0);
   const int num_samples = (int)(0.25f * sample_rate_hz + 0.5f);
   float* input = (float*)CHECK_NOTNULL(malloc(num_samples * sizeof(float)));

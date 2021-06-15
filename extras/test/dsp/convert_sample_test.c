@@ -1,4 +1,4 @@
-/* Copyright 2020 Google LLC
+/* Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@
 
 static double RandUniform() { return (double)rand() / RAND_MAX; }
 
-void TestConvertInt16ToFromFloat() {
+static void TestConvertInt16ToFromFloat() {
   puts("TestConvertInt16ToFromFloat");
 
   CHECK(ConvertSampleInt16ToFloat(0) == 0);
@@ -68,7 +68,7 @@ void TestConvertInt16ToFromFloat() {
   free(as_float);
 }
 
-void TestConvertInt32ToFromFloat() {
+static void TestConvertInt32ToFromFloat() {
   puts("TestConvertInt32ToFromFloat");
 
   CHECK(ConvertSampleInt32ToFloat(0) == 0);
@@ -112,7 +112,7 @@ void TestConvertInt32ToFromFloat() {
   free(as_float);
 }
 
-void TestConvertFloatTo0_MaxValue() {
+static void TestConvertFloatTo0_MaxValue() {
   puts("TestConvertFloatTo0_MaxValue");
 
   CHECK(ConvertSampleFloatTo0_MaxValue(0, 512) == 256);

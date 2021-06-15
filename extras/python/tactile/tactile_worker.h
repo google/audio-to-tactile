@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ extern "C" {
 
 #include <pthread.h>
 
-#include "extras/tools/channel_map.h"
+#include "extras/tools/channel_map_tui.h"
 #include "src/tactile/post_processor.h"
 #include "src/tactile/tactile_processor.h"
 #include "portaudio.h"

@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC
+// Copyright 2020-2021 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,20 +21,19 @@
 // when the battery voltage is low and trigger an interrupt.
 // https://infocenter.nordicsemi.com/index.jsp?topic=%2Fcom.nordic.infocenter.nrf52832.ps.v1.1%2Flpcomp.html
 // To measure the analog battery voltage, SAADC was used.
+// Note: the low power comparator can run only for one of the battery monitor or
+// temperature monitor at a time
 
 #ifndef AUDIO_TO_TACTILE_SRC_BATTERY_MONITOR_H_
 #define AUDIO_TO_TACTILE_SRC_BATTERY_MONITOR_H_
 
 #include <cstdint>
 
-#include "nrf_gpio.h"  // NOLINT(build/include)
+#include "board_defs.h"     // NOLINT(build/include)
+#include "lpcomp_common.h"  // NOLINT(build/include)
+#include "nrf_gpio.h"       // NOLINT(build/include)
 
 namespace audio_tactile {
-
-// Low power comparator definitions.
-enum {
-  LPCOMP_IRQ_PRIORITY = 7  // lowest priority
-};
 
 class BatteryMonitor {
  public:
@@ -42,13 +41,10 @@ class BatteryMonitor {
 
   // Configure the battery pin and initialize interrupts.
   // This function starts the listener (interrupt handler) as well.
-  void Initialize();
+  void InitializeLowVoltageInterrupt();
 
   // Stop the comparator for the battery monitor.
   void End();
-
-  // This function is called when a low battery is detected by comparator.
-  void IrqHandler();
 
   // Allows the user to add low battery warning in other parts of firmware.
   void OnLowBatteryEventListener(void (*function)(void));
@@ -56,7 +52,7 @@ class BatteryMonitor {
   // Returns why the interrupt happened. Two options are:
   // 0 - triggered because under reference voltage.
   // 1 - triggered because over reference voltage.
-  uint8_t GetEvent() const { return event_; }
+  uint8_t GetEvent() const { return get_lpcomp_event(); }
 
   // Use one-shot mode to read the battery voltage.
   int16_t MeasureBatteryVoltage();
@@ -67,11 +63,25 @@ class BatteryMonitor {
   float ConvertBatteryVoltageToFloat(int16_t raw_adc_battery_reading);
 
  private:
-  // Callback for the interrupt.
-  void (*callback_)(void);
+  // Low power comparator definitions.
+  enum {
+    kLowPowerCompIrqPriority = 7  // lowest priority
+  };
 
-  // Storing interrupt event. Event is info passed from the interrupt handler.
-  uint8_t event_;
+// Pin definitions.
+#if PUCK_BOARD
+  enum {
+    kLowPowerCompPin = LPCOMP_PSEL_PSEL_AnalogInput6,  // AIN pin 6 (P0.30).
+    kLowPowerCompAdcPin = SAADC_CH_PSELP_PSELP_AnalogInput6
+  };
+#endif
+
+#if SLIM_BOARD
+  enum {
+    kLowPowerCompPin = LPCOMP_PSEL_PSEL_AnalogInput3,  // AIN pin 3 (P0.05).
+    kLowPowerCompAdcPin = SAADC_CH_PSELP_PSELP_AnalogInput3
+  };
+#endif
 };
 
 extern BatteryMonitor PuckBatteryMonitor;

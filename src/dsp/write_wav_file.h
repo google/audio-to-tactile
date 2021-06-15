@@ -13,7 +13,7 @@
  * limitations under the License.
  *
  *
- * C library to write 16-bit WAV files.
+ * C library to write 16 or 24-bit WAV files.
  *
  * The simplest usage of this API is to use the WriteWavFile function, which
  * requires the samples to be buffered at the application layer.
@@ -58,7 +58,7 @@ extern "C" {
 int WriteWavHeader(FILE* f, size_t num_samples, int sample_rate_hz,
                    int num_channels);
 
-/* Write samples into a WAV file.  samples should be interleaved, and
+/* Write samples into a 16-bit WAV file.  samples should be interleaved, and
  * num_samples must be an integer multiple of num_channels. Returns 1 on
  * success, 0 on failure.
  */
@@ -70,6 +70,19 @@ int WriteWavSamples(FILE* f, const int16_t* samples, size_t num_samples);
  */
 int WriteWavFile(const char* file_name, const int16_t* samples,
                  size_t num_samples, int sample_rate_hz, int num_channels);
+
+/* Same functionality as the three functions above, but for 24-bit WAV files.
+ * The only API difference is that the input sample format is int32_t instead of
+ * int16_t. Only the upper 24 bits of each int32_t are written to the file,
+ * meaning that the expected data range is INT_32_MIN to INT_32_MAX and that
+ * the lowest 8 bits are truncated. */
+
+int WriteWavHeader24Bit(FILE* f, size_t num_samples, int sample_rate_hz,
+                        int num_channels);
+int WriteWavSamples24Bit(FILE* f, const int32_t* samples, size_t num_samples);
+
+int WriteWavFile24Bit(const char* file_name, const int32_t* samples,
+                      size_t num_samples, int sample_rate_hz, int num_channels);
 
 #ifdef __cplusplus
 } /* extern "C" */

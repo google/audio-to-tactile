@@ -1,4 +1,4 @@
-# Copyright 2019 Google LLC
+# Copyright 2019, 2021 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -37,7 +37,6 @@ py_test(
     srcs_version = "PY3",
     deps = [
         ":energy_envelope",
-        ":post_processor",
     ],
 )
 
@@ -77,8 +76,9 @@ py_extension(
         "tactile_worker_python_bindings.c",
     ],
     deps = [
+        "//:dsp",
         "//:tactile",
-        "//extras/tools:channel_map",
+        "//extras/tools:channel_map_tui",
         "//extras/tools:portaudio_device",
         "//extras/tools:util",
     ],

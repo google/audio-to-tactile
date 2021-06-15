@@ -1,4 +1,4 @@
-/* Copyright 2020 Google LLC
+/* Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -345,7 +345,7 @@ static void InitModule(PyObject* m) {
   PyModule_AddObject(m, "PLACES", places);
 }
 
-PyMODINIT_FUNC PyInit_classify_phoneme() {
+PyMODINIT_FUNC PyInit_classify_phoneme(void) {
   import_array();
   PyObject* m = PyModule_Create(&kModule);
   if (m) {

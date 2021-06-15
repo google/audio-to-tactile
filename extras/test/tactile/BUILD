@@ -29,6 +29,28 @@ c_test(
 )
 
 c_test(
+    name = "envelope_tracker_test",
+    srcs = ["envelope_tracker_test.c"],
+    deps = [
+        "//:dsp",
+        "//:tactile",
+    ],
+)
+
+c_test(
+    name = "tactile_pattern_test",
+    srcs = ["tactile_pattern_test.c"],
+    data = [
+        "//extras/test/testdata:tactile_pattern_wavs",
+    ],
+    deps = [
+        "//:dsp",
+        "//:tactile",
+        "//extras/tools:util",
+    ],
+)
+
+c_test(
     name = "tactile_processor_test",
     srcs = ["tactile_processor_test.c"],
     data = [

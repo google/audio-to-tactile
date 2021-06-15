@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,8 @@
 
 static double RandUniform() { return (double) rand() / RAND_MAX; }
 
-void TestBasic() {
+static void TestBasic() {
+  puts("TestBasic");
   PhasorRotator oscillator;
   double max_error = 0.0;
   int trial;
@@ -55,7 +56,8 @@ void TestBasic() {
   CHECK(max_error < 0.001);
 }
 
-void TestPeriod() {
+static void TestPeriod() {
+  puts("TestPeriod");
   const double kSampleRateHz = 16000.0;
   PhasorRotator oscillator;
   int trial;

@@ -1,4 +1,4 @@
-/* Copyright 2020 Google LLC
+/* Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,23 +27,28 @@
  *                decimation_factor=1,
  *                bpf_low_edge_hz=500.0,
  *                bpf_high_edge_hz=3500.0,
- *                energy_smoother_cutoff_hz=500.0,
- *                pcen_time_constant_s=0.3,
- *                pcen_alpha=0.5,
- *                pcen_beta=0.25,
- *                pcen_gamma=1e-8,
- *                pcen_delta=1.5e-4,
+ *                energy_cutoff_hz=500.0,
+ *                energy_tau_s=0.01,
+ *                noise_tau_s=0.4,
+ *                agc_strength=0.7,
+ *                denoise_thresh_factor=8.0,
+ *                gain_tau_attack_s=0.002,
+ *                gain_tau_release_s=0.15,
+ *                compressor_exponent=0.25,
+ *                compressor_delta=0.01,
  *                output_gain=1.0)
  *    """Constructor. [Wraps `EnergyEnvelopeMake()` in the C library.]"""
  *
  *  def reset():
  *    """Resets to initial state."""
  *
- *  def process_samples(self, input_samples)
+ *  def process_samples(self, input_samples, debug_out=None)
  *    """Process samples in a streaming manner.
  *
  *    Args:
  *      input_samples: 1-D numpy array.
+ *      debug_out: (Optional) A dict, which if passed, is filled with debug
+ *        signals of energy envelope's internal state.
  *    Returns:
  *      Array of length `len(input_samples) / decimation_factor`.
  *    """
@@ -97,27 +102,33 @@ static int EnergyEnvelopeObjectInit(EnergyEnvelopeObject* self,
                                    "decimation_factor",
                                    "bpf_low_edge_hz",
                                    "bpf_high_edge_hz",
-                                   "energy_smoother_cutoff_hz",
-                                   "pcen_time_constant_s",
-                                   "pcen_alpha",
-                                   "pcen_beta",
-                                   "pcen_gamma",
-                                   "pcen_delta",
+                                   "energy_cutoff_hz",
+                                   "energy_tau_s",
+                                   "noise_tau_s",
+                                   "agc_strength",
+                                   "denoise_thresh_factor",
+                                   "gain_tau_attack_s",
+                                   "gain_tau_release_s",
+                                   "compressor_exponent",
+                                   "compressor_delta",
                                    "output_gain",
                                    NULL};
 
   if (!PyArg_ParseTupleAndKeywords(
-          args, kw, "f|ifffffffff:__init__", (char**)keywords,
+          args, kw, "f|iffffffffffff:__init__", (char**)keywords,
           &input_sample_rate_hz,
           &decimation_factor,
           &params.bpf_low_edge_hz,
           &params.bpf_high_edge_hz,
-          &params.energy_smoother_cutoff_hz,
-          &params.pcen_time_constant_s,
-          &params.pcen_alpha,
-          &params.pcen_beta,
-          &params.pcen_gamma,
-          &params.pcen_delta,
+          &params.energy_cutoff_hz,
+          &params.energy_tau_s,
+          &params.noise_tau_s,
+          &params.agc_strength,
+          &params.denoise_thresh_factor,
+          &params.gain_tau_attack_s,
+          &params.gain_tau_release_s,
+          &params.compressor_exponent,
+          &params.compressor_delta,
           &params.output_gain)) {
     return -1;  /* PyArg_ParseTupleAndKeywords failed. */
   }
@@ -144,14 +155,28 @@ static PyObject* EnergyEnvelopeObjectReset(EnergyEnvelopeObject* self) {
   return Py_None;
 }
 
+/* Creates 1D float array in dict. Returns data pointer, or NULL on failure. */
+static float* CreateArrayInDict(PyObject* dict, const char* key,
+                                npy_intp size) {
+  PyObject* array = PyArray_SimpleNew(1, &size, NPY_FLOAT);
+  if (!array) { return NULL; }
+  float* data = (float*)PyArray_DATA((PyArrayObject*)array);
+  const int success = (PyDict_SetItemString(dict, key, array) == 0);
+  /* PyDict_SetItemString() does *not* steal a reference to array. */
+  Py_DECREF(array);
+  return success ? data : NULL;
+}
+
 /* Define `EnergyEnvelope.process_samples`. */
 static PyObject* EnergyEnvelopeObjectProcessSamples(
     EnergyEnvelopeObject* self, PyObject* args, PyObject* kw) {
   PyObject* samples_arg = NULL;
-  static const char* keywords[] = {"samples", NULL};
+  PyObject* debug_out = NULL;
+  static const char* keywords[] = {"samples", "debug_out", NULL};
 
-  if (!PyArg_ParseTupleAndKeywords(args, kw, "O:process_samples",
-                                   (char**)keywords, &samples_arg)) {
+  if (!PyArg_ParseTupleAndKeywords(args, kw, "O|O!:process_samples",
+                                   (char**)keywords, &samples_arg,
+                                   &PyDict_Type, &debug_out)) {
     return NULL;  /* PyArg_ParseTupleAndKeywords failed. */
   }
 
@@ -172,26 +197,61 @@ static PyObject* EnergyEnvelopeObjectProcessSamples(
   }
 
   const int num_samples = PyArray_SIZE(samples);
+  const float* samples_data = (const float*)PyArray_DATA(samples);
+  npy_intp output_size = num_samples / self->decimation_factor;
 
-  /* Create output numpy array. */
-  npy_intp output_dims[1];
-  output_dims[0] = num_samples / self->decimation_factor;
-  PyArrayObject* output =
-      (PyArrayObject*)PyArray_SimpleNew(1, output_dims, NPY_FLOAT);
-  if (!output) {  /* PyArray_SimpleNew failed. */
-    /* PyArray_SimpleNew already set an error, so clean up and return. */
-    Py_XDECREF(samples);
+  PyArrayObject* output_array =
+      (PyArrayObject*)PyArray_SimpleNew(1, &output_size, NPY_FLOAT);
+  if (!output_array) {
+    Py_DECREF(samples);
     return NULL;
   }
+  float* output = (float*)PyArray_DATA(output_array);
 
-  /* Process the samples. */
-  float* samples_data = (float*)PyArray_DATA(samples);
-  float* output_data = (float*)PyArray_DATA(output);
-  EnergyEnvelopeProcessSamples(
-      &self->energy_envelope, samples_data, num_samples, output_data, 1);
+  if (!debug_out) {
+    /* Process the samples. */
+    EnergyEnvelopeProcessSamples(
+        &self->energy_envelope, samples_data, num_samples, output, 1);
+  } else {
+    /* If a `debug_out` dict was passed, clear it and put arrays in it for
+     * holding energy envelope debug signals.
+     */
+    PyDict_Clear(debug_out);
+    float* smoothed_energy = NULL;
+    float* log2_noise = NULL;
+    float* smoothed_gain = NULL;
+    if (!(smoothed_energy = CreateArrayInDict(
+            debug_out, "smoothed_energy", output_size)) ||
+        !(log2_noise = CreateArrayInDict(
+            debug_out, "log2_noise", output_size)) ||
+        !(smoothed_gain = CreateArrayInDict(
+            debug_out, "smoothed_gain", output_size))) {
+      Py_DECREF(samples);
+      Py_DECREF(output_array);
+      PyDict_Clear(debug_out);
+      return NULL;
+    }
+
+    int i;
+    for (i = 0; i < output_size; ++i) {
+      /* Process the samples. In order to save debug signals, we pass
+       * decimation_factor input samples so that one output sample is produced
+       * at a time.
+       */
+      EnergyEnvelopeProcessSamples(
+          &self->energy_envelope, samples_data, self->decimation_factor,
+          output + i, 1);
+      samples_data += self->decimation_factor;
+
+      smoothed_energy[i] = self->energy_envelope.smoothed_energy;
+      log2_noise[i] = self->energy_envelope.log2_noise;
+      smoothed_gain[i] = self->energy_envelope.smoothed_gain;
+    }
+  }
+
 
   Py_DECREF(samples);
-  return (PyObject*)output;
+  return (PyObject*)output_array;
 }
 
 /* EnergyEnvelope's method functions. */
@@ -288,14 +348,17 @@ static void AddParamsDict(PyObject* m, const char* name,
   if (!dict ||
       !SetFloatInDict(dict, "bpf_low_edge_hz", params->bpf_low_edge_hz) ||
       !SetFloatInDict(dict, "bpf_high_edge_hz", params->bpf_high_edge_hz) ||
-      !SetFloatInDict(dict, "energy_smoother_cutoff_hz",
-                      params->energy_smoother_cutoff_hz) ||
-      !SetFloatInDict(dict, "pcen_time_constant_s",
-                      params->pcen_time_constant_s) ||
-      !SetFloatInDict(dict, "pcen_alpha", params->pcen_alpha) ||
-      !SetFloatInDict(dict, "pcen_beta", params->pcen_beta) ||
-      !SetFloatInDict(dict, "pcen_gamma", params->pcen_gamma) ||
-      !SetFloatInDict(dict, "pcen_delta", params->pcen_delta) ||
+      !SetFloatInDict(dict, "energy_cutoff_hz", params->energy_cutoff_hz) ||
+      !SetFloatInDict(dict, "energy_tau_s", params->energy_tau_s) ||
+      !SetFloatInDict(dict, "noise_tau_s", params->noise_tau_s) ||
+      !SetFloatInDict(dict, "agc_strength", params->agc_strength) ||
+      !SetFloatInDict(dict, "denoise_thresh_factor",
+                      params->denoise_thresh_factor) ||
+      !SetFloatInDict(dict, "gain_tau_attack_s", params->gain_tau_attack_s) ||
+      !SetFloatInDict(dict, "gain_tau_release_s", params->gain_tau_release_s) ||
+      !SetFloatInDict(dict, "compressor_exponent",
+                      params->compressor_exponent) ||
+      !SetFloatInDict(dict, "compressor_delta", params->compressor_delta) ||
       !SetFloatInDict(dict, "output_gain", params->output_gain)) {
     Py_XDECREF(dict);
     return;
@@ -303,7 +366,7 @@ static void AddParamsDict(PyObject* m, const char* name,
   PyModule_AddObject(m, name, dict);
 }
 
-PyMODINIT_FUNC PyInit_energy_envelope() {
+PyMODINIT_FUNC PyInit_energy_envelope(void) {
   import_array();
   PyObject* m = PyModule_Create(&kModule);
   kEnergyEnvelopeType.tp_new = PyType_GenericNew;

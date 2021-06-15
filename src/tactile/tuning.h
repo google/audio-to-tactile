@@ -1,4 +1,4 @@
-/* Copyright 2020 Google LLC
+/* Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,95 +17,118 @@
  *
  * The idea is the tuning functions below may be called in response to button
  * presses on the puck or BLE web app to adjust noise robustness vs. sensitivity
- * while it is running. To simplify the calling code, the `value` argument is an
- * integer control value between 0 and 255, and this value is then mapped in a
- * way that makes sense for that parameter.
+ * while it is running. To simplify the calling code, each parameter is
+ * represented with an integer control value between 0 and 255, which is then
+ * mapped in a way that makes sense for that parameter.
+ *
+ * Example use:
+ *   TuningKnobs tuning_knobs = kDefaultTuningKnobs;
+ *   // Make changes to the knobs...
+ *   tuning_knobs.values[kKnobOutputGain] = 100;
+ *   // Apply the new settings.
+ *   TactileProcessorApplyTuning(tactile_processor, &tuning_knobs);
  */
 
 #ifndef THIRD_PARTY_AUDIO_TO_TACTILE_SRC_TACTILE_TUNING_H_
 #define THIRD_PARTY_AUDIO_TO_TACTILE_SRC_TACTILE_TUNING_H_
 
-#include "dsp/fast_fun.h"
-#include "tactile/tactile_processor.h"
+#include <stdint.h>
 
-/* Sets the `output_gain` parameter of all EnergyEvelope instances based on a
- * control value between 0 and 255. The control is such that value = 0
- * corresponds to -18 dB gain, value = 191 to +0 dB, and value = 255 to +6 dB.
- * Returns the output gain in units of dB.
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* Constants for the meaning of each array entry in `TuningKnobs::values`. For
+ * instance, the AGC strength control value is `values[kKnobAgcStrength]`.
  */
-static float TuningSetOutputGain(TactileProcessor* processor, int value) {
-  /* Range of output_gain in dB. */
-  const float kMinGainDb = -18.0f;
-  const float kMaxGainDb = 6.0f;
-
-  if (value < 0) { value = 0; }
-  if (value > 255) { value = 255; }
-  /* Map `value` in [0, 255] to a gain in dB in [kMinGainDb, kMaxGainDb]. */
-  float value_db = kMinGainDb + ((kMaxGainDb - kMinGainDb) / 255.0f) * value;
-
-  /* Convert dB to linear amplitude ratio. */
-  float output_gain = FastExp2((M_LN10 / (20.0f * M_LN2)) * value_db);
-
-  int i;
-  for (i = 0; i < 4; ++i) {  /* Update each EnergyEvelope instance. */
-    processor->channel_states[i].output_gain = output_gain;
-  }
-
-  return value_db;
-}
-
-/* Sets the `pcen_delta` parameter of all EnergyEnvelope instances based on a
- * control value between 0 and 255. It maps value = 0 to 0.0001, value = 85 to
- * 0.001, value = 170 to 0.01, and value = 255 to 0.1. Returns the mapped value
- * of delta that was set.
- */
-static float TuningSetDenoising(TactileProcessor* processor, int value) {
-  /* Range of delta. */
-  const float kMinDelta = 0.0001f;
-  const float kMaxDelta = 0.1f;
-
-  if (value < 0) { value = 0; }
-  if (value > 255) { value = 255; }
-  /* Map `value` in [0, 255] to delta in [kMinDelta, kMaxDelta], warped
-   * logarithmically so that delta changes in larger steps for larger `value`.
+enum {
+  /* Input gain applied before any processing. The range is about -40 dB to
+   * +40 dB with control value = 127 corresponding to 0 dB (unit gain).
+   *
+   * NOTE: Unlike other tuning knobs, TactileProcessor itself does not use the
+   * input gain. Instead, the mapped input gain should be read with
+   *
+   *   float gain = TuningGetInputGain(&tuning);
+   *
+   * and applied to the input audio before calling TactileProcessor. This way,
+   * this gain affects all consumers of the input audio, and the gain can be
+   * absorbed into the scale factor in int16->float conversion.
    */
-  const float kLog2Min = log(kMinDelta) / M_LN2;
-  const float kLog2Max = log(kMaxDelta) / M_LN2;
-  float delta = FastExp2(kLog2Min + ((kLog2Max - kLog2Min) / 255.0f) * value);
+  kKnobInputGain,
 
-  int i;
-  for (i = 0; i < 4; ++i) {  /* Update each EnergyEvelope instance. */
-    processor->channel_states[i].pcen_delta = delta;
-    processor->channel_states[i].pcen_offset =
-        FastPow(delta, processor->channel_states[i].pcen_beta);
-  }
+  /* The `output_gain` parameter of all EnergyEvelope instances based on a
+   * control value between 0 and 255. The control is such that value = 0
+   * corresponds to -18 dB gain, value = 191 to +0 dB, and value = 255 to +6 dB.
+   */
+  kKnobOutputGain,
 
-  return delta;
-}
+  /* The `denoise_thresh_factor` parameter, separately for each EnergyEnvelope
+   * instance. It logarithmically maps control values to the range [1.0, 200.0],
+   * with control value = 89 corresponding to 10.0.
+   */
+  kKnobDenoising0,
+  kKnobDenoising1,
+  kKnobDenoising2,
+  kKnobDenoising3,
 
-/* Sets the `pcen_beta` parameter of all EnergyEvelope instances based on a
- * control value between 0 and 100. It linearly maps values to beta in the range
- * [0.1, 0.5], with value = 96 corresponding to beta = 0.25. Returns the mapped
- * value of beta that was set.
+  /* The `agc_strength` parameter of all EnergyEvelope instances. It linearly
+   * maps control values to the range [0.1, 0.9], with value = 191 corresponding
+   * to strength = 0.7.
+   */
+  kKnobAgcStrength,
+
+  /* The `noise_tau_s` parameter of all EnergyEvelope instances. It
+   * logarithmically maps control values to the range [0.04, 4.0], with value =
+   * 127 corresponding to tau = 0.4 s.
+   */
+  kKnobNoiseTau,
+
+  /* The `gain_tau_release_s` parameter of all EnergyEvelope instances. It
+   * logarithmically maps control values to the range [0.04, 4.0], with value =
+   * 73 corresponding to tau = 0.15 s.
+   */
+  kKnobGainTauRelease,
+
+  /* The `compressor_exponent` parameter of all EnergyEvelope instances. It
+   * linearly maps control values to exponents in the range [0.1, 0.5], with
+   * value = 96 corresponding to exponent = 0.25.
+   */
+  kKnobCompressor,
+
+  /* Sentinel, must always be the last enum entry. */
+  kNumTuningKnobs,
+};
+
+/* A struct of TactileProcessor tuning settings.
+ * NOTE: This struct is just an array of bytes, so it can be trivially
+ * serialized/deserialized by memcpy'ing the `values` array.
  */
-static float TuningSetCompression(TactileProcessor* processor, int value) {
-  /* Range of beta. */
-  const float kMinBeta = 0.1f;
-  const float kMaxBeta = 0.5f;
+typedef struct {
+  uint8_t values[kNumTuningKnobs];
+} TuningKnobs;
+extern const TuningKnobs kDefaultTuningKnobs;
 
-  if (value < 0) { value = 0; }
-  if (value > 255) { value = 255; }
-  /* Map `value` in [0, 255] linearly to beta in [kMinBeta, kMaxBeta]. */
-  float beta = kMinBeta + ((kMaxBeta - kMinBeta) / 255) * value;
+/* Maps control values to float parameters in the same way that TuningApply()
+ * does. The `knob` arg is a tuning knob index from 0 to kNumTuningKnobs - 1,
+ * and `value` is a control value between 0 and 255.
+ *
+ * The meaning of the returned float value depends on the knob:
+ *
+ *   `knob`               return value meaning
+ *   kKnobInputGain       Gain with units of dB.
+ *   kKnobOutputGain      Gain with units of dB.
+ *   kKnobDenosing0-3     Scale factor.
+ *   kKnobAgcStrength     Exponent, 0 => bypass, 1 => full normalization.
+ *   kKnobNoiseTau        Time constant with units of seconds.
+ *   kKnobGainTauRelease  Time constant with units of seconds.
+ *   kKnobCompressor      Exponent, smaller implies stronger compression.
+ */
+float TuningMapControlValue(int knob, int value);
 
-  int i;
-  for (i = 0; i < 4; ++i) {  /* Update each EnergyEvelope instance. */
-    processor->channel_states[i].pcen_beta = beta;
-    processor->channel_states[i].pcen_offset =
-        FastPow(processor->channel_states[i].pcen_delta, beta);
-  }
+/* Gets the input gain as a linear amplitude ratio. */
+float TuningGetInputGain(const TuningKnobs* tuning);
 
-  return beta;
-}
-
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 #endif  /* THIRD_PARTY_AUDIO_TO_TACTILE_SRC_TACTILE_TUNING_H_ */

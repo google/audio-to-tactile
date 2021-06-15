@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ static float Square(float x) { return x * x; }
 static float RandUniform() { return (float)rand() / RAND_MAX; }
 
 /* Check interpolation weights at the hexagon vertices. */
-void TestInterpolationAtVertices() {
+static void TestInterpolationAtVertices() {
   puts("TestInterpolationAtVertices");
   int i;
   for (i = 0; i < 7; ++i) {
@@ -79,7 +79,7 @@ static int InsideHexagonNeighborhood(float x, float y) {
 }
 
 /* Weights are a convex combination if (x,y) is inside the hexagon. */
-void TestConvex() {
+static void TestConvex() {
   puts("TestConvex");
   int i;
   for (i = 0; i < 100; ++i) {
@@ -107,7 +107,7 @@ void TestConvex() {
 }
 
 /* Interpolation weights computed for nearby points should be close. */
-void TestContinuity() {
+static void TestContinuity() {
   puts("TestContinuity");
   int i;
   for (i = 0; i < 100; ++i) {
@@ -132,7 +132,7 @@ void TestContinuity() {
 }
 
 /* Test the HexagonNorm() function. */
-void TestHexagonNorm() {
+static void TestHexagonNorm() {
   puts("TestHexagonNorm");
   /* Check at the origin. */
   CHECK(HexagonNorm(0.0f, 0.0f) == 0.0f);
@@ -160,7 +160,7 @@ void TestHexagonNorm() {
 }
 
 /* Test that HexagonNorm() differs from Euclidean (L2) norm by less than 20%. */
-void TestHexagonNormNearEuclideanNorm() {
+static void TestHexagonNormNearEuclideanNorm() {
   puts("TestHexagonNormNearEuclideanNorm");
   int i;
   for (i = 0; i < 100; ++i) {

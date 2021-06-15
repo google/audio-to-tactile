@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -88,7 +88,7 @@ void UpdateVolumeMeters(const float* output, int frames_per_buffer) {
 
 #define kVolumeMeterWidth 9
 
-void PrintVolumeMeters() {
+static void PrintVolumeMeters() {
   char bar[3 * kVolumeMeterWidth + 1];
   int c;
   for (c = 0; c < 2; ++c) {

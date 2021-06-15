@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,8 @@
 #define kNumChannels 24
 
 /* Test phoneme name lookup. */
-void TestPhonemeCodeByName() {
+static void TestPhonemeCodeByName() {
+  puts("TestPhonemeCodeByName");
   const PhonemeCode* code = PhonemeCodeByName("B");
   CHECK(code != NULL && !strcmp(code->phoneme, "B"));
 
@@ -50,7 +51,8 @@ void TestPhonemeCodeByName() {
 }
 
 /* Check code signal max amplitude. */
-void TestMaxAmplitude() {
+static void TestMaxAmplitude() {
+  puts("TestMaxAmplitude");
   const float kMaxDuration = 0.4f; /* Codes are at most 0.4s duration. */
   const float kSampleRateHz = 44100.0f;
   const int kNumSamples = (int)(kSampleRateHz * kMaxDuration + 0.5f);
@@ -83,7 +85,8 @@ void TestMaxAmplitude() {
 }
 
 /* Check that codes are some min L2 distance apart from one another. */
-void TestCodeSignalsAreDifferent() {
+static void TestCodeSignalsAreDifferent() {
+  puts("TestCodeSignalsAreDifferent");
   /* Table for accumulating distances between each pair of codes.
    * Only the lower triangle is used.
    */
@@ -140,7 +143,8 @@ void TestCodeSignalsAreDifferent() {
 }
 
 /* Test a few cases with PhonemeStringIsValid(). */
-void TestPhonemeStringIsValid() {
+static void TestPhonemeStringIsValid() {
+  puts("TestPhonemeStringIsValid");
   CHECK(PhonemeStringIsValid("OE"));
   CHECK(PhonemeStringIsValid("b,er,d"));
   CHECK(!PhonemeStringIsValid("b,er,XX,d"));
@@ -151,7 +155,8 @@ static float Max(float x, float y) { return (x >= y) ? x : y; }
 /* Test GeneratePhonemeSignal() on "B,ER,D" with "ER" emphasized and on a
  * few different phoneme spacings.
  */
-void TestGeneratePhonemeSignal(float spacing) {
+static void TestGeneratePhonemeSignal(float spacing) {
+  puts("TestGeneratePhonemeSignal");
   const float kSampleRateHz = 44100.0f;
   const char* kEmphasizedPhoneme = "ER";
   const float kEmphasisGain = 1.5f;

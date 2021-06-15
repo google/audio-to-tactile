@@ -1,4 +1,4 @@
-/* Copyright 2020 Google LLC
+/* Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -511,7 +511,7 @@ static struct PyModuleDef kModule = {
     NULL,                        /* m_free */
 };
 
-PyMODINIT_FUNC PyInit_wav_io_python_bindings() {
+PyMODINIT_FUNC PyInit_wav_io_python_bindings(void) {
   import_array();
   return PyModule_Create(&kModule);
 }

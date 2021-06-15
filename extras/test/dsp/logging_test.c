@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,12 +21,12 @@ typedef struct Thing {
 
 static int things_made;
 
-struct Thing* MakeThing() {
+static struct Thing* MakeThing() {
   ++things_made;
   return (Thing*) malloc(sizeof(Thing));
 }
 
-void DoesntEvaluateTwice() {
+static void DoesntEvaluateTwice() {
   things_made = 0;
   Thing* my_thing = CHECK_NOTNULL(MakeThing());
   CHECK(things_made == 1);

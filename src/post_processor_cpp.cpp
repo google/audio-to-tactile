@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC
+// Copyright 2020-2021 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,8 +19,7 @@ namespace audio_tactile {
 PostProcessorWrapper::PostProcessorWrapper() {}
 
 bool PostProcessorWrapper::Init(float output_sample_rate, int block_size,
-                                int num_channels, float gain);
-{
+                                int num_tactors, float gain) {
   const float kDefaultCutOff = 975.0f;
 
   sample_rate_ = output_sample_rate;
@@ -41,9 +40,7 @@ bool PostProcessorWrapper::Init(float output_sample_rate, int block_size,
 }
 
 void PostProcessorWrapper::PostProcessSamples(float* input_output) {
-  const int frames_per_carl_block = block_size_ / decimation_factor_;
-  PostProcessorProcessSamples(&post_processor_, input_output,
-                              frames_per_carl_block);
+  PostProcessorProcessSamples(&post_processor_, input_output, block_size_);
 }
 
 }  // namespace audio_tactile

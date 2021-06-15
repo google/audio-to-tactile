@@ -1,4 +1,4 @@
-/* Copyright 2020 Google LLC
+/* Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -137,7 +137,7 @@ static void PrintBiquads(const char* name,
   }
 }
 
-void QuadraticRoots(double c0, double c1, double c2,
+static void QuadraticRoots(double c0, double c1, double c2,
     ComplexDouble* root1, ComplexDouble* root2) {
   c1 /= (2 * c0);
   c2 /= c0;
@@ -147,9 +147,8 @@ void QuadraticRoots(double c0, double c1, double c2,
   *root2 = ComplexDoubleAdd(ComplexDoubleMake(-c1, 0.0), sqrt_d);
 }
 
-void BiquadsToZpk(const BiquadFilterCoeffs* coeffs,
-                  int num_biquads,
-                  Zpk* zpk) {
+static void BiquadsToZpk(const BiquadFilterCoeffs* coeffs, int num_biquads,
+                         Zpk* zpk) {
   const int degree = 2 * num_biquads;
   zpk->num_zeros = degree;
   zpk->num_poles = degree;
@@ -209,7 +208,7 @@ fail:
   return 0;
 }
 
-void TestZpkEval() {
+static void TestZpkEval() {
   puts("TestZpkEval");
   Zpk zpk;
 
@@ -236,7 +235,7 @@ void TestZpkEval() {
 }
 
 /* Test ZpkSort(), utility that sorts and pairs complex roots. */
-void TestZpkSort() {
+static void TestZpkSort() {
   puts("TestZpkSort");
   Zpk zpk;
   zpk.num_zeros = 8;
@@ -320,7 +319,7 @@ void TestZpkSort() {
   }
 }
 
-void TestZpkBilinearTransform() {
+static void TestZpkBilinearTransform() {
   puts("TestZpkBilinearTransform");
   int trial;
   for (trial = 0; trial < 10; ++trial) {
@@ -348,7 +347,7 @@ void TestZpkBilinearTransform() {
   }
 }
 
-void TestZpkAnalogPrototypeToLowpass() {
+static void TestZpkAnalogPrototypeToLowpass() {
   puts("TestZpkAnalogPrototypeToLowpass");
   int trial;
   for (trial = 0; trial < 10; ++trial) {
@@ -367,13 +366,13 @@ void TestZpkAnalogPrototypeToLowpass() {
     for (n = 0; n < 10; ++n) {
       const ComplexDouble map_s =
           ComplexDoubleMake(RandUnif(), 2 * RandUnif() - 1);
-      const ComplexDouble s =ComplexDoubleMulReal(map_s, 1 / cutoff_rad_s);
+      const ComplexDouble s = ComplexDoubleMulReal(map_s, 1 / cutoff_rad_s);
       CHECK(ComplexNear(ZpkEval(&zpk, s), ZpkEval(&map_zpk, map_s), 1e-10));
     }
   }
 }
 
-void TestZpkAnalogPrototypeToHighpass() {
+static void TestZpkAnalogPrototypeToHighpass() {
   puts("TestZpkAnalogPrototypeToHighpass");
   int trial;
   for (trial = 0; trial < 10; ++trial) {
@@ -399,7 +398,7 @@ void TestZpkAnalogPrototypeToHighpass() {
   }
 }
 
-void TestZpkAnalogPrototypeToBandpass() {
+static void TestZpkAnalogPrototypeToBandpass() {
   puts("TestZpkAnalogPrototypeToBandpass");
   int trial;
   for (trial = 0; trial < 10; ++trial) {
@@ -430,7 +429,7 @@ void TestZpkAnalogPrototypeToBandpass() {
   }
 }
 
-void TestZpkAnalogPrototypeToBandstop() {
+static void TestZpkAnalogPrototypeToBandstop() {
   puts("TestZpkAnalogPrototypeToBandstop");
   int trial;
   for (trial = 0; trial < 10; ++trial) {
@@ -461,7 +460,7 @@ void TestZpkAnalogPrototypeToBandstop() {
   }
 }
 
-void TestZpkToBiquads() {
+static void TestZpkToBiquads() {
   puts("TestZpkToBiquads");
   int trial;
   for (trial = 0; trial < 10; ++trial) {
@@ -491,7 +490,7 @@ void TestZpkToBiquads() {
 }
 
 /* Compare with lowpass filters designed by scipy.signal.butter. */
-void TestButterworthLowpassCompareWithScipy() {
+static void TestButterworthLowpassCompareWithScipy() {
   puts("TestButterworthLowpassCompareWithScipy");
   BiquadFilterCoeffs coeffs[4];
 
@@ -542,7 +541,7 @@ void TestButterworthLowpassCompareWithScipy() {
 }
 
 /* Compare with highpass filters designed by scipy.signal.butter. */
-void TestButterworthHighpassCompareWithScipy() {
+static void TestButterworthHighpassCompareWithScipy() {
   puts("TestButterworthHighpassCompareWithScipy");
   BiquadFilterCoeffs coeffs[4];
 
@@ -571,7 +570,7 @@ void TestButterworthHighpassCompareWithScipy() {
 }
 
 /* Compare with bandpass filters designed by scipy.signal.butter. */
-void TestButterworthBandpassCompareWithScipy() {
+static void TestButterworthBandpassCompareWithScipy() {
   puts("TestButterworthBandpassCompareWithScipy");
   BiquadFilterCoeffs coeffs[8];
 
@@ -611,7 +610,7 @@ void TestButterworthBandpassCompareWithScipy() {
 }
 
 /* Compare with bandstop filters designed by scipy.signal.butter. */
-void TestButterworthBandstopCompareWithScipy() {
+static void TestButterworthBandstopCompareWithScipy() {
   puts("TestButterworthBandstopCompareWithScipy");
   BiquadFilterCoeffs coeffs[8];
 
@@ -632,7 +631,7 @@ void TestButterworthBandstopCompareWithScipy() {
 }
 
 /* Compare with lowpass filters designed by scipy.signal.cheby1. */
-void TestChebyshev1LowpassCompareWithScipy() {
+static void TestChebyshev1LowpassCompareWithScipy() {
   puts("TestChebyshev1LowpassCompareWithScipy");
   BiquadFilterCoeffs coeffs[4];
 
@@ -661,7 +660,7 @@ void TestChebyshev1LowpassCompareWithScipy() {
 }
 
 /* Compare with lowpass filters designed by scipy.signal.cheby2. */
-void TestChebyshev2LowpassCompareWithScipy() {
+static void TestChebyshev2LowpassCompareWithScipy() {
   puts("TestChebyshev2LowpassCompareWithScipy");
   BiquadFilterCoeffs coeffs[4];
 
@@ -695,7 +694,7 @@ void TestChebyshev2LowpassCompareWithScipy() {
  * hard-coded stopping tolerance of 1e-4. Mathematica's implementation on the
  * other hand can execute with arbitrarily high precision.
  */
-void TestEllipticLowpassCompareWithMathematica() {
+static void TestEllipticLowpassCompareWithMathematica() {
   puts("TestEllipticLowpassCompareWithMathematica");
   BiquadFilterCoeffs coeffs[4];
 

@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "dsp/fast_fun.h"
 #include "phonetics/hexagon_interpolation.h"
 
 const int kTactileProcessorNumTactors = 10;
@@ -181,4 +182,39 @@ void TactileProcessorProcessSamples(TactileProcessor* processor,
 
   memcpy(vowel_hex_weights, next_vowel_hex_weights,
          sizeof(next_vowel_hex_weights));
+}
+
+void TactileProcessorApplyTuning(TactileProcessor* processor,
+                                 const TuningKnobs* knobs) {
+  const float output_gain_db =
+      TuningMapControlValue(kKnobOutputGain, knobs->values[kKnobOutputGain]);
+  /* Convert dB to linear amplitude ratio. */
+  const float output_gain = FastExp2((float)(M_LN10 / (20.0 * M_LN2)) *
+                                     output_gain_db);
+  const float agc_strength =
+      TuningMapControlValue(kKnobAgcStrength, knobs->values[kKnobAgcStrength]);
+  const float noise_tau =
+      TuningMapControlValue(kKnobNoiseTau, knobs->values[kKnobNoiseTau]);
+  const float gain_tau_release = TuningMapControlValue(
+      kKnobGainTauRelease, knobs->values[kKnobGainTauRelease]);
+  const float compressor_exponent =
+      TuningMapControlValue(kKnobCompressor, knobs->values[kKnobCompressor]);
+
+  int i;
+  for (i = 0; i < 4; ++i) {  /* Update each EnergyEvelope instance. */
+    const float denoise_thresh_factor = TuningMapControlValue(
+        kKnobDenoising0 + i, knobs->values[kKnobDenoising0 + i]);
+
+    processor->channel_states[i].output_gain = output_gain;
+    processor->channel_states[i].denoise_thresh_factor = denoise_thresh_factor;
+    processor->channel_states[i].agc_exponent = -agc_strength;
+    processor->channel_states[i].noise_smoother_coeff =
+        EnergyEnvelopeSmootherCoeff(&processor->channel_states[i], noise_tau);
+    processor->channel_states[i].gain_smoother_coeffs[1] =
+        EnergyEnvelopeSmootherCoeff(&processor->channel_states[i],
+                                    gain_tau_release);
+    processor->channel_states[i].compressor_exponent = compressor_exponent;
+
+    EnergyEnvelopeUpdatePrecomputedParams(&processor->channel_states[i]);
+  }
 }

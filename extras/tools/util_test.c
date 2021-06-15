@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,8 @@
 #include "src/dsp/logging.h"
 #include "src/dsp/math_constants.h"
 
-void TestStringEqualIgnoreCase() {
+static void TestStringEqualIgnoreCase() {
+  puts("TestStringEqualIgnoreCase");
   CHECK(StringEqualIgnoreCase("banana", "banana"));
   CHECK(StringEqualIgnoreCase("Banana", "baNANa"));
   CHECK(StringEqualIgnoreCase("", ""));
@@ -33,7 +34,8 @@ void TestStringEqualIgnoreCase() {
   CHECK(!StringEqualIgnoreCase("", "Banana"));
 }
 
-void TestFindSubstringIgnoreCase() {
+static void TestFindSubstringIgnoreCase() {
+  puts("TestFindSubstringIgnoreCase");
   const char* s = "banana!";
   CHECK(FindSubstringIgnoreCase(s, "nan") == s + 2);
   CHECK(FindSubstringIgnoreCase(s, "NaN") == s + 2);
@@ -46,7 +48,8 @@ void TestFindSubstringIgnoreCase() {
 }
 
 /* Check StartsWith() function. */
-void TestStartsWith() {
+static void TestStartsWith() {
+  puts("TestStartsWith");
   CHECK(StartsWith("needle", "needle"));
   CHECK(StartsWith("needleXYZ", "needle"));
   CHECK(StartsWith("XYZ", ""));  /* Always true with an empty prefix. */
@@ -56,7 +59,8 @@ void TestStartsWith() {
   CHECK(!StartsWith("", "needle"));
 }
 
-void TestStartsWithIgnoreCase() {
+static void TestStartsWithIgnoreCase() {
+  puts("TestStartsWithIgnoreCase");
   CHECK(StartsWithIgnoreCase("needle", "NEEDLE"));
   CHECK(StartsWithIgnoreCase("NeedleXYZ", "nEEdle"));
   CHECK(StartsWithIgnoreCase("XYZ", ""));
@@ -66,7 +70,8 @@ void TestStartsWithIgnoreCase() {
 }
 
 /* Check EndsWith() function. */
-void TestEndsWith() {
+static void TestEndsWith() {
+  puts("TestEndsWith");
   CHECK(EndsWith("needle", "needle"));
   CHECK(EndsWith("XYZneedle", "needle"));
   CHECK(EndsWith("XYZ", ""));  /* Always true with an empty suffix. */
@@ -76,7 +81,8 @@ void TestEndsWith() {
 }
 
 /* Test ParseListOfInts() function. */
-void TestParseListOfInts() {
+static void TestParseListOfInts() {
+  puts("TestParseListOfInts");
   int num_ints;
   int* result = CHECK_NOTNULL(ParseListOfInts("756,0,-32,1", &num_ints));
 
@@ -97,7 +103,8 @@ void TestParseListOfInts() {
 }
 
 /* Test ParseListOfDoubles() function. */
-void TestParseListOfDoubles() {
+static void TestParseListOfDoubles() {
+  puts("TestParseListOfDoubles");
   int num_doubles;
   double* result = CHECK_NOTNULL(
       ParseListOfDoubles("42,-0.01,7.2e-4", &num_doubles));
@@ -116,7 +123,8 @@ void TestParseListOfDoubles() {
   free(result);
 }
 
-void TestRoundUpToPowerOfTwo() {
+static void TestRoundUpToPowerOfTwo() {
+  puts("TestRoundUpToPowerOfTwo");
   CHECK(RoundUpToPowerOfTwo(1) == 1);
   CHECK(RoundUpToPowerOfTwo(15) == 16);
   CHECK(RoundUpToPowerOfTwo(16) == 16);
@@ -127,7 +135,8 @@ void TestRoundUpToPowerOfTwo() {
 }
 
 /* Check RandomInt() function with chi-squared goodness-of-fit test. */
-void TestRandomInt() {
+static void TestRandomInt() {
+  puts("TestRandomInt");
   const int kNumSamples = 500;
   int hist[101];
 
@@ -159,7 +168,8 @@ void TestRandomInt() {
 }
 
 /* Check AmplitudeRatioToDecibels and DecibelsToAmplitudeRatio. */
-void TestDecibelConversions() {
+static void TestDecibelConversions() {
+  puts("TestDecibelConversions");
   CHECK(fabs(AmplitudeRatioToDecibels(10.0f) - 20.0f) < 1e-6f);
   CHECK(fabs(DecibelsToAmplitudeRatio(20.0f) - 10.0f) < 1e-6f);
   CHECK(fabs(AmplitudeRatioToDecibels(2.0f) - 6.0206f) < 1e-6f);
@@ -193,7 +203,8 @@ static float ApplyGammaFilter(GammaFilter* filter, float input_sample) {
 }
 
 /* Check that GammaFilterSmootherCoeff() achieves the specified cutoff. */
-void TestGammaFilterSmootherCoeff() {
+static void TestGammaFilterSmootherCoeff() {
+  puts("TestGammaFilterSmootherCoeff");
   static const float kCutoffs[] = {350.0f, 500.0f, 3200.0f};
   const float kSampleRateHz = 8000.0f;
   int i;
@@ -234,7 +245,8 @@ void TestGammaFilterSmootherCoeff() {
 }
 
 /* Check TukeyWindow() with spot-checking a few samples. */
-void TestTukeyWindow() {
+static void TestTukeyWindow() {
+  puts("TestTukeyWindow");
   const float kDuration = 0.4f;
   int i;
   static const float kTransitionsList[] = {0.05f, 0.1f, 0.2f};
@@ -268,7 +280,8 @@ void TestTukeyWindow() {
 }
 
 /* Test permuting a 4-channel waveform to the order 3, 1, 0, 2. */
-void TestPermuteWaveformChannels() {
+static void TestPermuteWaveformChannels() {
+  puts("TestPermuteWaveformChannels");
   /* 3 frames, 4 channels. */
   float samples[3 * 4] = {
       10.0f, 20.0f, 30.0f, 40.0f,  /* Frame 0. */
@@ -287,7 +300,8 @@ void TestPermuteWaveformChannels() {
   CHECK(memcmp(samples, kExpected, 3 * 4 * sizeof(float)) == 0);
 }
 
-void TestPrettyTextBar() {
+static void TestPrettyTextBar() {
+  puts("TestPrettyTextBar");
   const int kWidth = 3;
   char* buffer = (char*)CHECK_NOTNULL(malloc(3 * kWidth + 1));
 

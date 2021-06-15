@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC
+// Copyright 2020-2021 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,18 +34,17 @@ class PostProcessorWrapper {
 
   // Process the samples.
   // The post processor expects a float array pointer from the tactile
-  // processor output. The expected array size is 80 (8 samples for each
-  // channel). The samples are in interleaved format: output[c + kNumChannel *
-  // n] = nth sample for channels. The output will need to be converted to PWM
-  // in uint16_t format to send to the PWM hardware module. The range of input
-  // and output is a float from -1 to 1.
+  // processor output of `block_size * num_channels` samples. The typical array
+  // size is 80 (8 samples for each channel). The samples are in interleaved
+  // format: output[c + kNumChannel * n] = nth sample for channel c. The output
+  // will need to be converted to PWM in uint16_t format to send to the PWM
+  // hardware module. The range of input and output is a float from -1 to 1.
   void PostProcessSamples(float* input_output);
 
  private:
   PostProcessor post_processor_;
   float sample_rate_;
   int block_size_;
-  int decimation_factor_;
 };
 
 }  // namespace audio_tactile

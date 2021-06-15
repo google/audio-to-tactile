@@ -80,8 +80,8 @@ static float* ReferenceResampling(const QResamplerKernel* kernel,
 }
 
 /* Compare with ReferenceResampling(). */
-void TestCompareWithReferenceResampler(int num_channels,
-                                       float filter_radius_factor) {
+static void TestCompareWithReferenceResampler(int num_channels,
+                                              float filter_radius_factor) {
   printf("TestCompareWithReferenceResampler(%d, %g)\n", num_channels,
          filter_radius_factor);
   const int kInputFrames = 50;
@@ -145,7 +145,7 @@ void TestCompareWithReferenceResampler(int num_channels,
 }
 
 /* Test streaming with blocks of random sizes between 0 and kMaxBlockFrames. */
-void TestStreamingRandomBlockSizes(int num_channels) {
+static void TestStreamingRandomBlockSizes(int num_channels) {
   printf("TestStreamingRandomBlockSizes(%d)\n", num_channels);
   const int kTotalInputFrames = 500;
   const int kMaxBlockFrames = 20;
@@ -245,7 +245,7 @@ void TestStreamingRandomBlockSizes(int num_channels) {
 }
 
 /* Resampling a sine wave should produce again a sine wave. */
-void TestResampleSineWave() {
+static void TestResampleSineWave() {
   puts("TestResampleSineWave");
   const float kFrequency = 1100.7f;
 
@@ -311,7 +311,7 @@ void TestResampleSineWave() {
 }
 
 /* Test resampling a chirp. */
-void TestResampleChirp() {
+static void TestResampleChirp() {
   puts("TestResampleChirp");
 
   int i;
@@ -384,7 +384,7 @@ void TestResampleChirp() {
 }
 
 /* Test sample dropping behavior when input_size > max_input_size. */
-void TestInputSizeExceedsMax(int num_channels) {
+static void TestInputSizeExceedsMax(int num_channels) {
   printf("TestInputSizeExceedsMax(%d)\n", num_channels);
   const int kInputFrames = 120;
   const int kMaxInputFrames = 50;

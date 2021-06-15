@@ -46,16 +46,16 @@ extern "C" {
 static const nrf_drv_timer_t benchmark_timer = NRF_DRV_TIMER_INSTANCE(1);
 
 /* Gets the elapsed time, and clears the timer */
-void StartBenchMarkTimer();
+void StartBenchMarkTimer(void);
 
 /* Disables the timer, will need to be reinitialized to restart. */
-void StopBenchMarkTimer();
+void StopBenchMarkTimer(void);
 
 /* Gets the elapsed time ticks, and clears the timer */
-uint32_t GetBenchMarkTimer();
+uint32_t GetBenchMarkTimer(void);
 
 /* Initializes the timer */
-void InitiateBenchmarkTimer();
+void InitiateBenchmarkTimer(void);
 
 /* Conversion to microseconds from ticks. Depends on the timer frequency.
  * I determined this by looking how much time takes for 1 sec delay

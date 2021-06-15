@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ static double RandUnif() {
   return (double) rand() / RAND_MAX;
 }
 
-void TestComplexDoubleBasic() {
+static void TestComplexDoubleBasic() {
   puts("TestComplexDoubleBasic");
   ComplexDouble z = ComplexDoubleMake(4.0, -3.0);
   CHECK(z.real == 4.0);
@@ -44,7 +44,7 @@ void TestComplexDoubleBasic() {
   CHECK(fabs(ComplexDoubleAbs2(z) - 25.0) <= 1e-15);
 }
 
-void TestComplexDoubleArithmetic() {
+static void TestComplexDoubleArithmetic() {
   puts("TestComplexDoubleArithmetic");
   int trial;
   for (trial = 0; trial < 10; ++trial) {
@@ -86,7 +86,7 @@ void TestComplexDoubleArithmetic() {
   }
 }
 
-void TestComplexDoublePolar() {
+static void TestComplexDoublePolar() {
   puts("TestComplexDoublePolar");
   CHECK(fabs(ComplexDoubleAbs(ComplexDoubleMake(0.0, 0.0))) <= 1e-15);
   CHECK(fabs(ComplexDoubleAbs(ComplexDoubleMake(1.0, 1e-7))
@@ -105,7 +105,7 @@ void TestComplexDoublePolar() {
   }
 }
 
-void TestComplexDoubleSqrt() {
+static void TestComplexDoubleSqrt() {
   puts("TestComplexDoubleSqrt");
   /* Check sqrt(z) at a few points. */
   ComplexDouble z = ComplexDoubleSqrt(ComplexDoubleMake(0.0, 0.0));
@@ -143,7 +143,7 @@ void TestComplexDoubleSqrt() {
   }
 }
 
-void TestComplexDoubleLogExp() {
+static void TestComplexDoubleLogExp() {
   puts("TestComplexDoubleLogExp");
   int trial;
   for (trial = 0; trial < kNumTrials; ++trial) {
@@ -155,7 +155,7 @@ void TestComplexDoubleLogExp() {
   }
 }
 
-void TestComplexDoubleACoshCosh() {
+static void TestComplexDoubleACoshCosh() {
   puts("TestComplexDoubleACoshCosh");
   ComplexDouble z = ComplexDoubleCosh(ComplexDoubleMake(0.0, 0.0));
   CHECK(fabs(z.real - 1.0) <= 1e-15);
@@ -193,7 +193,7 @@ void TestComplexDoubleACoshCosh() {
   }
 }
 
-void TestComplexDoubleASinhSinh() {
+static void TestComplexDoubleASinhSinh() {
   puts("TestComplexDoubleASinhSinh");
   ComplexDouble z = ComplexDoubleSinh(ComplexDoubleMake(0.0, 0.0));
   CHECK(fabs(z.real) <= 1e-15);
@@ -219,7 +219,7 @@ void TestComplexDoubleASinhSinh() {
   }
 }
 
-void TestComplexDoubleACosCos() {
+static void TestComplexDoubleACosCos() {
   puts("TestComplexDoubleACosCos");
   /* Check cos(z) at a few points. */
   ComplexDouble z = ComplexDoubleCos(ComplexDoubleMake(0.0, 0.0));
@@ -284,7 +284,7 @@ void TestComplexDoubleACosCos() {
   }
 }
 
-void TestComplexDoubleASinSin() {
+static void TestComplexDoubleASinSin() {
   puts("TestComplexDoubleASinSin");
   /* Check sin(z) at a few points. */
   ComplexDouble z = ComplexDoubleSin(ComplexDoubleMake(0.0, 0.0));
@@ -337,7 +337,7 @@ void TestComplexDoubleASinSin() {
   }
 }
 
-void TestComplexFloatBasic() {
+static void TestComplexFloatBasic() {
   puts("TestComplexFloatBasic");
   ComplexFloat z = ComplexFloatMake(4.0f, -3.0f);
   CHECK(z.real == 4.0f);
@@ -352,7 +352,7 @@ void TestComplexFloatBasic() {
   CHECK(fabs(ComplexFloatAbs2(z) - 25.0f) <= 1e-15);
 }
 
-void TestComplexFloatArithmetic() {
+static void TestComplexFloatArithmetic() {
   puts("TestComplexFloatArithmetic");
   int trial;
   for (trial = 0; trial < 10; ++trial) {

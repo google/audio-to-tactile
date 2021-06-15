@@ -438,7 +438,7 @@ static struct PyModuleDef kModule = {
     (Py_ssize_t)-1,                /* m_size */
 };
 
-PyMODINIT_FUNC PyInit_q_resampler_python_bindings() {
+PyMODINIT_FUNC PyInit_q_resampler_python_bindings(void) {
   import_array();
   PyObject* m = PyModule_Create(&kModule);
   if (m == NULL) { return NULL; }

@@ -34,7 +34,7 @@ void pwm_irq_handler(NRF_PWM_Type* pwm_module, uint8_t which_pwm_module);
  * 1 - module PWM1.
  * 2 - module PWM2.
  */
-uint8_t get_pwm_event();
+uint8_t get_pwm_event(void);
 
 /* Callback function for the interrupt handler. Can be assigned a function. */
 void on_pwm_sequence_end(void (*function)(void));

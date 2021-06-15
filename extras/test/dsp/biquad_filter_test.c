@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ static void ReferenceBiquadFilter(const BiquadFilterCoeffs* coeffs,
 }
 
 /* Biquad filter reproduces expected impulse response for a specific filter. */
-void TestImpulseResponse() {
+static void TestImpulseResponse() {
   puts("TestImpulseResponse");
   const float a = 0.95;
   const float omega = (2 * M_PI) / 7;  /* Period of 7 samples. */
@@ -67,7 +67,7 @@ void TestImpulseResponse() {
 }
 
 /* Biquad filter matches reference implementation. */
-void TestCompareWithReference() {
+static void TestCompareWithReference() {
   puts("TestCompareWithReference");
   const int kNumSamples = 20;
   float* input = (float*)CHECK_NOTNULL(malloc(kNumSamples * sizeof(float)));
@@ -107,7 +107,7 @@ void TestCompareWithReference() {
 }
 
 /* Test that applying identity filter is identity. */
-void TestIdentityFilter() {
+static void TestIdentityFilter() {
   puts("TestIdentityFilter");
   const BiquadFilterCoeffs coeffs = kBiquadFilterIdentityCoeffs;
   CHECK(coeffs.b0 == 1.0f);
@@ -131,7 +131,7 @@ void TestIdentityFilter() {
 }
 
 /* Test frequency response computation. */
-void TestFrequencyResponse() {
+static void TestFrequencyResponse() {
   puts("TestFrequencyResponse");
   /* A Butterworth lowpass filter with half-power point at 0.1 cycles/sample. */
   BiquadFilterCoeffs coeffs = {0.06745536f, 0.1349105f, 0.0674553f,

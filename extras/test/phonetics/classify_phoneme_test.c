@@ -1,4 +1,4 @@
-/* Copyright 2020 Google LLC
+/* Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ static int FindPhoneme(const char* name) {
  * + ClassifyPhoneme on a short WAV recording of a pure phoneme, and checks that
  * a moderately confident score is sometimes given to the correct label.
  */
-void TestPhoneme(const char* phoneme) {
+static void TestPhoneme(const char* phoneme) {
   printf("TestPhoneme(\"%s\")\n", phoneme);
   char wav_file[1024];
   sprintf(wav_file,
@@ -116,7 +116,7 @@ void TestPhoneme(const char* phoneme) {
   CHECK(accuracy >= 0.6f);
 }
 
-void TestLabelOutput() {
+static void TestLabelOutput() {
   puts("TestLabelOutput");
 
   const int kInputSize =

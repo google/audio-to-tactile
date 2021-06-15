@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -131,7 +131,8 @@ static void WriteBytesAsFile(const char* file_name,
   fclose(f);
 }
 
-void TestReadMonoWav() {
+static void TestReadMonoWav() {
+  puts("TestReadMonoWav");
   static const int16_t kExpectedSamples[4] = {7, -2, INT16_MAX, INT16_MIN};
   const char* wav_file_name = NULL;
   int16_t* samples = NULL;
@@ -139,7 +140,6 @@ void TestReadMonoWav() {
   int num_channels;
   int sample_rate_hz;
 
-  puts("Running TestReadMonoWav");
   wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
   WriteBytesAsFile(wav_file_name, kTest16BitMonoWavFile, 52);
 
@@ -155,7 +155,8 @@ void TestReadMonoWav() {
   remove(wav_file_name);
 }
 
-void TestReadMonoWav16BitGeneric() {
+static void TestReadMonoWav16BitGeneric() {
+  puts("TestReadMonoWav16BitGeneric");
   static const int32_t kExpectedSamples[4] = {7 << 16,
                                               -(2 << 16),
                                               2147483647,
@@ -166,7 +167,6 @@ void TestReadMonoWav16BitGeneric() {
   int num_channels;
   int sample_rate_hz;
 
-  puts("Running TestReadMonoWav16BitGeneric");
   wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
   WriteBytesAsFile(wav_file_name, kTest16BitMonoWavFile, 52);
 
@@ -188,7 +188,8 @@ void TestReadMonoWav16BitGeneric() {
   remove(wav_file_name);
 }
 
-void TestReadMonoWav24BitGeneric() {
+static void TestReadMonoWav24BitGeneric() {
+  puts("TestReadMonoWav24BitGeneric");
   static const int32_t kExpectedSamples[4] = {
       7 << 16,
       -(2 << 16),
@@ -199,8 +200,6 @@ void TestReadMonoWav24BitGeneric() {
   size_t num_samples;
   int num_channels;
   int sample_rate_hz;
-
-  puts("Running TestReadMonoWav24BitGeneric");
 
   wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
   WriteBytesAsFile(wav_file_name, kTest24BitMonoWavFile, 92);
@@ -216,7 +215,8 @@ void TestReadMonoWav24BitGeneric() {
   remove(wav_file_name);
 }
 
-void TestReadMonoWavFloatGeneric() {
+static void TestReadMonoWavFloatGeneric() {
+  puts("TestReadMonoWavFloatGeneric");
   /* The LSBs are going to be empty since we're reading 16 bits into a 32-bit
    * container (third element). */
   static const int32_t kExpectedSamples[4] = {1000 << 16,
@@ -228,8 +228,6 @@ void TestReadMonoWavFloatGeneric() {
   size_t num_samples;
   int num_channels;
   int sample_rate_hz;
-
-  puts("Running TestReadMonoWavFloatGeneric");
 
   wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
   WriteBytesAsFile(wav_file_name, kTestFloatMonoWavFile, 74);
@@ -245,13 +243,13 @@ void TestReadMonoWavFloatGeneric() {
   remove(wav_file_name);
 }
 
-void TestReadMonoWavStreaming() {
+static void TestReadMonoWavStreaming() {
+  puts("TestReadMonoWavStreaming");
   const char* wav_file_name = NULL;
   FILE* f;
   ReadWavInfo info;
   int16_t buffer[3];
 
-  puts("Running TestReadMonoWavStreaming");
   wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
   WriteBytesAsFile(wav_file_name, kTest16BitMonoWavFile, 52);
 
@@ -272,7 +270,8 @@ void TestReadMonoWavStreaming() {
   remove(wav_file_name);
 }
 
-void TestRead3ChannelWav() {
+static void TestRead3ChannelWav() {
+  puts("TestRead3ChannelWav");
   static const int16_t kExpectedSamples[6] = {0, 1, 2, 3, 4, 5};
   const char* wav_file_name = NULL;
   int16_t* samples = NULL;
@@ -280,7 +279,6 @@ void TestRead3ChannelWav() {
   int num_channels;
   int sample_rate_hz;
 
-  puts("Running TestRead3ChannelWav");
   wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
   WriteBytesAsFile(wav_file_name, kTest3ChannelWavFile, 92);
 
@@ -295,7 +293,8 @@ void TestRead3ChannelWav() {
   remove(wav_file_name);
 }
 
-void TestReadMulawWav() {
+static void TestReadMulawWav() {
+  puts("TestReadMulawWav");
   static const int16_t kExpectedSamples[8] = {
     29052, 20860, 18812, 31100, -7164, 716, -25980, -24956
   };
@@ -305,7 +304,6 @@ void TestReadMulawWav() {
   int num_channels;
   int sample_rate_hz;
 
-  puts("Running TestReadMulawWav");
   wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
   WriteBytesAsFile(wav_file_name, kTestMulawWavFile, sizeof(kTestMulawWavFile));
 
@@ -320,7 +318,8 @@ void TestReadMulawWav() {
   remove(wav_file_name);
 }
 
-void TestReadMulawWavGeneric() {
+static void TestReadMulawWavGeneric() {
+  puts("TestReadMulawWavGeneric");
   static const int16_t kExpected16BitSamples[8] = {
     29052, 20860, 18812, 31100, -7164, 716, -25980, -24956
   };
@@ -332,7 +331,6 @@ void TestReadMulawWavGeneric() {
   int sample_rate_hz;
   int i;
 
-  puts("Running TestReadMulawWavGeneric");
   for (i = 0; i < 8; i++) {
     expected_samples[i] = (int32_t) kExpected16BitSamples[i] << 16;
   }
@@ -350,14 +348,14 @@ void TestReadMulawWavGeneric() {
   remove(wav_file_name);
 }
 
-void TestReadBadWavTruncatedFile() {
+static void TestReadBadWavTruncatedFile() {
+  puts("TestReadBadWavTruncatedFile");
   const char* wav_file_name = NULL;
   int16_t* samples = NULL;
   size_t num_samples;
   int num_channels;
   int sample_rate_hz;
 
-  puts("Running TestReadBadWavTruncatedFile");
   wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
   WriteBytesAsFile(wav_file_name, kTest3ChannelWavFile, 74 /* cut 18 bytes */);
 
@@ -372,14 +370,14 @@ void TestReadBadWavTruncatedFile() {
   remove(wav_file_name);
 }
 
-void TestReadBadFactChunk() {
+static void TestReadBadFactChunk() {
+  puts("TestReadBadFactChunk");
   const char* wav_file_name = NULL;
   int16_t* samples = NULL;
   size_t num_samples;
   int num_channels;
   int sample_rate_hz;
 
-  puts("Running TestReadBadFactChunk");
   wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
   WriteBytesAsFile(wav_file_name, kTestBadFactChunkWavFile, 22);
 
@@ -394,11 +392,11 @@ void TestReadBadFactChunk() {
   remove(wav_file_name);
 }
 
-void TestWriteReadRoundTrips() {
+static void TestWriteReadRoundTrips() {
+  puts("TestWriteReadRoundTrips");
   const char* wav_file_name = NULL;
   int num_channels;
 
-  puts("Running TestWriteReadRoundTrips");
   wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
 
   for (num_channels = 1; num_channels <= 8; ++num_channels) {

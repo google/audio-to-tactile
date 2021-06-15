@@ -279,7 +279,7 @@ void TactophoneVisualizeTactors(TactophoneEngine* engine, int y, int x) {
   int active[kNumChannels];
   int c;
   for (c = 0; c < kNumChannels; c++) {
-    active[engine->channel_map.channels[c].source] = (rms[c] > 1e-4f);
+    active[engine->channel_map.sources[c]] = (rms[c] > 1e-4f);
   }
 
   /* To avoid ugly line wrapping, we constrain the X dimension so that the

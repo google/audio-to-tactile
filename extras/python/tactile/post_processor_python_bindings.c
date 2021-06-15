@@ -1,4 +1,4 @@
-/* Copyright 2020 Google LLC
+/* Copyright 2020-2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -227,7 +227,7 @@ static struct PyModuleDef kModule = {
     NULL,               /* m_free */
 };
 
-PyMODINIT_FUNC PyInit_post_processor() {
+PyMODINIT_FUNC PyInit_post_processor(void) {
   import_array();
   PyObject* m = PyModule_Create(&kModule);
   kPostProcessorType.tp_new = PyType_GenericNew;

@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC
+// Copyright 2020-2021 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,35 +16,35 @@
 
 #include <string.h>
 
-#include "board_defs.h"  // NOLINT(build/include)
 #include "look_up.h"     // NOLINT(build/include)
 #include "nrf_gpio.h"    // NOLINT(build/include)
 #include "nrf_pwm.h"     // NOLINT(build/include)
 #include "pwm_common.h"  // NOLINT(build/include)
 
+#if SLEEVE_BOARD || SLIM_BOARD
+
 namespace audio_tactile {
+
+Pwm SleeveTactors;
 
 Pwm::Pwm() {}
 
 void Pwm::Initialize() {
   // Configure amplifiers shutdowns pin.
-  nrf_gpio_cfg_output(kSleeveAmpEnablePin1);
-  nrf_gpio_cfg_output(kSleeveAmpEnablePin2);
-  nrf_gpio_cfg_output(kSleeveAmpEnablePin3);
-  nrf_gpio_cfg_output(kSleeveAmpEnablePin4);
-  nrf_gpio_cfg_output(kSleeveAmpEnablePin5);
-  nrf_gpio_cfg_output(kSleeveAmpEnablePin6);
+  nrf_gpio_cfg_output(kAmpEnablePin1);
+  nrf_gpio_cfg_output(kAmpEnablePin2);
+  nrf_gpio_cfg_output(kAmpEnablePin3);
+  nrf_gpio_cfg_output(kAmpEnablePin4);
+  nrf_gpio_cfg_output(kAmpEnablePin5);
+  nrf_gpio_cfg_output(kAmpEnablePin6);
 
   // Turn on the speaker amplifiers.
   EnableAmplifiers();
 
   // Configure the pins.
-  uint32_t pins_pwm0[4] = {kSleevePwmL1Pin, kSleevePwmR1Pin, kSleevePwmL2Pin,
-                           kSleevePwmR2Pin};
-  uint32_t pins_pwm1[4] = {kSleevePwmL3Pin, kSleevePwmR3Pin, kSleevePwmL4Pin,
-                           kSleevePwmR4Pin};
-  uint32_t pins_pwm2[4] = {kSleevePwmL5Pin, kSleevePwmR5Pin, kSleevePwmL6Pin,
-                           kSleevePwmR6Pin};
+  uint32_t pins_pwm0[4] = {kPwmL1Pin, kPwmR1Pin, kPwmL2Pin, kPwmR2Pin};
+  uint32_t pins_pwm1[4] = {kPwmL3Pin, kPwmR3Pin, kPwmL4Pin, kPwmR4Pin};
+  uint32_t pins_pwm2[4] = {kPwmL5Pin, kPwmR5Pin, kPwmL6Pin, kPwmR6Pin};
 
   InitializePwmModule(NRF_PWM0, pins_pwm0);
   InitializePwmModule(NRF_PWM1, pins_pwm1);
@@ -55,12 +55,12 @@ void Pwm::Initialize() {
   // <pin 1 PWM> <pin 2 PWM> <pin 3 PWM> <pin 4 PWM> ... <pin 1 PWM>
   // Even if we only use two pins (as here), we still need to set values for
   // 4 channels, as easy DMA reads them consecutively.
-  nrf_pwm_seq_cnt_set(NRF_PWM0, 0, kNumPwmValues * kNumChannels);
-  nrf_pwm_seq_ptr_set(NRF_PWM0, 0, pwm_buffer_[0]);
-  nrf_pwm_seq_cnt_set(NRF_PWM1, 0, kNumPwmValues * kNumChannels);
-  nrf_pwm_seq_ptr_set(NRF_PWM1, 0, pwm_buffer_[1]);
-  nrf_pwm_seq_cnt_set(NRF_PWM2, 0, kNumPwmValues * kNumChannels);
-  nrf_pwm_seq_ptr_set(NRF_PWM2, 0, pwm_buffer_[2]);
+  nrf_pwm_seq_cnt_set(NRF_PWM0, 0, kSamplesPerModule);
+  nrf_pwm_seq_ptr_set(NRF_PWM0, 0, pwm_buffer_);
+  nrf_pwm_seq_cnt_set(NRF_PWM1, 0, kSamplesPerModule);
+  nrf_pwm_seq_ptr_set(NRF_PWM1, 0, pwm_buffer_ + kSamplesPerModule);
+  nrf_pwm_seq_cnt_set(NRF_PWM2, 0, kSamplesPerModule);
+  nrf_pwm_seq_ptr_set(NRF_PWM2, 0, pwm_buffer_ + 2 * kSamplesPerModule);
 
   // Enable global interrupts for PWM.
   NVIC_SetPriority(PWM0_IRQn, kPWMIrqPriority);
@@ -101,6 +101,10 @@ void Pwm::InitializePwmModule(NRF_PWM_Type* pwm_module, uint32_t pins[4]) {
 }
 
 void Pwm::StartPlayback() {
+  // Warning: issue only in Arduino. When using StartPlayback() it crashes.
+  // Looks like NRF_PWM0 module is automatically triggered, and triggering it
+  // again here crashes ISR. Temporary fix is to only use nrf_pwm_task_trigger
+  // for NRF_PWM1 and NRF_PWM2. To fix might need a nRF52 driver update.
   nrf_pwm_task_trigger(NRF_PWM0, NRF_PWM_TASK_SEQSTART0);
   nrf_pwm_task_trigger(NRF_PWM1, NRF_PWM_TASK_SEQSTART0);
   nrf_pwm_task_trigger(NRF_PWM2, NRF_PWM_TASK_SEQSTART0);
@@ -133,66 +137,69 @@ void Pwm::EnablePwm() {
 }
 
 void Pwm::DisableAmplifiers() {
-  nrf_gpio_pin_write(kSleeveAmpEnablePin1, 0);
-  nrf_gpio_pin_write(kSleeveAmpEnablePin2, 0);
-  nrf_gpio_pin_write(kSleeveAmpEnablePin3, 0);
-  nrf_gpio_pin_write(kSleeveAmpEnablePin4, 0);
-  nrf_gpio_pin_write(kSleeveAmpEnablePin5, 0);
-  nrf_gpio_pin_write(kSleeveAmpEnablePin6, 0);
+  nrf_gpio_pin_write(kAmpEnablePin1, 0);
+  nrf_gpio_pin_write(kAmpEnablePin2, 0);
+  nrf_gpio_pin_write(kAmpEnablePin3, 0);
+  nrf_gpio_pin_write(kAmpEnablePin4, 0);
+  nrf_gpio_pin_write(kAmpEnablePin5, 0);
+  nrf_gpio_pin_write(kAmpEnablePin6, 0);
 }
 
 void Pwm::EnableAmplifiers() {
-  nrf_gpio_pin_write(kSleeveAmpEnablePin1, 1);
-  nrf_gpio_pin_write(kSleeveAmpEnablePin2, 1);
-  nrf_gpio_pin_write(kSleeveAmpEnablePin3, 1);
-  nrf_gpio_pin_write(kSleeveAmpEnablePin4, 1);
-  nrf_gpio_pin_write(kSleeveAmpEnablePin5, 1);
-  nrf_gpio_pin_write(kSleeveAmpEnablePin6, 1);
+  nrf_gpio_pin_write(kAmpEnablePin1, 1);
+  nrf_gpio_pin_write(kAmpEnablePin2, 1);
+  nrf_gpio_pin_write(kAmpEnablePin3, 1);
+  nrf_gpio_pin_write(kAmpEnablePin4, 1);
+  nrf_gpio_pin_write(kAmpEnablePin5, 1);
+  nrf_gpio_pin_write(kAmpEnablePin6, 1);
 }
 
-void Pwm::UpdatePwmModule(uint16_t* data_to_copy, int which_module) {
-  memcpy(pwm_buffer_[which_module], data_to_copy,
-         kNumPwmValues * kNumChannels * sizeof(int16_t));
+void Pwm::UpdatePwmModule(const uint16_t* data, int module) {
+  memcpy(pwm_buffer_ + module * kSamplesPerModule, data,
+         kSamplesPerModule * sizeof(int16_t));
 }
 
-void Pwm::UpdatePwmModuleChannel(uint16_t* new_data, int which_module,
-                                 int which_channel) {
+void Pwm::SilenceChannel(int channel) {
+  uint16_t* dest = GetChannelPointer(channel);
   for (int i = 0; i < kNumPwmValues; ++i) {
-    pwm_buffer_[which_module][i * 4 + which_channel] = new_data[i];
+    dest[i * kChannelsPerModule] = 0;
   }
 }
 
-void Pwm::SilencePwmModuleChannel(int which_module, int which_channel) {
+void Pwm::UpdateChannel(int channel, const uint16_t* data) {
+  uint16_t* dest = GetChannelPointer(channel);
   for (int i = 0; i < kNumPwmValues; ++i) {
-    pwm_buffer_[which_module][i * 4 + which_channel] = 0;
+    dest[i * kChannelsPerModule] = data[i];
   }
 }
 
-void Pwm::UpdatePwmModuleChannelFloat(float* new_data, int which_module,
-                                      int which_channel) {
+void Pwm::UpdateChannel(int channel, const float* data) {
+  uint16_t* dest = GetChannelPointer(channel);
   for (int i = 0; i < kNumPwmValues; ++i) {
-    uint16_t new_data_int = FloatToPwmSample(new_data[i]);
-    pwm_buffer_[which_module][i * 4 + which_channel] = new_data_int;
+    dest[i * kChannelsPerModule] = FloatToPwmSample(data[i]);
   }
 }
 
-void Pwm::UpdatePwmAllChannelsByte(uint8_t* new_data) {
+void Pwm::UpdateChannelWithGain(int channel, float gain, const float* data,
+                                int stride) {
+  uint16_t* dest = GetChannelPointer(channel);
+  const float scale = 0.5f * kPwmTopValue * gain;
+  const float offset = scale + 0.5f;
+  for (int i = 0; i < kNumPwmValues; ++i, data += stride) {
+    dest[i * kChannelsPerModule] =
+        static_cast<uint16_t>(scale * (*data) + offset);
+  }
+}
+
+void Pwm::UpdatePwmAllChannelsByte(const uint8_t* data) {
   uint16_t pwm_channel[kNumPwmValues];
-  int array_offset_counter = 0;
 
-  // The values have to be scaled up from a byte to 9-bits (2^9 = 512)
-  constexpr int kByteValues = 256;
-  constexpr float kScaleFactor = kPwmTopValue / 256;
-
-  for (int module = 0; module < kNumPwmModules; ++module) {
-    for (int channel = 0; channel < kNumChannels; ++channel) {
-      for (int i = 0; i < kNumPwmValues; ++i) {
-        pwm_channel[i] =
-            kScaleFactor * new_data[(i * kNumTotalPwm) + array_offset_counter];
-      }
-      UpdatePwmModuleChannel(pwm_channel, module, channel);
-      array_offset_counter = array_offset_counter + 1;
+  for (int c = 0; c < kNumTotalPwm; ++c) {
+    for (int i = 0, j = c; i < kNumPwmValues; ++i, j += kNumTotalPwm) {
+      // Scale byte value in [0, 255] to 9-bit value in [0, 510].
+      pwm_channel[i] = 2 * data[j];
     }
+    UpdateChannel(c, pwm_channel);
   }
 }
 
@@ -202,8 +209,6 @@ uint16_t Pwm::FloatToPwmSample(float sample) {
   return static_cast<uint16_t>(kScale * sample + kOffset);
 }
 
-Pwm SleeveTactors;
-
 void Pwm::OnSequenceEnd(void (*function)(void)) {
   on_pwm_sequence_end(function);
 }
@@ -211,3 +216,5 @@ void Pwm::OnSequenceEnd(void (*function)(void)) {
 uint8_t Pwm::GetEvent() { return get_pwm_event(); }
 
 }  // namespace audio_tactile
+
+#endif  // #if SLEEVE_BOARD || SLIM_BOARD
