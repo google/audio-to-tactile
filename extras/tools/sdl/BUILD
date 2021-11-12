@@ -15,8 +15,6 @@
 #
 # Utilities for working with the Simple DirectMedia Layer (SDL) library.
 
-load("//devtools/python/blaze:pytype.bzl", "py_binary", "py_library")
-load("//devtools/python/blaze:strict.bzl", "py_test")
 load("//:defs.bzl", "c_library")
 
 package(
