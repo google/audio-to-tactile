@@ -33,7 +33,7 @@ simplified by using Arduino IDE.
 
 The mechanical design was done using Fusion 360, and parts were printed on Prusa
 i3 MK3S+. The mechanical design files for the bracelet can be found in
-[slim_bracelet_desing/mechanical](https://github.com/google/audio-to-tactile/tree/main/extras/doc/hardware/slim_bracelet_design/mechanical).
+[slim_bracelet_design/enclosure_parts](https://github.com/google/audio-to-tactile/tree/main/extras/doc/hardware/slim_bracelet_design/enclosure_parts).
 
 The steps to put the bracelet together are described
 [in this guide](../mechanical/index.md).
