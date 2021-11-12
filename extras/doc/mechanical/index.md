@@ -45,7 +45,6 @@ insert with the soldering iron tip into the holes.
 ### Making the strap
 
 I used a 1x12 inch velcro strap from
-
 [Amazon](https://www.amazon.com/gp/product/B01MU56DCQ/).
 
 First, cut off the buckle with scissors.

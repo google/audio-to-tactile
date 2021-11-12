@@ -25,7 +25,7 @@ and wear.
 The pdf of the schematic can be found
 [here](slim_bracelet_design/pcb/slim_schematic_v1.pdf). The design was done in
 Altium Designer. The design files are located in
-[/slim_bracelet_design/pcb](extras/doc/hardware/slim_bracelet_design/pcb).
+[slim_bracelet_design/pcb](https://github.com/google/audio-to-tactile/tree/main/extras/doc/hardware/slim_bracelet_design/pcb).
 
 Use the firmware programming [guide](../firmware/index.md) to see different
 options for programming the embedded microcontroller. The programming is
@@ -33,7 +33,7 @@ simplified by using Arduino IDE.
 
 The mechanical design was done using Fusion 360, and parts were printed on Prusa
 i3 MK3S+. The mechanical design files for the bracelet can be found in
-[/slim_bracelet_desing/mechanical](extras/doc/hardware/slim_bracelet_design/mechanical)
+[slim_bracelet_desing/mechanical](https://github.com/google/audio-to-tactile/tree/main/extras/doc/hardware/slim_bracelet_design/mechanical).
 
 The steps to put the bracelet together are described
 [in this guide](../mechanical/index.md).
