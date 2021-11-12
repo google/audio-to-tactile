@@ -17,11 +17,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <style>
-html {font-size:100%; font-family:'Roboto'; line-height:1.5; background-color:#000; color:#7096a9}
+html {font-size:100%; font-family:'Roboto'; line-height:1.5;
+  background-color:#000; color:#968a7c}
 body {font-size:18px; margin:auto; max-width:53em; background-color:#000; padding: 0 3em 1em 3em;}
-a {color:#3bf; text-decoration: none}
-h1, h2 {margin-bottom:0; font-weight: normal; font-family: 'Montserrat', sans-serif;}
-h1 {color: #3bf; font-size: 2.5em; margin-top:1em; text-align: center}
+a {color:#82b1ff; text-decoration: none}
+h1, h2 {color: #f9a825; margin-bottom:0;
+  font-weight: normal; font-family: 'Montserrat', sans-serif;}
+h1 {font-size: 2.5em; margin-top:1em; text-align: center}
 h2 {font-size: 1.7em; margin:0}
 p {margin:0 0 1ex 0; padding:0}
 </style>
@@ -32,7 +34,7 @@ p {margin:0 0 1ex 0; padding:0}
 
 <h1>Visual demo of audio-to-tactile processing</h1>
 <p style="text-align:center; margin-bottom:3.4em; ">
-Pascal Getreuer, 2019-07-24 (updated 2021-06-15)
+Pascal Getreuer, 2019-07-24 (updated 2021-10-28)
 </p>
 
 <div style="width:326px; margin-right:4em; float:left">
@@ -66,21 +68,26 @@ height:50px; border-radius:2em; background: #f3f3f3 url('microphone.svg') no-rep
 </table>
 </div>
 
+<div style="overflow:hidden; padding:0 1.4em 0.6em 1.4em">
+<h2>Select form factor</h2>
+<table style="border-radius:6pt; margin:0.1em 0em 0.1em 0em;" cellpadding="5pt">
+<tr><td>
+<button id="bracelet_button" type="button" onclick="SelectFormFactor(0)" style="padding:0 0.3em 0
+0.3em; width: 6em; height:50px; border-radius:6pt; background: #82b1ff">Bracelet</button>
+</td><td>
+<button id="sleeve_button" type="button" onclick="SelectFormFactor(1)" style="padding:0 0.3em 0
+0.3em; width: 6em; height:50px; border-radius:6pt; background: #555">Sleeve</button>
+</td></tr>
+</table>
+</div>
+
 <div style="color:#b8b8b8; background-color:#202020; overflow:hidden;
 margin-top:0.5em; padding:0.6em 1.4em 0.6em 1.4em; border-radius:3pt">
-<p>This is a demo of the
-<a href="https://github.com/google/audio-to-tactile">audio-to-tactile</a>
-project. It shows a visual approximation of our processing, representing tactor
-vibration with brightness. Of course, you need tactile hardware to
-experience it fully.</p>
-<p>The "ʃ" tactor responds to "sh" (as in "ship"), and the "s" tactor to
-fricatives like "s" and "v" closer to the front of the mouth.</p>
-<p>The cluster in the middle responds to vowel sounds (labeled in <a
-href="https://en.wikipedia.org/wiki/IPA_vowel_chart_with_audio">IPA notation</a>), for example:</p>
-<img src="example.svg" width="200" height="200"
-alt="&#230; as in 'bat'" style="display:block; margin-left:auto;
-margin-right:auto">
-<p>The baseband tactor at the bottom responds to nasals and
+<p>This is a demo of the <a href="https://github.com/google/audio-to-tactile">audio-to-tactile</a>
+project. It shows a visual approximation of our processing, representing tactor vibration with
+brightness. Of course, you need tactile hardware to experience it fully.</p>
+<p>Tactor are labeled in <a href="https://en.wikipedia.org/wiki/IPA_vowel_chart_with_audio">IPA
+notation</a>, for example, ʃ is "sh" as in "ship". The baseband tactor responds to nasals and
 lower-frequency 80&ndash;500&nbsp;Hz sounds.</p>
 </div>
 
@@ -93,6 +100,7 @@ let testSoundNode = null;
 let microphoneNode = null;
 let currentInputNode = null;
 let connectInputFun = null;
+let formFactor = 0;
 
 function ConnectInputNode(inputNode, consumerNode) {
   if (inputNode != null) {
@@ -179,11 +187,11 @@ function InitWebAudio() {
 
 function SelectInputSource(i) {
   if (i == 0) {
-    document.getElementById('test_audio_box').style.backgroundColor = "#1b303f";
+    document.getElementById('test_audio_box').style.backgroundColor = "#4d412e";
     document.getElementById('microphone_box').style.backgroundColor = null;
   } else if (microphoneNode == null || currentInputNode != microphoneNode) {
     document.getElementById('test_audio_box').style.backgroundColor = null;
-    document.getElementById('microphone_box').style.backgroundColor = "#1b303f";
+    document.getElementById('microphone_box').style.backgroundColor = "#4d412e";
   } else {  // When microphone is enabled, clicking it again turns it off.
     document.getElementById('microphone_box').style.backgroundColor = null;
     i = -1;
@@ -195,6 +203,18 @@ function SelectInputSource(i) {
     InitWebAudio();
   }
   connectInputFun(i);
+}
+
+function SelectFormFactor(i) {
+  if (i == 0) {
+    document.getElementById('bracelet_button').style.backgroundColor = "#82b1ff";
+    document.getElementById('sleeve_button').style.backgroundColor = "#555";
+  } else {
+    document.getElementById('bracelet_button').style.backgroundColor = "#555";
+    document.getElementById('sleeve_button').style.backgroundColor = "#82b1ff";
+  }
+  formFactor = i;
+  Module._SelectFormFactor(formFactor);
 }
 </script>
 </body>
