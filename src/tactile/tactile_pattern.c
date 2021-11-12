@@ -44,6 +44,9 @@
  *   'F'   kToneSeconds    336.4 Hz sine wave.
  *   '/'   kChirpSeconds   Rising exponential chirp.
  *
+ * Durations for tone and pause can be set by changing the duration fields
+ * in the pattern object.
+ *
  * Tactile perception has little sensitivity to frequencies above 300 Hz and a
  * frequency change JND of 20-30%. With hardware constraints, tactors have
  * difficulty producing frequencies much below 30 Hz. So all frequencies are
@@ -70,12 +73,17 @@ const char* kTactilePatternConfirm = "5-5";
  */
 static const char* kCalibrationTwoTonePattern = "999---999";
 static const char* kCalibrationOneTonePattern = "999";
+static const char* kCalibrationIntensityAdjustmentPattern =
+    "99---99---99";  /* 400 ms stimulus, 300 ms interstimulus */
+static const char* kCalibrationOneToneThresholdPattern = "99"; /* 400 ms */
 
 static const float kAmplitude = 0.15f; /* Amplitude in [0.0, 1.0]. */
 static const float kPauseSeconds = 0.03f;
+static const float kPauseLong = 0.1f;
 static const float kFadeSeconds = 0.02f;
 
 static const float kToneSeconds = 0.08f;
+static const float kToneLong = 0.2f;
 
 static const float kChirpSeconds = 0.3f;
 static const float kChirpStartHz = 40.0f;
@@ -131,7 +139,7 @@ static void StartSegment(TactilePattern* p, int first) {
     case 'D':
     case 'E':
     case 'F':
-      duration_s = kToneSeconds;
+      duration_s = p->tone_duration;
       frequency_hz = GetToneFrequency(segment);
       break;
     case '/':
@@ -141,14 +149,20 @@ static void StartSegment(TactilePattern* p, int first) {
     case '\0':
       return;
     default: /* Treat '-' (or anything unrecognized) as a pause. */
-      duration_s = kPauseSeconds;
+      duration_s = p->pause_duration;
       frequency_hz = 0.0f;
       /* When playing calibration tones, use the pause to determine when to
-       * switch the active channel from the first to the second, so that the
-       * second tone in the pattern plays on `second_channel`.
+       * switch the active channel between the first and second channels.
+       * Only switch the channel on the first pause of a continuous pause
+       * segment, and only if the pause is not the first character of
+       * the pattern.
        */
-      if (p->active_channel >= 0) {
-        p->active_channel = p->second_channel;
+      if (p->active_channel >= 0 && !first && !IsSilent(p->pattern[-1])) {
+        if (p->active_channel != p->second_channel) {
+          p->active_channel = p->second_channel;
+        } else {
+          p->active_channel = p->first_channel;
+        }
       }
       break;
   }
@@ -188,6 +202,9 @@ void TactilePatternStart(TactilePattern* p, const char* pattern) {
   p->fade_counter = 0;
   p->fade_start_index = 0;
   p->active_channel = -1; /* All channels are active. */
+  p->amplitude = kAmplitude;
+  p->tone_duration = kToneSeconds;
+  p->pause_duration = kPauseSeconds;
   StartSegment(p, 1);
 }
 
@@ -197,12 +214,34 @@ void TactilePatternStartCalibrationTones(TactilePattern* p, int first_channel,
                              ? kCalibrationOneTonePattern
                              : kCalibrationTwoTonePattern);
   p->active_channel = first_channel;
+  p->first_channel = first_channel;
   p->second_channel = second_channel;
+}
+
+void TactilePatternStartCalibrationTonesThresholds(TactilePattern* p,
+                                                   int first_channel,
+                                                   int second_channel,
+                                                   float amplitude) {
+  p->active_channel = first_channel;
+  p->first_channel = first_channel;
+  p->second_channel = second_channel;
+  p->amplitude = amplitude;
+  p->pattern = first_channel == second_channel
+                             ? kCalibrationOneToneThresholdPattern
+                             : kCalibrationIntensityAdjustmentPattern;
+  p->tone.phase = 0;
+  p->segment_counter = 0;
+  p->fade_counter = 0;
+  p->fade_start_index = 0;
+  p->tone_duration = kToneLong;
+  p->pause_duration = kPauseLong;
+  StartSegment(p, 1);
 }
 
 int TactilePatternSynthesize(TactilePattern* p, int num_frames,
                              int num_channels, float* output) {
   int active_channel = p->active_channel;
+  const float amplitude = p->amplitude;
 
   int i;
   for (i = 0; i < num_frames; ++i, output += num_channels) {
@@ -217,7 +256,7 @@ int TactilePatternSynthesize(TactilePattern* p, int num_frames,
       } else {
         /* Generate sine wave. */
         OscillatorNext(&p->tone);
-        value = kAmplitude * Phase32Sin(p->tone.phase);
+        value = amplitude * Phase32Sin(p->tone.phase);
         if (segment == '/') { /* Chirp segment. */
           /* Grow the oscillator frequency to make an exponential chirp. */
           p->tone.frequency *= p->chirp_rate;

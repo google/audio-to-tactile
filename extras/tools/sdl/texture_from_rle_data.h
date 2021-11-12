@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,27 +22,7 @@
  * SDL_DestroyTexture to release memory when done. On failure, the function
  * prints a message to stderr and returns NULL.
  *
- * The encoded data format is as follows:
- *
- * The first 8 bytes encode a rectangle. Fields x, y, width, height are encoded
- * as big endian 16-bit unsigned integer values.
- *
- *  - The width and height fields specify the image dimensions.
- *
- *  - The x and y fields are ignored by the decompression and may be used for
- *    any purpose, e.g. screen coordinates for where to display the image.
- *
- * The image data follows the rectangle. The image is encoded in TGA format as a
- * series of "packets". There are two kinds: "run-length packets" and "raw
- * packets". Each packet starts with a one-byte packet header. The high bit
- * indicates the kind of packet (0 => raw, 1 => run length). The lower 7 bits
- * encodes the length `n` minus one, so the max possible length is 128 pixels. A
- * packet is allowed to cross scanlines.
- *
- *  - A run-length packet header is followed by a single byte, a pixel value to
- *    be repeated `n` times.
- *
- *  - A raw packet header is followed by `n` bytes for the next `n` pixels.
+ * The encoded data format is described in rle_compress_image.py.
  */
 
 #ifndef AUDIO_TO_TACTILE_EXTRAS_TOOLS_SDL_TEXTURE_FROM_RLE_DATA_H_

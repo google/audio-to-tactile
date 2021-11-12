@@ -18,8 +18,8 @@
  * `TactileProcessor` performs audio-to-tactile processing, taking a (mono)
  * audio stream as input and producing a 10-channel tactile signal as output, to
  * be presented on a 10-tactor array. There are four groups of output signals,
- * corresponding to the channels of the energy envelope design. Tactile signals
- * are computed as smoothed energy envelopes of the following bands:
+ * corresponding to the four `Enveloper` channels. Tactile signals are computed
+ * as smoothed energy envelopes of the following bands:
  *
  *   Baseband:     80-500 Hz sensitivity to get pitch pulses, percussion, drums.
  *   Vowel:        500-3500 Hz sensitivity to get speech formants.
@@ -50,7 +50,7 @@
 
 #include "frontend/carl_frontend.h"
 #include "phonetics/embed_vowel.h"
-#include "tactile/energy_envelope.h"
+#include "tactile/enveloper.h"
 #include "tactile/tuning.h"
 
 #ifdef __cplusplus
@@ -62,10 +62,7 @@ extern const int kTactileProcessorNumTactors;
 
 /* TactileProcessor parameters. */
 typedef struct {
-  EnergyEnvelopeParams baseband_channel_params;
-  EnergyEnvelopeParams vowel_channel_params;
-  EnergyEnvelopeParams sh_fricative_channel_params;
-  EnergyEnvelopeParams fricative_channel_params;
+  EnveloperParams enveloper_params;
   /* Decimation factor after computing the energy envelope. */
   int decimation_factor;
   /* Parameters for the `CarlFrontend` used for vowel embedding. Particularly,
@@ -82,8 +79,8 @@ void TactileProcessorSetDefaultParams(TactileProcessorParams* params);
 float TactileProcessorOutputSampleRateHz(const TactileProcessorParams* params);
 
 typedef struct {
-  /* States of the baseband, vowel, sh fricative, and fricative channels. */
-  EnergyEnvelope channel_states[4];
+  /* Energy envelopes. */
+  Enveloper enveloper;
   /* Decimation factor after computing energy envelopes. */
   int decimation_factor;
   /* Vowel embedding frontend. */

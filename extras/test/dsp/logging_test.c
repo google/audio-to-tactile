@@ -21,12 +21,12 @@ typedef struct Thing {
 
 static int things_made;
 
-static struct Thing* MakeThing() {
+static struct Thing* MakeThing(void) {
   ++things_made;
   return (Thing*) malloc(sizeof(Thing));
 }
 
-static void DoesntEvaluateTwice() {
+static void DoesntEvaluateTwice(void) {
   things_made = 0;
   Thing* my_thing = CHECK_NOTNULL(MakeThing());
   CHECK(things_made == 1);

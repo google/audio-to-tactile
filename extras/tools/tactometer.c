@@ -44,7 +44,8 @@
 static const float kFrequenciesHz[] = {
   12.5f, 25.0f, 50.0f, 75.0f, 100.0f, 125.0f, 150.0f, 200.0f, 250.0f, 300.0f,
   350.0f, 400.0f, 500.0f, 600.0f};
-#define kNumFrequencies (sizeof(kFrequenciesHz) / sizeof(*kFrequenciesHz))
+#define kNumFrequencies \
+    ((int)(sizeof(kFrequenciesHz) / sizeof(*kFrequenciesHz)))
 
 static const SDL_Scancode kKeytarNoteKeys[kNumFrequencies] = {
     SDL_SCANCODE_A, SDL_SCANCODE_Z, SDL_SCANCODE_S, SDL_SCANCODE_X,
@@ -172,8 +173,9 @@ static int PortaudioCallback(const void* input_buffer, void* output_buffer,
   float smoothed_amplitude_stage1 = buzzer->smoothed_amplitude_stage1;
   float smoothed_amplitude = buzzer->smoothed_amplitude;
 
+  const int num_frames = (int)frames_per_buffer;
   int i;
-  for (i = 0; i < frames_per_buffer; ++i) {
+  for (i = 0; i < num_frames; ++i) {
     /* Apply second-order Gamma filter to smooth the target amplitude. */
     smoothed_amplitude_stage1 += engine.amplitude_smoother * (
         target_amplitude - smoothed_amplitude_stage1);

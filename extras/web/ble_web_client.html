@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" href="ble_web_client.css">
+
 <!--
 Copyright 2021 Google LLC
 
@@ -16,752 +18,412 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-<style>
-button {
-  font-size: 110%;
-}
-fieldset {
-  padding: 0.01em 0 0 0;
-}
-.panel {
-  width: 26em;
-  border:1px solid #bbb;
-  margin: 0 1ex 1ex 0;
-  padding: 1em;
-  border-radius: 3pt;
-}
-.panel legend {
-  font-size: 120%;
-}
-.panel button {
-  padding: 4pt;
-  margin-right: 0.3em;
-}
-.panel table {
-  margin-top: 1.5ex;
-}
-.knobLabel {
-  margin-right: 0.8em;
-}
-#tuningKnobs .knobSlider {
-  width: 18em;
-}
-#channelMap .knobSlider {
-  width: 12em;
-}
-.knobTextValue {
-  width: 3.5em;
-  text-align: right;
-  font-family: monospace;
-}
-.knobUnits {}
-</style>
 <title>Audio-to-Tactile BLE web client</title>
 </head>
 <body>
-<h1>Audio-to-Tactile BLE web client</h1>
+  <h1>Audio-to-Tactile BLE web client</h1>
 
-<div id="connectionPanel" style="padding:1em">
-  <button id="clientConnectButton" style="font-size:110%"
-    onclick="connectionToggle()">Connect</button></br>
-</div>
+  <div id="connectionPanel">
+    <button id="clientConnectButton"
+      onclick="bleInstance.connectionToggle()">Connect</button><br>
+    <legend class="deviceNameLegend">Device name</legend>
+    <input id="deviceName" type="text" value="" maxlength="16"
+        oninput="deviceNameChanged()">
+    <button id="OtaBootloadMode" onclick="bleInstance.sendBootloadModeCommand()"
+        disabled="true">Bootload mode</button>
+  </div>
 
-<h1>Battery voltage: </h1>
-<h2 id="batteryVoltage">Waiting for battery voltage...</h2>
+  <h1>Battery voltage: </h1>
+  <h2 id="batteryVoltage">Waiting for battery voltage...</h2>
 
-<h1>Temperature: </h1>
-<h2 id="temperature">Waiting for temperature sensor...</h2>
+  <h1>Temperature: </h1>
+  <h2 id="temperature">Waiting for temperature sensor...</h2>
 
-<fieldset class="panel" style="float:left">
-<legend style="margin:0, padding:0">Audio input level</legend>
-<canvas id="plot" width="470" height="300"></canvas>
-</fieldset>
+  <fieldset class="panel">
+    <legend class="plot-legend">Audio input level</legend>
+    <canvas id="plot" width="470" height="300"></canvas>
+  </fieldset>
 
-<fieldset id="tuningKnobs" class="panel" style="float: left">
-<legend>Tuning knobs</legend>
-<button id="resetTuning" onclick="resetTuning()">Reset</button>
-<button id="applyTuning" onclick="requestSetTuning()" disabled="true">Apply to device</button>
-</fieldset>
+  <fieldset id="tuningKnobs" class="panel">
+    <legend>Tuning knobs</legend>
+    <button id="resetTuning" onclick="bleInstance.resetTuning()">
+      Reset
+    </button>
+    <button id="applyTuning" onclick="bleInstance.requestSetTuning()"
+        disabled="true">Apply to device</button>
+  </fieldset>
 
-<fieldset id="channelMap" class="panel" style="float: left; width:29em">
-<legend>Channel map</legend>
-<button id="resetChannelMap" onclick="resetChannelMap()" disabled="true">Reset</button>
-</fieldset>
+  <fieldset id="channelMap" class="panel">
+    <legend>Channel map</legend>
+    <button id="resetChannelMap" onclick="bleInstance.resetChannelMap()"
+        disabled="true">Reset</button>
+  </fieldset>
 
-<fieldset class="panel" style="clear: both">
-<legend>Tactile pattern</legend>
-<input id="tactilePattern" type="text" value="68A-6-6-/"
-style="font-family:monospace; font-size:125%; float:left"
-maxlength="15">
-<button id="playTactilePattern" onclick="requestPlayTactilePattern()"
-  disabled="true" style="float:left; margin-left:1ex">Play</button>
-</fieldset>
+  <fieldset class="panel panel-clear">
+    <legend>Tactile pattern</legend>
+    <input id="tactilePattern" type="text" value="68A-6-6-/" maxlength="15">
+    <button id="playTactilePattern"
+      onclick="bleInstance.requestPlayTactilePattern(
+          document.getElementById('tactilePattern').value)"
+      disabled="true">Play</button>
+  </fieldset>
 
-<p style="font-size:110%">Log</p>
-<textarea id="logDisplay" rows="20" cols="105" readonly="true"
-style="color: #eee; background-color: #222; resize: none;">
-</textarea>
+  <fieldset class="panel panel-clear">
+    <legend>Log</legend>
+    <textarea id="logDisplay" rows="20" cols="105" readonly="true">
+    </textarea>
+  </fieldset>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/smoothie/1.34.0/smoothie.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/smoothie/1.34.0/smoothie.js">
+</script>
+<script src="./ble_library.js"></script>
 <script>
-// These codes should match the MessageType enum in cpp/message.h.
-const MESSAGE_TYPE_TEMPERATURE = 16;
-const MESSAGE_TYPE_TUNING = 18;
-const MESSAGE_TYPE_TACTILE_PATTERN = 19;
-const MESSAGE_TYPE_GET_TUNING = 20;
-const MESSAGE_TYPE_CHANNEL_MAP = 24;
-const MESSAGE_TYPE_GET_CHANNEL_MAP = 25;
-const MESSAGE_TYPE_STATS_RECORD = 26;
-const MESSAGE_TYPE_CHANNEL_GAIN_UPDATE = 27;
-const MESSAGE_TYPE_BATTERY_VOLTAGE = 28;
-
-const NUM_TACTORS = 10;
-const ENVELOPE_TRACKER_RECORD_POINTS = 33;
-const ENVELOPE_TRACKER_MEASUREMENT_PERIOD_MS = 30;
-
-var bleDevice;
-var nusRx;
-var nusTx;
-var connected = false;
-var logDisplay = document.getElementById('logDisplay');
-
-// Define smoothie chart for plotting the audio envelope.
-var plot = new TimeSeries();
-var smoothed_envelope = 0.0;
-const smoothie = new SmoothieChart({
-  minValue: 0.0,
-  grid: {
-    fillStyle: '#f8f8f8',
-    strokeStyle: '#bbb',
-    verticalSections: 1,
-    borderVisible: false
-  },
-  labels: {
-    fillStyle: '#000000',
-    fontSize: 16,
-    precision: 3
-  },
-  title: {
-    text: 'Audio input level',
-    fillStyle: '#000000'
-  },
-  limitFPS: 60
-});
-smoothie.addTimeSeries(plot, {strokeStyle: '#1f77b4', lineWidth: 2});
-smoothie.streamTo(document.querySelector('#plot'), 100);
-
-// Linearly maps `value_in` from [0, 255] to [min_in, min_out].
-function lin_mapping(value_in, min_out, max_out) {
-  return min_out + ((max_out - min_out) / 255) * value_in;
-}
-
-// Logarithmically maps `value_in` from [0, 255] to [min_in, min_out].
-function log_mapping(value_in, min_out, max_out) {
-  return Math.exp(lin_mapping(value_in, Math.log(min_out), Math.log(max_out)));
-}
-
-// Definitions of all the tuning knobs. This should match the definitions in tactile/tuning.c.
-var tuningKnobs = [
-  {label: 'Input gain',
-    default: 127,
-    mapping: (x) => {
-      return lin_mapping(x, -40.0, 40.315).toFixed(1).replace('-', '&minus;');
-    },
-    units: 'dB',
-  },
-  {label: 'Output gain',
-    default: 191,
-    mapping: (x) => {
-      return lin_mapping(x, -18.0, 6.0).toFixed(1).replace('-', '&minus;');
-    },
-    units: 'dB',
-  },
-  {label: 'Denoising 0',
-    default: 99,
-    mapping: (x) => { return log_mapping(x, 2.0, 200,0).toFixed(1); },
-  },
-  {label: 'Denoising 1',
-    default: 77,
-    mapping: (x) => { return log_mapping(x, 2.0, 200,0).toFixed(1); },
-  },
-  {label: 'Denoising 2',
-    default: 77,
-    mapping: (x) => { return log_mapping(x, 2.0, 200,0).toFixed(1); },
-  },
-  {label: 'Denoising 3',
-    default: 77,
-    mapping: (x) => { return log_mapping(x, 2.0, 200,0).toFixed(1); },
-  },
-  {label: 'AGC strength',
-    default: 191,
-    mapping: (x) => { return lin_mapping(x, 0.1, 0.9).toFixed(2); },
-  },
-  {label: 'Noise &tau;',
-    default: 127,
-    mapping: (x) => { return log_mapping(x, 0.04, 4.0).toFixed(2); },
-    units: 's',
-  },
-  {label: 'Gain &tau; release',
-    default: 73,
-    mapping: (x) => { return log_mapping(x, 0.04, 4.0).toFixed(2); },
-    units: 's',
-  },
-  {label: 'Compressor',
-    default: 96,
-    mapping: (x) => { return lin_mapping(x, 0.1, 0.5).toFixed(2); },
-  },
-  ];
-
-// Generates HTML table with sliders, etc. for all the tuning knobs defined in `tuningKnobs`.
-(() => {
-  var table = document.createElement('table');
-  for (var i = 0; i < tuningKnobs.length; i++) {
-    var slider = document.createElement('input');  // Make knob slider element.
-    slider.className = 'knobSlider';
-    slider.type = 'range';
-    slider.id = 'knob' + i
-    slider.name = slider.id;
-    slider.min = 0;
-    slider.max = 255;
-    slider.value = tuningKnobs[i].default;
-
-    var label = document.createElement('label');  // Make text label element.
-    label.setAttribute('for', slider.id);
-    label.className = 'knobLabel';
-    label.innerHTML = tuningKnobs[i].label;
-
-    var tr = table.insertRow();  // Add a table row for this knob.
-    tr.insertCell().appendChild(label);
-    tr.insertCell().appendChild(slider);
-
-    var td = tr.insertCell();
-    td.className = 'knobTextValue';  // Text element that displays the mapped value.
-    td.innerHTML = tuningKnobs[i].mapping(slider.value);
-
-    ((slider, td, mapping) => {  // Update the text display when the slider changes.
-      slider.addEventListener('input', function () {
-        td.innerHTML = mapping(slider.value);
-      }, false);
-    })(slider, td, tuningKnobs[i].mapping);
-
-    td = tr.insertCell();
-    td.className = 'knobUnits';  // Add units after the text display.
-    td.innerHTML = tuningKnobs[i].units || '';
+  var logDisplay = document.getElementById('logDisplay');
+  var logLines = [];
+  /**
+   * Appends a message to the log window. A newline is inserted after
+   * the message.
+   * @param {string} s A string to be displayed in the log window.
+   */
+  var logFunction = function log(s) {
+    // If the log gets long, discard old messages to keep UI responsive.
+    var discard = (logLines.length >= 100);
+    if (discard) {
+      logLines = logLines.slice(-99);
+    }
+    var now = new Date();
+    var timestamp = ('00' + now.getHours()).slice(-2) + ':' +
+      ('00' + now.getMinutes()).slice(-2) + ':' +
+      ('00' + now.getSeconds()).slice(-2) + '.' +
+      ('000' + now.getMilliseconds()).slice(-3);
+    logLines.push(timestamp + ' -> ' + s);
+    logDisplay.value = logLines.join('\n');
+    logDisplay.scrollTop = logDisplay.scrollHeight;
   }
-  document.getElementById('tuningKnobs').appendChild(table);
-})();
 
-// Resets tuning to default values.
-function resetTuning() {
-  for (var i = 0; i < tuningKnobs.length; i++) {
-    var slider = document.getElementById('knob' + i);
-    slider.value = tuningKnobs[i].default;
-    slider.dispatchEvent(new Event('input'));
+  // Define smoothie chart for plotting the audio envelope.
+  var plot = new TimeSeries();
+  var smoothed_envelope = 0.0;
+  const smoothie = new SmoothieChart({
+    minValue: 0.0,
+    grid: {
+      fillStyle: '#f8f8f8',
+      strokeStyle: '#bbb',
+      verticalSections: 1,
+      borderVisible: false
+    },
+    labels: {
+      fillStyle: '#000000',
+      fontSize: 16,
+      precision: 3
+    },
+    title: {
+      text: 'Audio input level',
+      fillStyle: '#000000'
+    },
+    limitFPS: 60
+  });
+  smoothie.addTimeSeries(plot, {strokeStyle: '#1f77b4', lineWidth: 2});
+  smoothie.streamTo(document.querySelector('#plot'), 100);
+
+  /**
+   * Plot new data on the smoothie chart.
+   * @param {Float32Array} out New data points to plot.
+   */
+  function updatePlot(out) {
+    var t = new Date().getTime();
+    for (var i = 0; i < ENVELOPE_TRACKER_RECORD_POINTS; i++) {
+      // Take sqrt to get amplitude and do some light smoothing to compensate
+      // for quantization of the envelope. The 0.33 coeff corresponds to a time
+      // constant of about 2.5 measurements.
+      smoothed_envelope += 0.33 * (Math.sqrt(out[i]) - smoothed_envelope);
+      plot.append(t, smoothed_envelope);
+      t += ENVELOPE_TRACKER_MEASUREMENT_PERIOD_MS;
+    }
   }
-}
 
-function channelGainMapping(x) {
-  gain_db = (18 / 62) * (x - 63);
-  return gain_db.toFixed(1).replace('-', '&minus;');
-}
+  /**
+   * Updates UI elements after connecting or disconnecting BLE.
+   * @param {boolean} connected A flag to indicate whether a BLE device
+   *    is currently connected.
+   */
+  function updateButtonState(connected) {
+    if (connected) {
+      document.getElementById('clientConnectButton').innerHTML = 'Disconnect';
+      document.getElementById('applyTuning').disabled = false;
+      document.getElementById('resetChannelMap').disabled = false;
+      document.getElementById('playTactilePattern').disabled = false;
+      document.getElementById('OtaBootloadMode').disabled = false;
+    } else {
+      document.getElementById('clientConnectButton').innerHTML = 'Connect';
+      document.getElementById('applyTuning').disabled = true;
+      document.getElementById('resetChannelMap').disabled = true;
+      document.getElementById('playTactilePattern').disabled = true;
+      document.getElementById('OtaBootloadMode').disabled = true;
+    }
+  }
 
-function channelUpdateEnable(c) {
-  const enabled = document.getElementById('channelEnable' + c).checked;
-  document.getElementById('channelSource' + c).disabled = !enabled;
-  document.getElementById('channelGain' + c).disabled = !enabled;
-  document.getElementById('channelTest' + c).disabled = !enabled;
-}
+  /**
+   * Updates UI elements when a new battery voltage is received from BLE.
+   * @param {float} num The new battery voltage.
+   */
+  function updateBatteryVoltage(num) {
+    var element = document.getElementById("batteryVoltage");
+    // Keep two decimal points.
+    element.innerHTML = parseFloat(num).toFixed(2) + " V";
+  }
 
-function getChannelSource(c) {
-  return document.getElementById('channelSource' + c).value - 1;
-}
+  /**
+   * Updates UI elements when a new temperature reading is received from BLE.
+   * @param {float} num The new temperature reading.
+   */
+  function updateTemperature(num) {
+    var element = document.getElementById("temperature");
+    // Keep two decimal points.
+    element.innerHTML = parseFloat(num).toFixed(2) + " °C";
+  }
 
-// Generates channel map HTML table.
-(() => {
-  var table = document.createElement('table');
-  var tr = table.insertRow();  // Make header row.
-  tr.insertCell().innerHTML = 'Tactor';
-
-  var enableAll = document.createElement('input');  // Make enable all element.
-  tr.insertCell().appendChild(enableAll);
-  enableAll.type = 'checkbox';
-  enableAll.id = 'channelEnableAll';
-  enableAll.checked = true;
-  enableAll.style = 'margin-right:1em';
-
-  tr.insertCell().innerHTML = 'Source';
-  tr.insertCell().innerHTML = 'Gain';
-  tr.insertCell();  // Gain text.
-  tr.insertCell();  // Gain units.
-  tr.insertCell();  // Test button.
-
-  enableAll.addEventListener('change', function () {
-    for (var c = 0; c < NUM_TACTORS; c++) {
-      var checkbox = document.getElementById('channelEnable' + c);
-      checkbox.checked = enableAll.checked;
+  /**
+   * Updates UI elements for all channels, including source, gain, and
+   * whether each channel is enabled.
+   */
+  function updateChannels() {
+    for (var c = 0; c < NUM_TACTORS; c ++) {
+      document.getElementById('channelSource' + c).value =
+          bleInstance.channelData[c].source;
+      document.getElementById('channelEnable' + c).checked =
+          bleInstance.channelData[c].enabled;
+      document.getElementById('channelGain' + c).value =
+          bleInstance.channelData[c].gain;
+      document.getElementById('channelGainText' + c).innerHTML =
+         channelGainMapping(bleInstance.channelData[c].gain);
       channelUpdateEnable(c);
     }
-    requestSetChannelMap();
-  });
-
-  for (var c = 0; c < NUM_TACTORS; c++) {
-    var label = document.createElement('label');  // Make text label element.
-    label.className = 'knobLabel';
-    label.innerHTML = 'Tactor ' + (c + 1);
-
-    var checkbox = document.createElement('input');  // Make checkbox element.
-    checkbox.className = 'channelEnable';
-    checkbox.type = 'checkbox';
-    checkbox.id = 'channelEnable' + c
-    checkbox.checked = true;
-    checkbox.style = 'margin-right:1em';
-
-    var source = document.createElement('input');  // Make number element.
-    source.type = 'number';
-    source.id = 'channelSource' + c
-    source.min = 1;
-    source.max = NUM_TACTORS;
-    source.value = c + 1;
-
-    var slider = document.createElement('input');  // Make gain slider element.
-    slider.className = 'knobSlider';
-    slider.type = 'range';
-    slider.id = 'channelGain' + c
-    slider.name = slider.id;
-    slider.min = 1;
-    slider.max = 63;
-    slider.value = 63;
-
-    var gainText = tr.insertCell();
-    gainText.className = 'knobTextValue';  // Text element that displays the mapped value.
-    gainText.innerHTML = channelGainMapping(slider.value);
-
-    var testButton = document.createElement('input');
-    testButton.type = 'button';
-    testButton.id = 'channelTest' + c
-    testButton.value = 'Test';
-    testButton.style = 'margin-left:1em';
-
-    var tr = table.insertRow();  // Add a table row for this knob.
-    tr.insertCell().appendChild(label);
-    tr.insertCell().appendChild(checkbox);
-    tr.insertCell().appendChild(source);
-    tr.insertCell().appendChild(slider);
-    tr.insertCell().appendChild(gainText);
-    var td = tr.insertCell();
-    td.className = 'knobUnits';  // Add units after the text display.
-    td.innerHTML = 'dB';
-    tr.insertCell().appendChild(testButton);
-
-    ((c, source, slider, gainText, checkbox, testButton) => {
-      source.addEventListener('change', function () {
-        requestSetChannelMap();
-      }, false);
-
-      // Update the text display when the slider changes.
-      slider.addEventListener('input', function () {
-        gainText.innerHTML = channelGainMapping(slider.value);
-      }, false);
-
-      slider.addEventListener('change', function () {
-        requestSetChannelGainUpdate(getChannelSource(0), getChannelSource(c));
-      }, false);
-
-      // Enable/disable when checkbox changes.
-      checkbox.addEventListener('change', function () {
-        channelUpdateEnable(c);
-        const numChecked =
-          document.querySelectorAll('.channelEnable:checked').length;
-        if (numChecked == 0) {
-          enableAll.indeterminate = false;
-          enableAll.checked = false;
-        } else if (numChecked == NUM_TACTORS) {
-          enableAll.indeterminate = false;
-          enableAll.checked = true;
-        } else {
-          enableAll.indeterminate = true;
-        }
-        requestSetChannelMap();
-      }, false);
-
-      // Play test buzz.
-      testButton.addEventListener('click', function () {
-        requestSetChannelGainUpdate(getChannelSource(c), getChannelSource(c));
-      }, false);
-    })(c, source, slider, gainText, checkbox, testButton);
   }
 
-  document.getElementById('channelMap').appendChild(table);
-})();
+  /**
+   * Toggles whether a given channel's UI elements are enabled or disabled,
+   * and updateds the enableAll indicator.
+   * @param {number} c Index of the channel to update.
+   */
+  function channelUpdateEnable(c) {
+    const enabled = document.getElementById('channelEnable' + c).checked;
+    document.getElementById('channelSource' + c).disabled = !enabled;
+    document.getElementById('channelGain' + c).disabled = !enabled;
+    document.getElementById('channelTest' + c).disabled = !enabled;
 
-// Resets channel map to default values.
-function resetChannelMap() {
-  for (var c = 0; c < NUM_TACTORS; c++) {
-    var source = document.getElementById('channelSource' + c);
-    source.value = c + 1;
-    var slider = document.getElementById('channelGain' + c);
-    slider.value = 63;
-    slider.dispatchEvent(new Event('input'));
+    const numChecked =
+        document.querySelectorAll('.channelEnable:checked').length;
+    const enableAll = document.getElementById('channelEnableAll');
+    if (numChecked == 0) {
+      enableAll.indeterminate = false;
+      enableAll.checked = false;
+    } else if (numChecked == NUM_TACTORS) {
+      enableAll.indeterminate = false;
+      enableAll.checked = true;
+    } else {
+      enableAll.indeterminate = true;
+    }
   }
 
-  var enableAll = document.getElementById('channelEnableAll');
-  enableAll.checked = true;
-  enableAll.indeterminate = false;
-  enableAll.dispatchEvent(new Event('change'));
-}
-
-var logLines = [];
-// Appends a message to the log window. A newline is inserted after the message.
-function log(s) {
-  // If the log gets long, discard old messages to keep UI responsive.
-  var discard = (logLines.length >= 100);
-  if (discard) {
-    logLines = logLines.slice(-99);
-  }
-  var now = new Date();
-  var timestamp = ('00' + now.getHours()).slice(-2) + ':' +
-    ('00' + now.getMinutes()).slice(-2) + ':' +
-    ('00' + now.getSeconds()).slice(-2) + '.' +
-    ('000' + now.getMilliseconds()).slice(-3);
-  logLines.push(timestamp + ' -> ' + s);
-  logDisplay.value = logLines.join('\n');
-  logDisplay.scrollTop = logDisplay.scrollHeight;
-}
-
-// Update UI elements after connecting or disconnecting.
-function updateButtonState() {
-  if (connected) {
-    document.getElementById('clientConnectButton').innerHTML = 'Disconnect';
-    document.getElementById('applyTuning').disabled = false;
-    document.getElementById('resetChannelMap').disabled = false;
-    document.getElementById('playTactilePattern').disabled = false;
-  } else {
-    document.getElementById('clientConnectButton').innerHTML = 'Connect';
-    document.getElementById('applyTuning').disabled = true;
-    document.getElementById('resetChannelMap').disabled = true;
-    document.getElementById('playTactilePattern').disabled = true;
-  }
-}
-
-// Toggle the BLE connection.
-function connectionToggle() {
-  if (connected) {
-    disconnect();
-  } else {
-    connect();
-  }
-}
-
-// Connect BLE to device that both has a name starting with 'Audio-to-Tactile' and is advertising
-// the Nordic UART Service, then send it a "get tuning" request.
-function connect() {
-  // UUIDs for the BLE Nordic UART Service (NUS). We use NUS to send messages
-  // between this web app and the device.
-  //
-  // Reference:
-  // https://infocenter.nordicsemi.com/index.jsp?topic=%2Fsdk_nrf5_v16.0.0%2Fble_sdk_app_nus_eval.html
-  const NUS_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
-  const NUS_RX_CHARACTERISTIC_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
-  const NUS_TX_CHARACTERISTIC_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
-  var nusService;
-
-  if (!navigator.bluetooth) {
-    log('WebBluetooth API is not available.\r\n' +
-      'Please make sure the Web Bluetooth flag is enabled.');
-    return;
-  }
-  navigator.bluetooth.requestDevice({  // Scan for a matching BLE device.
-    filters: [
-      {namePrefix: 'Audio-to-Tactile'},
-      {services: [NUS_SERVICE_UUID]},
-    ],
-    optionalServices: [
-      NUS_SERVICE_UUID,
-      NUS_RX_CHARACTERISTIC_UUID,
-      NUS_TX_CHARACTERISTIC_UUID
-    ],
-  })
-    .then(device => {
-    bleDevice = device;
-      bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
-      // Connect to the GATT server.
-      return device.gatt.connect();
-    })
-    .then(server => {
-      // Locate the NUS service.
-      service = server.getPrimaryService(NUS_SERVICE_UUID);
-      return service;
-    }).then(service => {
-      nusService = service;
-      // Locate Rx characteristic.
-      return nusService.getCharacteristic(NUS_RX_CHARACTERISTIC_UUID);
-    })
-    .then(characteristic => {
-      nusRx = characteristic;
-      // Locate Tx characteristic.
-      return nusService.getCharacteristic(NUS_TX_CHARACTERISTIC_UUID);
-    })
-    .then(characteristic => {
-      nusTx = characteristic;
-      // Listen for messages sent from the device.
-      nusTx.addEventListener('characteristicvaluechanged', onReceivedMessage);
-      return nusTx.startNotifications();
-    })
-    .then(() => {
-      log('BLE connected to ' + bleDevice.name);
-      connected = true;
-      updateButtonState();
-
-      // Send "get tuning" request to the device.
-      requestGetTuning();
-    })
-    .catch(error => {
-      log('Error: ' + error);
-      if (bleDevice && bleDevice.gatt.connected) {
-        bleDevice.gatt.disconnect();
-      }
-    });
-}
-
-function disconnect() {
-  if (bleDevice && bleDevice.gatt.connected) {
-    bleDevice.gatt.disconnect();
-    connected = false;
-    updateButtonState();
-  }
-}
-
-function onDisconnected() {
-  connected = false;
-  log('BLE disconnected.');
-  updateButtonState();
-}
-
-function onReceivedMessage(event) {
-  let bytes = event.target.value;
-  if (bytes.byteLength < 4 || bytes.byteLength != 4 + bytes.getUint8(3)) {
-    log('Received invalid message.');
-  }
-  let messageType = bytes.getUint8(2);
-  let messagePayload = new Uint8Array(bytes.getUint8(3));
-  for (var i = 0; i < messagePayload.byteLength; i++) {
-    messagePayload[i] = bytes.getUint8(4 + i);
-  }
-  log('Got type: ' + messageType + ', [' +
-    messagePayload.join(', ') + ']')
-
-  if (messageType == MESSAGE_TYPE_TUNING && messagePayload.byteLength == tuningKnobs.length) {
-    for (var i = 0; i < tuningKnobs.length; i++) {
+  /**
+   * Updates slider values for all tuning knobs.
+   */
+  function updateTuningKnobs() {
+    for (var i = 0; i < bleInstance.tuningKnobs.length; i++) {
       var slider = document.getElementById('knob' + i);
-      slider.value = messagePayload[i];
+      slider.value = bleInstance.tuningKnobs[i].currentValue;
       slider.dispatchEvent(new Event('input'));
     }
-    requestGetChannelMap();
-  } else if (messageType == MESSAGE_TYPE_CHANNEL_MAP) {
-    receiveChannelMap(messagePayload);
-  } else if (messageType == MESSAGE_TYPE_STATS_RECORD) {
-    receiveStatsRecord(messagePayload);
-  } else if (messageType == MESSAGE_TYPE_BATTERY_VOLTAGE){
-    receiveBatteryVoltage(messagePayload);
-  } else if (messageType == MESSAGE_TYPE_TEMPERATURE){
-    receiveTemperature(messagePayload);
-  } else {
-    log('Unsupported message type.');
-  }
-}
-
-function writeMessage(messageType, messagePayload) {
-  if (!connected) { return; }
-  log('Sent type: ' + messageType + ', [' + messagePayload.join(', ') + ']')
-
-  let bytes = new Uint8Array(4 + messagePayload.byteLength);
-  bytes[2] = messageType;
-  bytes[3] = messagePayload.byteLength;
-  for (var i = 0; i < messagePayload.byteLength; i++) {
-    bytes[4 + i] = messagePayload[i];
   }
 
-  // Compute Fletcher-16 checksum.
-  var sum1 = 1;
-  var sum2 = 0;
-  for (var i = 2; i < bytes.length; i++) {
-    sum1 += bytes[i];
-    sum2 += sum1;
-  }
-  bytes[0] = sum1 % 255;
-  bytes[1] = sum2 % 255;
-
-  nusRx.writeValue(bytes);
-}
-
-function receiveBatteryVoltage(messagePayload) {
-  var view = new DataView(messagePayload.buffer)
-  var num = view.getFloat32(0, /*littleEndian=*/true);
-  var element = document.getElementById("batteryVoltage");
-  // Keep two decimal points.
-  element.innerHTML = parseFloat(num).toFixed(2) + " V";
-}
-
-function receiveTemperature(messagePayload) {
-  var view = new DataView(messagePayload.buffer)
-  var num = view.getFloat32(0, /*littleEndian=*/true);
-  var element = document.getElementById("temperature");
-  // Keep two decimal points.
-  element.innerHTML = parseFloat(num).toFixed(2) + " °C";
-}
-
-function requestGetTuning() {
-  if (!connected) { return; }
-  writeMessage(MESSAGE_TYPE_GET_TUNING, new Uint8Array(0));
-}
-
-function requestSetTuning() {
-  if (!connected) { return; }
-  let messagePayload = new Uint8Array(tuningKnobs.length);
-  for (var i = 0; i < tuningKnobs.length; i++) {
-    messagePayload[i] = document.getElementById('knob' + i).value;
-  }
-  writeMessage(MESSAGE_TYPE_TUNING, messagePayload);
-}
-
-function requestPlayTactilePattern() {
-  if (!connected) { return; }
-  var enc = new TextEncoder();
-  var messagePayload =
-       enc.encode(document.getElementById('tactilePattern').value);
-  writeMessage(MESSAGE_TYPE_TACTILE_PATTERN, messagePayload);
-}
-
-function requestGetChannelMap() {
-  if (!connected) { return; }
-  writeMessage(MESSAGE_TYPE_GET_CHANNEL_MAP, new Uint8Array(0));
-}
-
-function receiveChannelMap(messagePayload) {
-  if (messagePayload.length == 0) { return; }
-  const numInput = 1 + ((messagePayload[0] + 15) & 15);
-  const numOutput = messagePayload[0] >> 4;
-  if (messagePayload.length != 1 + Math.ceil(numOutput / 2) +
-                               3 * Math.ceil(numOutput / 4)
-      || numInput != NUM_TACTORS
-      || numOutput != NUM_TACTORS) {
-    return;
+  /**
+   * Updates the value of the device name.
+   */
+  function updateDeviceName(newName) {
+    document.getElementById('deviceName').value = newName;
   }
 
-  var i = 1;
-  for (var c = 0; c < numOutput; c += 2, i++) {
-    document.getElementById('channelSource' + c).value =
-        (messagePayload[i] & 15) + 1;
-    document.getElementById('channelSource' + (c + 1)).value =
-        (messagePayload[i] >> 4) + 1;
-  }
+  // Generate a BLE Manager with the UI update functions.
+  var bleInstance = new BleManager(logFunction, updateButtonState,
+    updateBatteryVoltage, updateTemperature, updateChannels, updateTuningKnobs,
+    updatePlot, updateDeviceName);
 
-  setGain = (c, value) => {
-    if (c < NUM_TACTORS) {
-      document.getElementById('channelEnable' + c).checked = (value > 0);
-      channelUpdateEnable(c);
-      if (value > 0) {
-        document.getElementById('channelGain' + c).value = value;
+
+  // Generates HTML table with sliders, etc. for all the tuning knobs defined
+  // in `tuningKnobs`.
+  (() => {
+    var table = document.createElement('table');
+    var tuningKnobs = bleInstance.tuningKnobs;
+    for (var i = 0; i < tuningKnobs.length; i++) {
+      var slider = document.createElement('input');  // Make knob slider element.
+      slider.className = 'knobSlider';
+      slider.type = 'range';
+      slider.id = 'knob' + i
+      slider.name = slider.id;
+      slider.min = 0;
+      slider.max = 255;
+      slider.value = tuningKnobs[i].default;
+
+      var label = document.createElement('label');  // Make text label element.
+      label.setAttribute('for', slider.id);
+      label.className = 'knobLabel';
+      label.innerHTML = tuningKnobs[i].label;
+
+      var tr = table.insertRow();  // Add a table row for this knob.
+      tr.insertCell().appendChild(label);
+      tr.insertCell().appendChild(slider);
+
+      var td = tr.insertCell();
+      td.className = 'knobTextValue';  // Text element that displays the mapped value.
+      td.innerHTML = tuningKnobs[i].mapping(slider.value);
+
+      // Update the text display when the slider changes
+      // and update the BLE Manager's tuning knob data.
+      ((slider, td, mapping, knob) => {
+        slider.addEventListener('input', function () {
+          td.innerHTML = mapping(slider.value);
+          bleInstance.setTuningData(knob, slider.value);
+        }, false);
+      })(slider, td, tuningKnobs[i].mapping, i);
+
+      td = tr.insertCell();
+      td.className = 'knobUnits';  // Add units after the text display.
+      td.innerHTML = tuningKnobs[i].units || '';
+    }
+    document.getElementById('tuningKnobs').appendChild(table);
+  })();
+
+  // Generates channel map HTML table.
+  (() => {
+    var table = document.createElement('table');
+    var tr = table.insertRow();  // Make header row.
+    tr.insertCell().innerHTML = 'Tactor';
+
+    var enableAll = document.createElement('input');  // Make enable all element.
+    tr.insertCell().appendChild(enableAll);
+    enableAll.type = 'checkbox';
+    enableAll.id = 'channelEnableAll';
+    enableAll.checked = true;
+
+    tr.insertCell().innerHTML = 'Source';
+    tr.insertCell().innerHTML = 'Gain';
+    tr.insertCell();  // Gain text.
+    tr.insertCell();  // Gain units.
+    tr.insertCell();  // Test button.
+
+    enableAll.addEventListener('change', function () {
+      for (var c = 0; c < NUM_TACTORS; c++) {
+        var checkbox = document.getElementById('channelEnable' + c);
+        checkbox.checked = enableAll.checked;
+        bleInstance.setChannelData(c, 'enabled', enableAll.checked);
+        channelUpdateEnable(c);
       }
+      bleInstance.requestSetChannelMap();
+    });
+
+    for (var c = 0; c < NUM_TACTORS; c++) {
+      var label = document.createElement('label');  // Make text label element.
+      label.className = 'knobLabel';
+      label.innerHTML = 'Tactor ' + (c + 1);
+
+      var checkbox = document.createElement('input');  // Make checkbox element.
+      checkbox.className = 'channelEnable';
+      checkbox.type = 'checkbox';
+      checkbox.id = 'channelEnable' + c;
+      checkbox.checked = true;
+
+      var source = document.createElement('input');  // Make number element.
+      source.type = 'number';
+      source.id = 'channelSource' + c;
+      source.min = 1;
+      source.max = NUM_TACTORS;
+      source.value = c + 1;
+
+      var slider = document.createElement('input');  // Make gain slider element.
+      slider.className = 'knobSlider';
+      slider.type = 'range';
+      slider.id = 'channelGain' + c;
+      slider.name = slider.id;
+      slider.min = 1;
+      slider.max = 63;
+      slider.value = 63;
+
+      var gainText = tr.insertCell();
+      gainText.id = 'channelGainText' + c;
+      gainText.className = 'knobTextValue';  // Text element that displays the mapped value.
+      gainText.innerHTML = channelGainMapping(slider.value);
+
+      var testButton = document.createElement('input');
+      testButton.type = 'button';
+      testButton.class = 'channelTest';
+      testButton.id = 'channelTest' + c;
+      testButton.value = 'Test';
+
+      var tr = table.insertRow();  // Add a table row for this knob.
+      tr.insertCell().appendChild(label);
+      tr.insertCell().appendChild(checkbox);
+      tr.insertCell().appendChild(source);
+      tr.insertCell().appendChild(slider);
+      tr.insertCell().appendChild(gainText);
+
+      var td = tr.insertCell();
+      td.className = 'knobUnits';  // Add units after the text display.
+      td.innerHTML = 'dB';
+      tr.insertCell().appendChild(testButton);
+
+      ((c, source, slider, gainText, checkbox, testButton) => {
+        source.addEventListener('change', function () {
+          bleInstance.setChannelData(c, 'source', source.value);
+          bleInstance.requestSetChannelMap();
+        }, false);
+        // Update the text display when the slider changes.
+        slider.addEventListener('input', function () {
+          gainText.innerHTML = channelGainMapping(slider.value);
+        }, false);
+        slider.addEventListener('change', function () {
+          bleInstance.setChannelData(c, 'gain', slider.value);
+          bleInstance.requestSetChannelGainUpdate(0, c);
+        }, false);
+        // Enable/disable when checkbox changes.
+        checkbox.addEventListener('change', function () {
+          bleInstance.setChannelData(c, 'enabled',
+            document.getElementById('channelEnable' + c).checked);
+          channelUpdateEnable(c);
+          bleInstance.requestSetChannelMap();
+        }, false);
+        // Play test buzz.
+        testButton.addEventListener('click', function () {
+          bleInstance.requestSetChannelGainUpdate(c, c);
+        }, false);
+      })(c, source, slider, gainText, checkbox, testButton);
     }
-  };
-  for (var c = 0; c < numOutput; c += 4, i += 3) {
-    const pack24 = messagePayload[i]
-                 | messagePayload[i + 1] << 8
-                 | messagePayload[i + 2] << 16;
-    setGain(c, pack24 & 63);
-    setGain(c + 1, (pack24 >> 6) & 63);
-    setGain(c + 2, (pack24 >> 12) & 63);
-    setGain(c + 3, (pack24 >> 18) & 63);
+
+    document.getElementById('channelMap').appendChild(table);
+  })();
+
+  /**
+   * Formats a slider value as a human readable gain value.
+   * @param {number} x Slider value to convert to gain.
+   */
+  function channelGainMapping(x) {
+    gain_db = (18 / 62) * (x - 63);
+    return gain_db.toFixed(1).replace('-', '&minus;');
   }
 
-  // Trigger one of the channel checkboxes to update channelEnableAll.
-  document.getElementById('channelEnable0').dispatchEvent(new Event('change'));
-}
+  var deviceNameUpdateTimer;
 
-function requestSetChannelMapOrGainUpdate(testChannels) {
-  if (!connected) { return; }
-  const numInput = NUM_TACTORS;
-  const numOutput = NUM_TACTORS;
-  var size = 1 + 3 * Math.ceil(numOutput / 4) +
-      (testChannels.length ? 1 : Math.ceil(numOutput / 2));
-  let messagePayload = new Uint8Array(size);
-
-  // Write number of input and output channels in the first byte.
-  messagePayload[0] = (numInput & 15) | numOutput << 4;
-
-  var i = 1;
-  if (testChannels.length) {
-    messagePayload[i] = (testChannels[0] & 15) | testChannels[1] << 4;
-    i++;
-  } else {
-    // Write source mapping, 4 bits per channel.
-    for (var c = 0; c < numOutput; c += 2, i++) {
-      var source0 = getChannelSource(c);
-      var source1 = getChannelSource(c + 1);
-      messagePayload[i] = (source0 & 15) | (source1 & 15) << 4;
-    }
+  /**
+   * Request to set a new name on the device after a delay.
+   */
+  function deviceNameChanged() {
+    window.clearTimeout(deviceNameUpdateTimer);
+    deviceNameUpdateTimer = window.setTimeout(() => {
+      let newName = document.getElementById('deviceName').value;
+      bleInstance.requestSetDeviceName(newName);
+    }, 1000 /* milliseconds */);
   }
 
-  // Write gains, 6 bits per channel in little endian order.
-  getGain = c => {
-    if (c < NUM_TACTORS &&
-        document.getElementById('channelEnable' + c).checked) {
-      return document.getElementById('channelGain' + c).value;
-    } else {
-      return 0;
-    }
-  };
-  for (var c = 0; c < numOutput; c += 4, i += 3) {
-    const pack24 = getGain(c) | getGain(c + 1) << 6
-        | getGain(c + 2) << 12 | getGain(c + 3) << 18;
-    messagePayload[i] = pack24 & 255;
-    messagePayload[i + 1] = (pack24 >> 8) & 255;
-    messagePayload[i + 2] = (pack24 >> 16) & 255;
-  }
-
-  var messageType = testChannels.length ? MESSAGE_TYPE_CHANNEL_GAIN_UPDATE
-                                        : MESSAGE_TYPE_CHANNEL_MAP;
-  writeMessage(messageType, messagePayload);
-}
-
-function requestSetChannelMap() {
-  requestSetChannelMapOrGainUpdate([]);
-}
-
-function requestSetChannelGainUpdate(c1, c2) {
-  requestSetChannelMapOrGainUpdate([c1, c2]);
-}
-
-function receiveStatsRecord(messagePayload) {
-  decodeEnergy = value => { return Math.pow(value / 255.0, 6.0); };
-  decodeDelta = code => { return [0, 1, 4, 11, 0, -1, -4, -11][code]; };
-  var cumulative = messagePayload[0];
-  let out = new Float32Array(ENVELOPE_TRACKER_RECORD_POINTS);
-  out[0] = decodeEnergy(cumulative);
-
-  var k = 1;
-  for (var i = 1; i < ENVELOPE_TRACKER_RECORD_POINTS; i += 8) {
-    var pack24 = messagePayload[k]
-      | messagePayload[k + 1] << 8
-      | messagePayload[k + 2] << 16;
-    k += 3;
-    for (var j = 0; j < 8; ++j, pack24 >>= 3) {
-      cumulative += decodeDelta(pack24 & 7);
-      out[i + j] = decodeEnergy(cumulative);
-    }
-  }
-
-  var t = new Date().getTime();
-  for (var i = 0; i < ENVELOPE_TRACKER_RECORD_POINTS; i++) {
-    // Take sqrt to get amplitude and do some light smoothing to compensate
-    // for quantization of the envelope. The 0.33 coeff corresponds to a time
-    // constant of about 2.5 measurements.
-    smoothed_envelope += 0.33 * (Math.sqrt(out[i]) - smoothed_envelope);
-    plot.append(t, smoothed_envelope);
-    t += ENVELOPE_TRACKER_MEASUREMENT_PERIOD_MS;
-  }
-}
 </script>
 
 </body>

@@ -56,42 +56,47 @@ enum {
    */
   kKnobInputGain,
 
-  /* The `output_gain` parameter of all EnergyEvelope instances based on a
-   * control value between 0 and 255. The control is such that value = 0
-   * corresponds to -18 dB gain, value = 191 to +0 dB, and value = 255 to +6 dB.
+  /* The `output_gain` parameter of all Enveloper channels based on a control
+   * value between 0 and 255. The control is such that value = 0 corresponds to
+   * -18 dB gain, value = 191 to +0 dB, and value = 255 to +6 dB.
    */
   kKnobOutputGain,
 
-  /* The `denoise_thresh_factor` parameter, separately for each EnergyEnvelope
-   * instance. It logarithmically maps control values to the range [1.0, 200.0],
-   * with control value = 89 corresponding to 10.0.
+  /* The `denoise_thresh_factor` parameter, separately for each Enveloper
+   * channel. It logarithmically maps control values to the range [1.0, 200.0].
    */
-  kKnobDenoising0,
-  kKnobDenoising1,
-  kKnobDenoising2,
-  kKnobDenoising3,
+  kKnobDenoisingBaseband,
+  kKnobDenoisingVowel,
+  kKnobDenoisingShFricative,
+  kKnobDenoisingFricative,
 
-  /* The `agc_strength` parameter of all EnergyEvelope instances. It linearly
-   * maps control values to the range [0.1, 0.9], with value = 191 corresponding
-   * to strength = 0.7.
+  /* Time constant for diffusing energy envelopes across channels. It
+   * logarithmically maps control values to the range [0.04, 4.0], with value =
+   * 51 corresponding to tau = 0.1 s.
+   */
+  kKnobCrossChannelTau,
+
+  /* The `agc_strength` parameter of all Enveloper channels. It linearly maps
+   * control values to the range [0.1, 0.9], with value = 191 corresponding to
+   * strength = 0.7.
    */
   kKnobAgcStrength,
 
-  /* The `noise_tau_s` parameter of all EnergyEvelope instances. It
-   * logarithmically maps control values to the range [0.04, 4.0], with value =
-   * 127 corresponding to tau = 0.4 s.
+  /* The `noise_tau_s` parameter of all Enveloper channels. It logarithmically
+   * maps control values to the range [0.04, 4.0], with value = 127
+   * corresponding to tau = 0.4 s.
    */
   kKnobNoiseTau,
 
-  /* The `gain_tau_release_s` parameter of all EnergyEvelope instances. It
+  /* The `gain_tau_release_s` parameter of all Enveloper channels. It
    * logarithmically maps control values to the range [0.04, 4.0], with value =
    * 73 corresponding to tau = 0.15 s.
    */
   kKnobGainTauRelease,
 
-  /* The `compressor_exponent` parameter of all EnergyEvelope instances. It
-   * linearly maps control values to exponents in the range [0.1, 0.5], with
-   * value = 96 corresponding to exponent = 0.25.
+  /* The `compressor_exponent` parameter of all Enveloper channels. It linearly
+   * maps control values to exponents in the range [0.1, 0.5], with value = 96
+   * corresponding to exponent = 0.25.
    */
   kKnobCompressor,
 
@@ -108,20 +113,45 @@ typedef struct {
 } TuningKnobs;
 extern const TuningKnobs kDefaultTuningKnobs;
 
+typedef enum {
+  kTuningMapLinearly,
+  kTuningMapLogarithmically,
+} TuningMapMethod;
+
+/* Struct of info about a tuning knob. */
+typedef struct {
+  /* A brief name to identify the knob, useful for UI display. */
+  const char* name;
+  /* Format string for displaying the mapped knob value, including units. */
+  const char* format;
+  /* Description string, describing the algorithm meaning or effect of the knob.
+   * To fit in UI displays, this may be up to about 100 characters.
+   */
+  const char* description;
+  /* Method for mapping the control value. */
+  TuningMapMethod map_method;
+  /* Knob's min mapped value, corresponding to control value 0. */
+  float min_value;
+  /* Knob's max mapped value, corresponding to control value 255. */
+  float max_value;
+} TuningKnobInfo;
+extern const TuningKnobInfo kTuningKnobInfo[kNumTuningKnobs];
+
 /* Maps control values to float parameters in the same way that TuningApply()
  * does. The `knob` arg is a tuning knob index from 0 to kNumTuningKnobs - 1,
  * and `value` is a control value between 0 and 255.
  *
  * The meaning of the returned float value depends on the knob:
  *
- *   `knob`               return value meaning
- *   kKnobInputGain       Gain with units of dB.
- *   kKnobOutputGain      Gain with units of dB.
- *   kKnobDenosing0-3     Scale factor.
- *   kKnobAgcStrength     Exponent, 0 => bypass, 1 => full normalization.
- *   kKnobNoiseTau        Time constant with units of seconds.
- *   kKnobGainTauRelease  Time constant with units of seconds.
- *   kKnobCompressor      Exponent, smaller implies stronger compression.
+ *   `knob`                return value meaning
+ *   kKnobInputGain        Gain with units of dB.
+ *   kKnobOutputGain       Gain with units of dB.
+ *   kKnobDenosing*        Scale factor.
+ *   kKnobCrossChannelTau  Time constant with units of seconds.
+ *   kKnobAgcStrength      Exponent, 0 => bypass, 1 => full normalization.
+ *   kKnobNoiseTau         Time constant with units of seconds.
+ *   kKnobGainTauRelease   Time constant with units of seconds.
+ *   kKnobCompressor       Exponent, smaller implies stronger compression.
  */
 float TuningMapControlValue(int knob, int value);
 

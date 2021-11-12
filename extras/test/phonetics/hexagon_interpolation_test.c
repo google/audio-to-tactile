@@ -24,10 +24,10 @@
 static float Square(float x) { return x * x; }
 
 /* Random float distributed uniformly in [0, 1]. */
-static float RandUniform() { return (float)rand() / RAND_MAX; }
+static float RandUniform(void) { return (float)rand() / RAND_MAX; }
 
 /* Check interpolation weights at the hexagon vertices. */
-static void TestInterpolationAtVertices() {
+static void TestInterpolationAtVertices(void) {
   puts("TestInterpolationAtVertices");
   int i;
   for (i = 0; i < 7; ++i) {
@@ -79,7 +79,7 @@ static int InsideHexagonNeighborhood(float x, float y) {
 }
 
 /* Weights are a convex combination if (x,y) is inside the hexagon. */
-static void TestConvex() {
+static void TestConvex(void) {
   puts("TestConvex");
   int i;
   for (i = 0; i < 100; ++i) {
@@ -107,7 +107,7 @@ static void TestConvex() {
 }
 
 /* Interpolation weights computed for nearby points should be close. */
-static void TestContinuity() {
+static void TestContinuity(void) {
   puts("TestContinuity");
   int i;
   for (i = 0; i < 100; ++i) {
@@ -132,7 +132,7 @@ static void TestContinuity() {
 }
 
 /* Test the HexagonNorm() function. */
-static void TestHexagonNorm() {
+static void TestHexagonNorm(void) {
   puts("TestHexagonNorm");
   /* Check at the origin. */
   CHECK(HexagonNorm(0.0f, 0.0f) == 0.0f);
@@ -160,7 +160,7 @@ static void TestHexagonNorm() {
 }
 
 /* Test that HexagonNorm() differs from Euclidean (L2) norm by less than 20%. */
-static void TestHexagonNormNearEuclideanNorm() {
+static void TestHexagonNormNearEuclideanNorm(void) {
   puts("TestHexagonNormNearEuclideanNorm");
   int i;
   for (i = 0; i < 100; ++i) {

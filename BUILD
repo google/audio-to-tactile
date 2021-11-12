@@ -27,12 +27,12 @@ package(
 exports_files(["LICENSE"])
 
 # Embedded development tools don't necessarily support the latest C++ standard,
-# so we set "-std=c11" to check that this code builds in C++11.
+# so we set "-std=c++11" to check that this code builds in C++11.
 cc_library(
     name = "cpp",
     srcs = glob(["src/cpp/*.cpp"]),
     hdrs = glob(["src/cpp/*.h"]),
-    copts = ["-std=c11"],
+    copts = ["-std=c++11"],
     includes = ["src"],
     deps = [
         ":dsp",
@@ -96,10 +96,15 @@ filegroup(
     name = "repo_files",
     srcs = glob(
         [
-            "*",
             "examples/**",
             "extras/**",
             "src/**",
         ],
-    ),
+    ) + [
+        "BUILD",
+        "LICENSE",
+        "WORKSPACE.bazel",
+        "defs.bzl",
+        "library.properties",
+    ],
 )

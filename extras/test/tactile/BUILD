@@ -1,4 +1,4 @@
-# Copyright 2019 Google LLC
+# Copyright 2019, 2021 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -20,8 +20,8 @@ load("//:defs.bzl", "c_test")
 package(licenses = ["notice"])
 
 c_test(
-    name = "energy_envelope_test",
-    srcs = ["energy_envelope_test.c"],
+    name = "envelope_tracker_test",
+    srcs = ["envelope_tracker_test.c"],
     deps = [
         "//:dsp",
         "//:tactile",
@@ -29,8 +29,17 @@ c_test(
 )
 
 c_test(
-    name = "envelope_tracker_test",
-    srcs = ["envelope_tracker_test.c"],
+    name = "enveloper_test",
+    srcs = ["enveloper_test.c"],
+    deps = [
+        "//:dsp",
+        "//:tactile",
+    ],
+)
+
+c_test(
+    name = "parse_key_value_test",
+    srcs = ["parse_key_value_test.c"],
     deps = [
         "//:dsp",
         "//:tactile",

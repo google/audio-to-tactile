@@ -82,7 +82,7 @@ static void CheckFileBytes(const char* file_name, const uint8_t* expected_bytes,
   free(bytes);
 }
 
-static void TestWriteMonoWav() {
+static void TestWriteMonoWav(void) {
   puts("TestWriteMonoWav");
   static const int16_t kSamples[4] = {7, -2, INT16_MAX, INT16_MIN};
   const char* wav_file_name = NULL;
@@ -94,7 +94,7 @@ static void TestWriteMonoWav() {
   remove(wav_file_name);
 }
 
-static void TestWriteMonoWavStreaming() {
+static void TestWriteMonoWavStreaming(void) {
   puts("TestWriteMonoWavStreaming");
   static const int16_t kSamples[4] = {7, -2, INT16_MAX, INT16_MIN};
   const char* wav_file_name = NULL;
@@ -113,7 +113,7 @@ static void TestWriteMonoWavStreaming() {
   remove(wav_file_name);
 }
 
-static void TestWrite3ChannelWav() {
+static void TestWrite3ChannelWav(void) {
   puts("TestWrite3ChannelWav");
   static const int16_t kSamples[6] = {0, 1, 2, 3, 4, 5};
   const char* wav_file_name = NULL;
@@ -124,7 +124,7 @@ static void TestWrite3ChannelWav() {
   remove(wav_file_name);
 }
 
-static void TestWriteMono24BitWav() {
+static void TestWriteMono24BitWav(void) {
   puts("TestWriteMono24BitWav");
   /* << 8 accounts for the 16 to 24 bit conversion as described in the process
    * for generating the WAV file above. The remaining << 8 accounts for our

@@ -15,6 +15,8 @@
 #
 # Utilities for working with the Simple DirectMedia Layer (SDL) library.
 
+load("//devtools/python/blaze:pytype.bzl", "py_binary", "py_library")
+load("//devtools/python/blaze:strict.bzl", "py_test")
 load("//:defs.bzl", "c_library")
 
 package(
@@ -37,6 +39,28 @@ c_library(
     hdrs = ["draw_text.h"],
     deps = [
         "@sdl2",
+    ],
+)
+
+py_binary(
+    name = "rle_compress_image",
+    srcs = ["rle_compress_image.py"],
+    deps = [
+    ],
+)
+
+py_library(
+    name = "rle_compress_image_lib",
+    srcs = ["rle_compress_image.py"],
+    deps = [
+    ],
+)
+
+py_test(
+    name = "rle_compress_image_test",
+    srcs = ["rle_compress_image_test.py"],
+    deps = [
+        ":rle_compress_image_lib",
     ],
 )
 

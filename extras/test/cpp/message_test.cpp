@@ -25,6 +25,7 @@
 #include "extras/tools/channel_map_tui.h"
 #include "src/cpp/constants.h"
 #include "src/dsp/logging.h"
+#include "src/tactile/tuning.h"
 
 // NOLINTBEGIN(readability/check)
 
@@ -227,6 +228,141 @@ void TestChannelMap() {
     for (int c = 0; c < num_out; ++c) {
       CHECK(fabs(recovered.gains[c] - channel_map.gains[c])
             <= 0.04f * channel_map.gains[c]);
+      CHECK(recovered.sources[c] == channel_map.sources[c]);
+    }
+  }
+}
+
+void TestChannelGainUpdate() {
+  puts("TestChannelGainUpdate");
+  ChannelMap channel_map;
+  int test_channels[2];
+  ChannelMap recovered;
+  int recovered_test_channels[2];
+  Message message;
+
+  channel_map.num_input_channels = 16;
+  std::mt19937 rng(0);
+  for (int num_out = 0; num_out <= 12; ++num_out) {
+    channel_map.num_output_channels = num_out;
+    for (int c = 0; c < 2; ++c) {
+      test_channels[c] = std::uniform_int_distribution<int>(0, 15)(rng);
+    }
+    for (int c = 0; c < num_out; ++c) {
+      channel_map.gains[c] =
+          std::uniform_real_distribution<float>(0.125f, 1.0f)(rng);
+    }
+
+    message.WriteChannelGainUpdate(channel_map, test_channels);
+    CHECK(message.ReadChannelGainUpdate(&recovered, recovered_test_channels));
+
+    CHECK(recovered.num_input_channels == channel_map.num_input_channels);
+    CHECK(recovered.num_output_channels == channel_map.num_output_channels);
+    for (int c = 0; c < 2; ++c) {
+      CHECK(recovered_test_channels[c] == test_channels[c]);
+    }
+    for (int c = 0; c < num_out; ++c) {
+      CHECK(fabs(recovered.gains[c] - channel_map.gains[c])
+            <= 0.04f * channel_map.gains[c]);
+    }
+  }
+}
+
+// Test the kDeviceName message.
+void TestDeviceName() {
+  puts("TestDeviceName");
+  std::string name = "abc123";
+  Message message;
+  message.WriteDeviceName(name.c_str());
+  CHECK(message.type() == MessageType::kDeviceName);
+  CHECK(message.payload().size() == static_cast<int>(name.size()));
+
+  char recovered[17];
+  CHECK(message.ReadDeviceName(recovered));
+  CHECK(recovered == name);
+
+  // Test where the name length exceeds 16 chars.
+  name = "This name is much too long...";
+  message.WriteDeviceName(name.c_str());
+  CHECK(message.type() == MessageType::kDeviceName);
+  CHECK(message.payload().size() == 16);
+
+  CHECK(message.ReadDeviceName(recovered));
+  CHECK(recovered == name.substr(0, 16));
+}
+
+// Test the kOnConnectionBatch message.
+void TestOnConnectionBatch() {
+  puts("TestOnConnectionBatch");
+  Message message;
+
+  std::mt19937 rng(0);
+  for (int trial = 0; trial < 10; ++trial) {
+    const int firmware_build_date =
+        std::uniform_int_distribution<int>(20000101, 21000101)(rng);
+    const float battery_v =
+        std::uniform_real_distribution<float>(0.0f, 5.0f)(rng);
+    const float temperature_c =
+        std::uniform_real_distribution<float>(0.0f, 40.0f)(rng);
+
+    Settings settings;
+    const int device_name_length =
+        std::uniform_int_distribution<int>(0, kMaxDeviceNameLength)(rng);
+    for (int i = 0; i < device_name_length; ++i) {
+      settings.device_name[i] =
+          std::uniform_int_distribution<char>('a', 'z')(rng);
+    }
+    settings.device_name[device_name_length] = '\0';
+
+    for (int i = 0; i < kNumTuningKnobs; ++i) {
+      settings.tuning.values[i] =
+          std::uniform_int_distribution<uint8_t>(0, 255)(rng);
+    }
+
+    const int num_in = std::uniform_int_distribution<int>(4, 16)(rng);
+    const int num_out = std::uniform_int_distribution<int>(1, 12)(rng);
+    settings.channel_map.num_input_channels = num_in;
+    settings.channel_map.num_output_channels = num_out;
+    for (int c = 0; c < num_out; ++c) {
+      settings.channel_map.gains[c] =
+          std::uniform_real_distribution<float>(0.125f, 1.0f)(rng);
+      settings.channel_map.sources[c] =
+          std::uniform_int_distribution<int>(0, num_in - 1)(rng);
+    }
+
+    message.WriteOnConnectionBatch(
+        /*firmware_build_date=*/firmware_build_date,
+        /*battery_v=*/battery_v,
+        /*temperature_c=*/temperature_c,
+        /*settings=*/settings);
+
+    int recovered_firmware_build_date;
+    float recovered_battery_v;
+    float recovered_temperature_c;
+    Settings recovered_settings;
+    CHECK(message.ReadOnConnectionBatch(
+        /*firmware_build_date=*/&recovered_firmware_build_date,
+        /*battery_v=*/&recovered_battery_v,
+        /*temperature_c=*/&recovered_temperature_c,
+        /*settings=*/&recovered_settings));
+
+    CHECK(recovered_firmware_build_date == firmware_build_date);
+    CHECK(recovered_battery_v == battery_v);
+    CHECK(recovered_temperature_c == temperature_c);
+    CHECK(!strcmp(recovered_settings.device_name, settings.device_name));
+    for (int i = 0; i < kNumTuningKnobs; ++i) {
+      CHECK(recovered_settings.tuning.values[i] == settings.tuning.values[i]);
+    }
+    CHECK(recovered_settings.channel_map.num_input_channels
+          == settings.channel_map.num_input_channels);
+    CHECK(recovered_settings.channel_map.num_output_channels
+          == settings.channel_map.num_output_channels);
+    for (int c = 0; c < num_out; ++c) {
+      const float expected_gain = settings.channel_map.gains[c];
+      CHECK(fabs(recovered_settings.channel_map.gains[c] - expected_gain)
+            <= 0.04f * expected_gain);
+      const int expected_source = settings.channel_map.sources[c];
+      CHECK(recovered_settings.channel_map.sources[c] == expected_source);
     }
   }
 }
@@ -250,6 +386,8 @@ void TestSimpleMessages() {
                     &Message::WriteGetTuning);
   TestSimpleMessage("GetChannelMap", MessageType::kGetChannelMap,
                     &Message::WriteGetChannelMap);
+  TestSimpleMessage("GetDeviceName", MessageType::kGetDeviceName,
+                    &Message::WriteGetDeviceName);
   TestSimpleMessage("StreamDataStart", MessageType::kStreamDataStart,
                     &Message::WriteStreamDataStart);
   TestSimpleMessage("StreamDataStop", MessageType::kStreamDataStop,
@@ -269,6 +407,9 @@ int main(int argc, char** argv) {
   audio_tactile::TestTuning();
   audio_tactile::TestTactilePattern();
   audio_tactile::TestChannelMap();
+  audio_tactile::TestChannelGainUpdate();
+  audio_tactile::TestDeviceName();
+  audio_tactile::TestOnConnectionBatch();
   audio_tactile::TestSimpleMessages();
 
   puts("PASS");

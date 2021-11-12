@@ -18,51 +18,156 @@
 #include "dsp/fast_fun.h"
 
 const TuningKnobs kDefaultTuningKnobs = {{
-  /* kKnobInputGain      */ 127,
-  /* kKnobOutputGain     */ 191,
-  /* kKnobDenoising0     */  99,
-  /* kKnobDenoising1     */  77,
-  /* kKnobDenoising2     */  77,
-  /* kKnobDenoising3     */  77,
-  /* kKnobAgcStrength    */ 191,
-  /* kKnobNoiseTa        */ 127,
-  /* kKnobGainTauRelease */  73,
-  /* kKnobCompresso      */  96,
+  /* kKnobInputGain            */ 127,
+  /* kKnobOutputGain           */ 191,
+  /* kKnobDenoisingBaseband    */ 155,
+  /* kKnobDenoisingVowel       */  67,
+  /* kKnobDenoisingShFricative */  67,
+  /* kKnobDenoisingFricative   */  67,
+  /* kKnobCrossChannelTau      */  51,
+  /* kKnobAgcStrength          */ 191,
+  /* kKnobNoiseTau             */ 178,
+  /* kKnobGainTauRelease       */  73,
+  /* kKnobCompressor           */  96,
 }};
 
+const TuningKnobInfo kTuningKnobInfo[kNumTuningKnobs] = {
+    { /* kKnobInputGain */
+        "Input gain",
+        "%.1f dB",
+        "Gain applied to the input audio before any processing.",
+        kTuningMapLinearly,
+        -40.0f, /* In units of dB. */
+        40.315f,
+    },
+    { /* kKnobOutputGain */
+        "Output gain",
+        "%.1f dB",
+        "The `output_gain` parameter of all Enveloper channels.",
+        kTuningMapLinearly,
+        -18.0f, /* In units of dB. */
+        6.0f,
+    },
+    { /* kKnobDenoisingBaseband */
+        "Denoising baseband",
+        "%.1f",
+        "The `denoise_thresh_factor` parameter for the baseband (0) "
+        "Enveloper channel. Larger value implies stronger denoising.",
+        kTuningMapLogarithmically,
+        1.0f,
+        200.0f,
+    },
+    { /* kKnobDenoisingVowel */
+        "Denoising vowel",
+        "%.1f",
+        "The `denoise_thresh_factor` parameter for the vowel (1) "
+        "Enveloper channel. Larger value implies stronger denoising.",
+        kTuningMapLogarithmically,
+        1.0f,
+        200.0f,
+    },
+    { /* kKnobDenoisingShFricative */
+        "Denoising sh fricative",
+        "%.1f",
+        "The `denoise_thresh_factor` parameter for the sh fricative (2) "
+        "Enveloper channel. Larger value implies stronger denoising.",
+        kTuningMapLogarithmically,
+        1.0f,
+        200.0f,
+    },
+    { /* kKnobDenoisingFricative */
+        "Denoising fricative",
+        "%.1f",
+        "The `denoise_thresh_factor` parameter for the fricative (3) "
+        "Enveloper channel. Larger value implies stronger denoising.",
+        kTuningMapLogarithmically,
+        1.0f,
+        200.0f,
+    },
+    { /* kKnobCrossChannelTau */
+        "Cross-channel time constant",
+        "%.2f s",
+        "The `cross_channel_tau_s` parameter. Smaller value implies faster "
+        "diffusion and stronger cross-channel inhibition.",
+        kTuningMapLogarithmically,
+        0.04f, /* In units of seconds. */
+        4.0f,
+    },
+    { /* kKnobAgcStrength */
+        "AGC strength",
+        "%.2f",
+        "Auto gain control (AGC) strength for all Enveloper channels. "
+        "Larger value implies stronger normalization.",
+        kTuningMapLinearly,
+        0.1f,
+        0.9f,
+    },
+    { /* kKnobNoiseTau */
+        "Noise time constant",
+        "%.2f s",
+        "The `noise_tau_s` parameter for all Enveloper channels. Specifies "
+        "how quickly the estimate of the noise level adapts.",
+        kTuningMapLogarithmically,
+        0.04f, /* In units of seconds. */
+        4.0f,
+    },
+    { /* kKnobGainTauRelease */
+        "Gain release time constant",
+        "%.2f s",
+        "The `gain_tau_release_s` parameter for all Enveloper channels.",
+        kTuningMapLogarithmically,
+        0.04f, /* In units of seconds. */
+        4.0f,
+    },
+    { /* kKnobCompressor */
+        "Compressor",
+        "%.2f",
+        "The `compressor_exponent` parameter for all Enveloper channels. "
+        "Smaller value implies stronger compression.",
+        kTuningMapLinearly,
+        0.1f,
+        0.5f,
+    },
+};
+
 /* Maps `value_in` in [0, 255] linearly in [min_out, max_out]. */
-static float LinMapping(int value_in, float min_out, float max_out) {
-  if (value_in < 0) { value_in = 0; }
-  if (value_in > 255) { value_in = 255; }
+static float MapLinearly(int value_in, float min_out, float max_out) {
   return min_out + ((max_out - min_out) / 255.0f) * value_in;
 }
 
 /* Maps `value_in` in [0, 255] logarithmically in [min_out, max_out]. */
-static float LogMapping(int value_in, float min_out, float max_out) {
-  return FastExp2(LinMapping(value_in, FastLog2(min_out), FastLog2(max_out)));
+static float MapLogarithmically(int value_in, float min_out, float max_out) {
+  return FastExp2(MapLinearly(value_in, FastLog2(min_out), FastLog2(max_out)));
 }
 
 float TuningMapControlValue(int knob, int value) {
-  switch (knob) {
-    case kKnobInputGain:
-      return LinMapping(value, -40.0f, 40.315); /* In units of dB. */
-    case kKnobOutputGain:
-      return LinMapping(value, -18.0f, 6.0f); /* In units of dB. */
-    case kKnobDenoising0:
-    case kKnobDenoising1:
-    case kKnobDenoising2:
-    case kKnobDenoising3:
-      return LogMapping(value, 2.0f, 200.0f);
-    case kKnobAgcStrength:
-      return LinMapping(value, 0.1f, 0.9f);
-    case kKnobNoiseTau:
-    case kKnobGainTauRelease:
-      return LogMapping(value, 0.04f, 4.0f); /* In units of seconds. */
-    case kKnobCompressor:
-      return LinMapping(value, 0.1f, 0.5f);
-    default:
-      return 0.0f;
+  if (!(0 <= knob && knob < kNumTuningKnobs)) { return 0.0f; }
+  const TuningKnobInfo* info = &kTuningKnobInfo[knob];
+
+  /* Since MapLogarthimically uses FastLog2 and FastExp2, the mapping has about
+   * 0.3% numerical error. This is not a problem for algorithm behavior, but
+   * noticeable in UI display at the endpoints. So we handle the endpoints
+   * separately to ensure they map exactly to `min_value` and `max_value`.
+   */
+  if (value <= 0) {
+    return info->min_value;
+  } else if (value >= 255) {
+    return info->max_value;
   }
+
+  /* Map a control value in [1, 254]. */
+  switch (info->map_method) {
+    case kTuningMapLinearly:
+      return MapLinearly(value, info->min_value, info->max_value);
+
+    case kTuningMapLogarithmically:
+      return MapLogarithmically(value, info->min_value, info->max_value);
+  }
+
+  /* While the above switch is exhaustive, this return suppresses a "control
+   * reaches end of non-void function" warning with GCC.
+   */
+  return 0;
 }
 
 float TuningGetInputGain(const TuningKnobs* tuning) {

@@ -25,10 +25,10 @@
 #include "src/mux/mux_common.h"
 
 /* Generates a random value uniformly in [0.0, 1.0]. */
-static float RandUniform() { return (float)rand() / RAND_MAX; }
+static float RandUniform(void) { return (float)rand() / RAND_MAX; }
 
 /* Generates a random value with approximately standard normal distribution. */
-static float RandNormal() {
+static float RandNormal(void) {
   return 2 * (RandUniform() + RandUniform() + RandUniform() - 1.5f);
 }
 
@@ -205,7 +205,7 @@ static void TestRoundTrip(float delay_in_samples, float noise_stddev) {
 /* Same as TestRoundTrip but with odd channels equal to zero. This checks for
  * interference from pilot signals and neighboring channels.
  */
-static void TestZeroOddChannelsRoundTrip() {
+static void TestZeroOddChannelsRoundTrip(void) {
   puts("TestZeroOddChannelsRoundTrip");
   const int kNumFrames = 1000;
   float* tactile_signals = MakeTactileTestSignals(kNumFrames);
@@ -256,7 +256,7 @@ static void TestZeroOddChannelsRoundTrip() {
   free(tactile_signals);
 }
 
-static void TestMuxerStreaming() {
+static void TestMuxerStreaming(void) {
   puts("TestMuxerStreaming");
   const int kNumFrames = 250;
   float* tactile_signals = MakeTactileTestSignals(kNumFrames);
@@ -309,7 +309,7 @@ static void TestMuxerStreaming() {
   free(tactile_signals);
 }
 
-static void TestDemuxerStreaming() {
+static void TestDemuxerStreaming(void) {
   puts("TestDemuxerStreaming");
   const int kNumFrames = 250;
   const int kNumMuxedSamples = kNumFrames * kMuxRateFactor;

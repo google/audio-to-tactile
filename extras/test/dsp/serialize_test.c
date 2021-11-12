@@ -20,7 +20,7 @@
 #include "src/dsp/logging.h"
 
 /* Test serialization / deserialization of uint16_t. */
-static void TestU16() {
+static void TestU16(void) {
   puts("TestU16");
   uint8_t buffer[sizeof(uint16_t)];
   LittleEndianWriteS16(0x0102, buffer);
@@ -33,7 +33,7 @@ static void TestU16() {
 
   /* Check round trip of serializing and deserializing some test values. */
   static const uint16_t kTestValues[] = {0, 1, 2, 300, 50000, UINT16_MAX};
-  int i;
+  size_t i;
   for (i = 0; i < sizeof(kTestValues) / sizeof(*kTestValues); ++i) {
     const uint16_t value = kTestValues[i];
     LittleEndianWriteU16(value, buffer);
@@ -45,7 +45,7 @@ static void TestU16() {
 }
 
 /* Test serialization / deserialization of uint32_t. */
-static void TestU32() {
+static void TestU32(void) {
   puts("TestU32");
   uint8_t buffer[sizeof(uint32_t)];
   LittleEndianWriteU32(UINT32_C(0x01020304), buffer);
@@ -62,7 +62,7 @@ static void TestU32() {
 
   /* Check round trip of serializing and deserializing some test values. */
   static const uint32_t kTestValues[] = {0, 1, 2, 250000UL, UINT32_MAX};
-  int i;
+  size_t i;
   for (i = 0; i < sizeof(kTestValues) / sizeof(*kTestValues); ++i) {
     const uint32_t value = kTestValues[i];
     LittleEndianWriteU32(value, buffer);
@@ -74,7 +74,7 @@ static void TestU32() {
 }
 
 /* Test serialization / deserialization of uint64_t. */
-static void TestU64() {
+static void TestU64(void) {
   puts("TestU64");
   uint8_t buffer[sizeof(uint64_t)];
   LittleEndianWriteU64(UINT64_C(0x0102030405060708), buffer);
@@ -99,7 +99,7 @@ static void TestU64() {
 
   /* Check round trip of serializing and deserializing some test values. */
   static const uint64_t kTestValues[] = {0, 1, UINT64_C(92) << 55, UINT64_MAX};
-  int i;
+  size_t i;
   for (i = 0; i < sizeof(kTestValues) / sizeof(*kTestValues); ++i) {
     const uint64_t value = kTestValues[i];
     LittleEndianWriteU64(value, buffer);
@@ -111,7 +111,7 @@ static void TestU64() {
 }
 
 /* Test serialization / deserialization of int16_t. */
-static void TestS16() {
+static void TestS16(void) {
   puts("TestS16");
   uint8_t buffer[sizeof(int16_t)];
   LittleEndianWriteS16(-2, buffer);  /* -2 in two's complement is 0xfffe. */
@@ -124,7 +124,7 @@ static void TestS16() {
 
   /* Check round trip of serializing and deserializing some test values. */
   static const int16_t kTestValues[] = {0, 1, INT16_MAX, -1, -25000, INT16_MIN};
-  int i;
+  size_t i;
   for (i = 0; i < sizeof(kTestValues) / sizeof(*kTestValues); ++i) {
     const int16_t value = kTestValues[i];
     LittleEndianWriteS16(value, buffer);
@@ -136,7 +136,7 @@ static void TestS16() {
 }
 
 /* Test serialization / deserialization of int32_t. */
-static void TestS32() {
+static void TestS32(void) {
   puts("TestS32");
   uint8_t buffer[sizeof(int32_t)];
   LittleEndianWriteS32(-2, buffer);
@@ -153,7 +153,7 @@ static void TestS32() {
 
   /* Check round trip of serializing and deserializing some test values. */
   static const int32_t kTestValues[] = {0, 1, INT32_MAX, -1, -25000, INT32_MIN};
-  int i;
+  size_t i;
   for (i = 0; i < sizeof(kTestValues) / sizeof(*kTestValues); ++i) {
     const int32_t value = kTestValues[i];
     LittleEndianWriteS32(value, buffer);
@@ -165,7 +165,7 @@ static void TestS32() {
 }
 
 /* Test serialization / deserialization of int64_t. */
-static void TestS64() {
+static void TestS64(void) {
   puts("TestS64");
   uint8_t buffer[sizeof(int64_t)];
   LittleEndianWriteS64(-2, buffer);
@@ -190,7 +190,7 @@ static void TestS64() {
 
   /* Check round trip of serializing and deserializing some test values. */
   static const int64_t kTestValues[] = {0, 1, INT64_MAX, -1, -25000, INT64_MIN};
-  int i;
+  size_t i;
   for (i = 0; i < sizeof(kTestValues) / sizeof(*kTestValues); ++i) {
     const int64_t value = kTestValues[i];
     LittleEndianWriteS64(value, buffer);
@@ -202,12 +202,12 @@ static void TestS64() {
 }
 
 /* Test serialization / deserialization of 32-bit float. */
-static void TestF32() {
+static void TestF32(void) {
   puts("TestF32");
   uint8_t buffer[sizeof(float)];
   /* Check round trip of serializing and deserializing some test values. */
   static const float kTestValues[] = {0.0f, 3.71f, -3.71f, 2.5e-6f, 2.5e6f};
-  int i;
+  size_t i;
   for (i = 0; i < sizeof(kTestValues) / sizeof(*kTestValues); ++i) {
     const float value = kTestValues[i];
     LittleEndianWriteF32(value, buffer);
@@ -219,12 +219,12 @@ static void TestF32() {
 }
 
 /* Test serialization / deserialization of 64-bit double. */
-static void TestF64() {
+static void TestF64(void) {
   puts("TestF64");
   uint8_t buffer[sizeof(double)];
   /* Check round trip of serializing and deserializing some test values. */
   static const double kTestValues[] = {0.0, 3.71, -3.71, 2.5e-6, 2.5e6};
-  int i;
+  size_t i;
   for (i = 0; i < sizeof(kTestValues) / sizeof(*kTestValues); ++i) {
     const double value = kTestValues[i];
     LittleEndianWriteF64(value, buffer);
@@ -248,7 +248,7 @@ static uint8_t Fletcher8Naive(const uint8_t* data, size_t size) {
 }
 
 /* Test Fletcher-8 checksum. */
-static void TestFletcher8() {
+static void TestFletcher8(void) {
   puts("TestFletcher8");
   /* A short 3-byte input where we can compute the checksum by hand:
    *
@@ -306,7 +306,7 @@ static uint16_t Fletcher16Naive(const uint8_t* data, size_t size) {
 }
 
 /* Test Fletcher-16 checksum. */
-static void TestFletcher16() {
+static void TestFletcher16(void) {
   puts("TestFletcher16");
   const int size = 8192;
   uint8_t* data = (uint8_t*)CHECK_NOTNULL(malloc(size));

@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -126,9 +126,10 @@ int Callback(const void* input_buffer, void* output_buffer,
   float* output = (float*)output_buffer;
 
   if (g_channel_index == -1) {
-    BuzzerGenerate(&g_buzzer_state, frames_per_buffer, output, g_num_channels);
+    const int num_frames = (int)frames_per_buffer;
+    BuzzerGenerate(&g_buzzer_state, num_frames, output, g_num_channels);
     int i;
-    for (i = 0; i < frames_per_buffer; ++i) {
+    for (i = 0; i < num_frames; ++i) {
       float value = *output++;
       int c;
       for (c = 1; c < g_num_channels; ++c) {

@@ -38,6 +38,12 @@ c_test(
 )
 
 c_test(
+    name = "channel_map_test",
+    srcs = ["channel_map_test.c"],
+    deps = ["//:dsp"],
+)
+
+c_test(
     name = "complex_test",
     srcs = ["complex_test.c"],
     deps = ["//:dsp"],

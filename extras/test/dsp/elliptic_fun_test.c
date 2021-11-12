@@ -22,7 +22,7 @@
 #include "src/dsp/logging.h"
 #include "src/dsp/math_constants.h"
 
-static double RandUnif() { return (double)rand() / RAND_MAX; }
+static double RandUnif(void) { return (double)rand() / RAND_MAX; }
 
 static int ComplexIsApproximatelyEqual(ComplexDouble actual,
                                        ComplexDouble expected) {
@@ -38,7 +38,7 @@ static int ComplexIsApproximatelyEqual(ComplexDouble actual,
 }
 
 /* Compare EllipticK to known values. */
-static void TestEllipticK() {
+static void TestEllipticK(void) {
   puts("TestEllipticK");
   CHECK(fabs(EllipticK(0.0) - M_PI / 2) < 1e-15);
 
@@ -58,7 +58,7 @@ static void TestEllipticK() {
  * F(0.6|0.1), scipy.special.ellipkinc(0.6, 0.1) and EllipticF[0.6, 0.1]; note
  * that scipy's implementation doesn't support complex phi).
  */
-static void TestEllipticF() {
+static void TestEllipticF(void) {
   puts("TestEllipticF");
   /* Test that F(0|m) = 0. */
   CHECK(ComplexIsApproximatelyEqual(
@@ -95,7 +95,7 @@ static void TestEllipticF() {
 }
 
 /* JacobiAmplitude should be the inverse of EllipticF. */
-static void TestJacobiAmplitude() {
+static void TestJacobiAmplitude(void) {
   puts("TestJacobiAmplitude");
   int trial;
   for (trial = 0; trial < 100; ++trial) {

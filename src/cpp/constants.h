@@ -25,6 +25,8 @@ constexpr int kNumPwmValues = 8;
 constexpr int kNumTotalPwm = 12;
 // Max length of a TactilePattern pattern string, not including null terminator.
 constexpr int kMaxTactilePatternLength = 15;
+// Max length of a device name string, not including null terminator.
+constexpr int kMaxDeviceNameLength = 16;
 
 }  // namespace audio_tactile
 

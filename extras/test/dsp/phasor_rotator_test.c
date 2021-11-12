@@ -23,9 +23,9 @@
 #include "src/dsp/logging.h"
 #include "src/dsp/math_constants.h"
 
-static double RandUniform() { return (double) rand() / RAND_MAX; }
+static double RandUniform(void) { return (double) rand() / RAND_MAX; }
 
-static void TestBasic() {
+static void TestBasic(void) {
   puts("TestBasic");
   PhasorRotator oscillator;
   double max_error = 0.0;
@@ -56,7 +56,7 @@ static void TestBasic() {
   CHECK(max_error < 0.001);
 }
 
-static void TestPeriod() {
+static void TestPeriod(void) {
   puts("TestPeriod");
   const double kSampleRateHz = 16000.0;
   PhasorRotator oscillator;

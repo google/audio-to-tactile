@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -116,7 +116,7 @@ static void InPlaceFloatToInt32Conversion(size_t num_elements, void* input) {
   const float kMax = INT32_MAX;
   const float normalizer = -kLowest;
   unsigned char* bytes = input;
-  int i;
+  size_t i;
   for (i = 0; i < num_elements; ++i, bytes += 4) {
     float input_float = 0;
     memcpy(&input_float, bytes, 4);

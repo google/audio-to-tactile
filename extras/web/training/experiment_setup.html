@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <!--
+  Copyright 2021 Google LLC
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      https://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+  -->
+  <title>Lipreading Set Up</title>
+</head>
+
+<body>
+  <div class="ble-wrapper landing-section">
+    <h1 class="title">Bracelet Set Up</h1>
+    <div> Turn on bracelet then click "Connect". </div>
+    <button id="clientConnectButton" onclick="bleInstance.connectionToggle()">
+      Connect
+    </button>
+    <br>
+    <button id="customChannelMap"
+        onclick="customChannelMap([1, -1,-1,-1,-1,-1,-1,-1,9,-1])"
+        disabled>
+      Configure for Experiment
+    </button>
+    <br>
+    <a href="../training_web_app/lipreading_video_interface.html">
+      <button id="experiment-link" disabled> Continue to Experiment </button>
+    </a>
+
+  <script type="text/javascript" src="../ble_library.js"></script>
+  <script>
+    /**
+     * Updates UI elements after connecting or disconnecting BLE.
+     * @param {boolean} connected A flag to indicate whether a BLE device
+     *    is currently connected.
+     */
+    function updateButtonState(connected) {
+      if (connected) {
+        document.getElementById('clientConnectButton').innerHTML = 'Disconnect';
+        document.getElementById('customChannelMap').disabled = false;
+      } else {
+        document.getElementById('clientConnectButton').innerHTML = 'Connect';
+        document.getElementById('customChannelMap').disabled = true;
+        document.getElementById("experiment-link").disabled = true;
+      }
+    }
+
+    // Generate a BLE Manager with the UI update functions.
+    var bleInstance = new BleManager(console.log, updateButtonState);
+
+    /**
+     * Applies a custom mapping to the channel sources. A value of -1 indicates
+     * the channel should be disabled.
+     * @param {Array<number>} mapping An array of source indices ordered by
+     *    channel indices.
+     */
+    function customChannelMap(mapping) {
+      for (var c = 0; c < NUM_TACTORS; c++) {
+        if (mapping[c] > -1 ) {
+          bleInstance.setChannelData(c, 'source', mapping[c]);
+        }
+        bleInstance.setChannelData(c, 'gain', 63);
+        bleInstance.setChannelData(c, 'enabled', mapping[c] > -1);
+      }
+      bleInstance.requestSetChannelMap();
+      document.getElementById("experiment-link").disabled = false;
+    }
+  </script>

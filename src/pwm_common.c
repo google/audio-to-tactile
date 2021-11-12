@@ -35,9 +35,12 @@ void pwm_irq_handler(NRF_PWM_Type* pwm_module, uint8_t which_pwm_module) {
   /* Triggered after sequence is finished. */
   if (nrf_pwm_event_check(pwm_module, NRF_PWM_EVENT_SEQEND0)) {
     nrf_pwm_event_clear(pwm_module, NRF_PWM_EVENT_SEQEND0);
-    nrf_pwm_task_trigger(pwm_module, NRF_PWM_TASK_SEQSTART0);
     pwm_event = which_pwm_module;
+    /* Do callback before starting the next sequence, so we can modify the
+     * buffer before it gets played.
+     */
     callback();
+    nrf_pwm_task_trigger(pwm_module, NRF_PWM_TASK_SEQSTART0);
   }
   /* Triggered when playback is stopped. */
   if (nrf_pwm_event_check(pwm_module, NRF_PWM_EVENT_STOPPED)) {

@@ -27,7 +27,7 @@ static int /*bool*/ IsClose(float actual, float expected) {
   return fabs(actual - expected) <= 0.15f * expected;
 }
 
-static void TestBasic() {
+static void TestBasic(void) {
   puts("TestBasic");
   EnvelopeTracker tracker;
   EnvelopeTrackerInit(&tracker, kSampleRateHz);
@@ -74,7 +74,7 @@ static void TestBasic() {
   free(input);
 }
 
-static void TestStreamingRandomBlockSizes() {
+static void TestStreamingRandomBlockSizes(void) {
   puts("TestStreamingRandomBlockSizes");
   EnvelopeTracker tracker;
   EnvelopeTrackerInit(&tracker, kSampleRateHz);

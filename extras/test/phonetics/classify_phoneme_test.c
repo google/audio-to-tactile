@@ -59,7 +59,8 @@ static void TestPhoneme(const char* phoneme) {
       wav_file, &num_samples, &num_channels, &sample_rate_hz));
   CHECK(num_channels == 1);
   CHECK(sample_rate_hz == kClassifierInputHz);
-  CHECK(num_samples >= kClassifyPhonemeNumChannels * kClassifyPhonemeNumFrames);
+  CHECK((int)num_samples >=
+        kClassifyPhonemeNumChannels * kClassifyPhonemeNumFrames);
 
   /* Make frontend to get CARL frames. The classifier expects input sample rate
    * CLASSIFIER_INPUT_HZ, block_size=128, pcen_cross_channel_diffusivity=60, and
@@ -86,7 +87,7 @@ static void TestPhoneme(const char* phoneme) {
 
   int start;
   int i;
-  for (start = 0; start + kBlockSize < num_samples; start += kBlockSize) {
+  for (start = 0; start + kBlockSize < (int)num_samples; start += kBlockSize) {
     float input_float[kBlockSize];
     for (i = 0; i < kBlockSize; ++i) {
       input_float[i] = input_int16[start + i] / 32768.0f;
@@ -116,7 +117,7 @@ static void TestPhoneme(const char* phoneme) {
   CHECK(accuracy >= 0.6f);
 }
 
-static void TestLabelOutput() {
+static void TestLabelOutput(void) {
   puts("TestLabelOutput");
 
   const int kInputSize =

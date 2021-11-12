@@ -35,7 +35,7 @@ static void FillRandomValues(int size, ComplexFloat* output) {
 }
 
 /* Check the size-4 transform of {1, 2, 3, 4} against golden data. */
-static void TestForwardTransformSize4() {
+static void TestForwardTransformSize4(void) {
   puts("TestForwardTransformSize4");
   const int kTransformSize = 4;
   ComplexFloat data[4] = {{1.0, 0.0}, {2.0, 0.0}, {3.0, 0.0}, {4.0, 0.0}};

@@ -30,6 +30,7 @@
 
 #include "cpp/constants.h"
 #include "cpp/slice.h"
+#include "cpp/settings.h"
 #include "dsp/channel_map.h"
 #include "tactile/envelope_tracker.h"
 #include "tactile/tuning.h"
@@ -37,7 +38,7 @@
 namespace audio_tactile {
 
 // Types of messages. Append new op codes without changing old ones, as they
-// insure compatability when communicating with external devices. Type values
+// ensure compatibility when communicating with external devices. Type values
 // must be between 0 and 255.
 enum class MessageType {
   kNone = 0,
@@ -69,6 +70,13 @@ enum class MessageType {
   kStatsRecord = 26,
   kChannelGainUpdate = 27,
   kBatteryVoltage = 28,
+  kDeviceName = 29,
+  kGetDeviceName = 30,
+  kPrepareForBluetoothBootloading = 31,
+  kFlashWriteStatus = 32,
+  kOnConnectionBatch = 33,
+  kGetOnConnectionBatch = 34,
+  kCalibrateChannel = 35,
 };
 
 // Recipients of messages.
@@ -149,10 +157,10 @@ class Message {
   // Reads the samples from a kAudioSamples message.
   bool ReadAudioSamples(Slice<int16_t, kAdcDataSize> samples) const;
 
-  // Writes a kTemperature message to send termistor temperature measurement.
-  void WriteTemperature(float temperature);
+  // Writes a kTemperature message to send thermistor temperature measurement.
+  void WriteTemperature(float temperature_c);
   // Reads the temperature from a kTemperature message.
-  bool ReadTemperature(float* temperature) const;
+  bool ReadTemperature(float* temperature_c) const;
 
   // Writes a kBatteryVoltage message to send battery voltage.
   void WriteBatteryVoltage(float voltage);
@@ -213,8 +221,51 @@ class Message {
                              int expected_inputs = -1,
                              int expected_outputs = -1) const;
 
+  // Reads a kCalibrateChannel message. Requires two calibration channels
+  // and an amplitude for calibration playback.
+  bool ReadCalibrateChannel(ChannelMap* channel_map,
+                            int calibration_channels[2],
+                            float* calibration_amplitude) const;
+
   // Writes a kStatsRecord message.
   void WriteStatsRecord(const EnvelopeTracker& envelope_tracker);
+
+  // Writes a kDeviceName message. `device_name` must be a string with
+  // length <= kMaxDeviceNameLength (= 16), not counting the null terminator.
+  void WriteDeviceName(const char* device_name);
+  // Reads a kDeviceName message into `device_name`. `device_name` must have
+  // space for at least kMaxDeviceNameLength + 1 chars.
+  bool ReadDeviceName(char* device_name) const;
+
+  // Writes an on-connection batch message. This message is sent from the device
+  // to app on connection, batching firmware build date, battery voltage,
+  // temperature, and Settings.
+  void WriteOnConnectionBatch(int firmware_build_date,
+                              float battery_v,
+                              float temperature_c,
+                              const Settings& settings);
+  // Reads an on-connection batch message, reading firmware build date, battery
+  // voltage, temperature, and Settings. As in `ReadChannelMap`, the function
+  // checks whether the message's number of inputs and outputs agree with
+  // `expected_inputs` and `expected_outputs`. Setting these args to -1 allows
+  // any number of channels. Returns true if all fields are read successfully.
+  bool ReadOnConnectionBatch(int* firmware_build_date,
+                             float* battery_v,
+                             float* temperature_c,
+                             Settings* settings,
+                             int expected_inputs = -1,
+                             int expected_outputs = -1);
+
+  // Writes flash memory status after a write, where:
+  // 0 - successful write
+  // 1 - unknown error
+  // 2 - flash is not formatted.
+  void WriteFlashWriteStatus(int status);
+
+  // Reads flash memory status after a write.
+  bool ReadFlashWriteStatus(int* status) const;
+
+
 
   // For the following messages, the payload is empty and are read simply by
   // checking `type()`.
@@ -241,6 +292,11 @@ class Message {
     SetTypeAndPayload(MessageType::kGetChannelMap, {});
   }
 
+  // Writes kGetDeviceName message request to get the device name.
+  void WriteGetDeviceName() {
+    SetTypeAndPayload(MessageType::kGetDeviceName, {});
+  }
+
   // Writes a kStreamDataStart message.
   void WriteStreamDataStart() {
     SetTypeAndPayload(MessageType::kStreamDataStart, {});
@@ -260,12 +316,6 @@ class Message {
   }
 
   uint16_t ComputeChecksum() const;
-
-  void WriteChannelMapOrGainUpdate(const ChannelMap& channel_map,
-                                   const int* test_channels);
-  bool ReadChannelMapOrGainUpdate(ChannelMap* channel_map, int* test_channels,
-                                  int expected_inputs,
-                                  int expected_outputs) const;
 
   uint8_t bytes_[kHeaderSize + kMaxPayloadSize];
 };

@@ -148,7 +148,6 @@ static int TactileWorkerObjectInit(TactileWorkerObject* self, PyObject* args,
   float global_gain_db = 0.0f;
   float mid_gain_db = -10.0f;
   float high_gain_db = -5.5f;
-  float cutoff_hz = 500.0f;
   static const char* keywords[] = {
       "input_device", "output_device", "chunk_size", "sample_rate_hz",
       "channels", "channel_gains_db", "global_gain_db", "cutoff_hz",
@@ -159,7 +158,8 @@ static int TactileWorkerObjectInit(TactileWorkerObject* self, PyObject* args,
           args, kw, "|zziiszffpffff:__init__", (char**)keywords,
           &params.input_device,
           &params.output_device, &params.chunk_size, &sample_rate_hz, &channels,
-          &channel_gains_db, &global_gain_db, &cutoff_hz,
+          &channel_gains_db, &global_gain_db,
+          &params.tactile_processor_params.enveloper_params.energy_cutoff_hz,
           &params.post_processor_params.use_equalizer,
           &mid_gain_db, &high_gain_db,
           &params.post_processor_params.max_amplitude,
@@ -175,14 +175,6 @@ static int TactileWorkerObjectInit(TactileWorkerObject* self, PyObject* args,
 
   params.tactile_processor_params.frontend_params.input_sample_rate_hz =
       sample_rate_hz;
-  params.tactile_processor_params.baseband_channel_params.energy_cutoff_hz =
-      cutoff_hz;
-  params.tactile_processor_params.vowel_channel_params.energy_cutoff_hz =
-      cutoff_hz;
-  params.tactile_processor_params.sh_fricative_channel_params.energy_cutoff_hz =
-      cutoff_hz;
-  params.tactile_processor_params.fricative_channel_params.energy_cutoff_hz =
-      cutoff_hz;
 
   params.post_processor_params.mid_gain =
       DecibelsToAmplitudeRatio(mid_gain_db);

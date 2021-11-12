@@ -102,7 +102,7 @@ static void WriteBytesAsFile(const char* file_name,
   fclose(f);
 }
 
-static void TestReadMonoWav() {
+static void TestReadMonoWav(void) {
   puts("TestReadMonoWav");
   const char* wav_file_name = NULL;
   FILE* f;
@@ -125,7 +125,7 @@ static void TestReadMonoWav() {
   fclose(f);
 }
 
-static void TestNonstandardWavFile() {
+static void TestNonstandardWavFile(void) {
   puts("TestNonstandardWavFile");
   const char* wav_file_name = NULL;
   FILE* f;

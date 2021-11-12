@@ -15,7 +15,7 @@
 //
 // Arduino-compatible library for serial interface.
 //
-// This driver provides Arduino-compatabile library for serial interface, also
+// This driver provides an Arduino-compatible library for serial interface, also
 // called universal serial transmitter-receiver with Easy DMA (UARTE). HAL
 // (Hardware abstraction layer) functions are used. The Nordic driver is not
 // used. This driver allows to send and receive raw data, as well as predefined
@@ -80,9 +80,9 @@ class AudioTactileSerialCom {
 
   AudioTactileSerialCom();
 
-  // Initializes serial comunications for the sleeve. The sleeve and the puck
-  // use different pins this different initalizations. This function starts the
-  // lister (interrupt handler) as well.
+  // Initializes serial communications for the sleeve. The sleeve and the puck
+  // use different pins this different initializations. This function starts the
+  // listener (interrupt handler) as well.
   void InitSleeve(void (*event_fun)());
 
   // Initializes serial communications for the puck.

@@ -26,7 +26,7 @@ static char* g_events[16];
 static int g_num_events = 0;
 
 static void AddEvent(const char* event, ...) {
-  CHECK(g_num_events < sizeof(g_events) / sizeof(*g_events));
+  CHECK((size_t)g_num_events < sizeof(g_events) / sizeof(*g_events));
   g_events[g_num_events] = (char*)malloc(64);
   va_list args;
   va_start(args, event);

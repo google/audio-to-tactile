@@ -245,7 +245,7 @@ static void TestStreamingRandomBlockSizes(int num_channels) {
 }
 
 /* Resampling a sine wave should produce again a sine wave. */
-static void TestResampleSineWave() {
+static void TestResampleSineWave(void) {
   puts("TestResampleSineWave");
   const float kFrequency = 1100.7f;
 
@@ -311,7 +311,7 @@ static void TestResampleSineWave() {
 }
 
 /* Test resampling a chirp. */
-static void TestResampleChirp() {
+static void TestResampleChirp(void) {
   puts("TestResampleChirp");
 
   int i;

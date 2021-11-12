@@ -1,4 +1,4 @@
-# Copyright 2020 Google LLC
+# Copyright 2020-2021 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -40,10 +40,11 @@ TACTILE_PROCESSOR_DEMO_OBJ= \
 		tactile_processor_web_bindings.o \
 		butterworth.o \
 		embed_vowel.o \
-		energy_envelope.o \
+		enveloper.o \
 		hexagon_interpolation.o \
 		post_processor.o \
-		run_tactile_processor_assets.o \
+		run_tactile_processor_bracelet_assets.o \
+		run_tactile_processor_sleeve_assets.o \
 		tactile_processor.o \
 		tactor_equalizer.o \
 		texture_from_rle_data.o \
@@ -92,7 +93,10 @@ hexagon_interpolation.o: ../../src/phonetics/hexagon_interpolation.c
 nn_ops.o: ../../src/phonetics/nn_ops.c
 	emcc $(EMCC_FLAGS) -c $< -o $@
 
-run_tactile_processor_assets.o: ../tools/run_tactile_processor_assets.c
+run_tactile_processor_bracelet_assets.o: ../tools/run_tactile_processor_bracelet_assets.c
+	emcc $(EMCC_FLAGS) -c $< -o $@
+
+run_tactile_processor_sleeve_assets.o: ../tools/run_tactile_processor_sleeve_assets.c
 	emcc $(EMCC_FLAGS) -c $< -o $@
 
 tactile_processor.o: ../../src/tactile/tactile_processor.c
@@ -104,7 +108,7 @@ post_processor.o: ../../src/tactile/post_processor.c
 tactor_equalizer.o: ../../src/tactile/tactor_equalizer.c
 	emcc $(EMCC_FLAGS) -c $< -o $@
 
-energy_envelope.o: ../../src/tactile/energy_envelope.c
+enveloper.o: ../../src/tactile/enveloper.c
 	emcc $(EMCC_FLAGS) -c $< -o $@
 
 carl_frontend_design.o: ../../src/frontend/carl_frontend_design.c

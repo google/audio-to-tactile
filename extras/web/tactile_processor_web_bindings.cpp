@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC
+// Copyright 2019, 2021 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,19 +29,28 @@
 #include "extras/tools/sdl/basic_sdl_app.h"
 #include "extras/tools/sdl/texture_from_rle_data.h"
 
+// The visualization has nominally 10 tactors even for the bracelet. The unused
+// tactors are simply mapped to blank images.
 constexpr int kNumTactors = 10;
 constexpr int kDecimationFactor = 8;
 constexpr int kBlockSize = 64;
 constexpr int kOutputBlockSize = kBlockSize / kDecimationFactor;
 
-// Defined in run_tactile_processor_assets.c.
+constexpr int kNumFormFactors = 2;
 constexpr int kNumImageAssets = (kNumTactors + 1);
-extern const uint8_t* kImageAssetsRle[kNumImageAssets];
+// Defined in run_tactile_processor_assets.c.
+extern const uint8_t* kBraceletImageAssetsRle[kNumImageAssets];
+extern const uint8_t* kSleeveImageAssetsRle[kNumImageAssets];
+
+struct FormFactorAssets {
+  SDL_Texture* images[kNumImageAssets];
+  SDL_Rect image_rects[kNumImageAssets];
+};
 
 struct {
   BasicSdlApp app;
-  SDL_Texture* image_assets[kNumImageAssets];
-  SDL_Rect image_asset_rects[kNumImageAssets];
+  FormFactorAssets form_factors[kNumFormFactors];
+  int selected_form_factor;
   uint8_t colormap[256 * 3];
 
   int chunk_size;
@@ -54,12 +63,24 @@ struct {
 static void MainTick();
 static void GenerateColormap(uint8_t* colormap);
 
+static bool LoadFormFactorAssets(SDL_Renderer* renderer,
+    const uint8_t* data[kNumImageAssets], FormFactorAssets* form_factor) {
+  for (int i = 0; i < kNumImageAssets; ++i) {
+    form_factor->images[i] = CreateTextureFromRleData(
+        data[i], renderer, &form_factor->image_rects[i]);
+    if (!form_factor->images[i]) { return false; }
+  }
+  SDL_SetTextureColorMod(form_factor->images[kNumTactors], 0x9d, 0x8c, 0x78);
+  return true;
+}
+
 // Initializes SDL. This gets called immediately after the emscripten runtime
 // has initialized.
 extern "C" void EMSCRIPTEN_KEEPALIVE OnLoad() {
   for (int c = 0; c < kNumTactors; ++c) {
     engine.volume[c] = 0.0f;
   }
+  engine.selected_form_factor = 0;
 
   if (SDL_Init(SDL_INIT_VIDEO) != 0) {
     fprintf(stderr, "Error: %s\n", SDL_GetError());
@@ -82,15 +103,16 @@ extern "C" void EMSCRIPTEN_KEEPALIVE OnLoad() {
   }
 
   /* Create SDL_Textures from embedded image assets. */
-  for (int i = 0; i < kNumImageAssets; ++i) {
-    engine.image_assets[i] = CreateTextureFromRleData(
-        kImageAssetsRle[i], engine.app.renderer,
-        &engine.image_asset_rects[i]);
-    if (!engine.image_assets[i]) { exit(1); }
+  if (!LoadFormFactorAssets(engine.app.renderer,
+                            kBraceletImageAssetsRle,
+                            &engine.form_factors[0]) ||
+      !LoadFormFactorAssets(engine.app.renderer,
+                            kSleeveImageAssetsRle,
+                            &engine.form_factors[1])) {
+    exit(1);
   }
 
   GenerateColormap(engine.colormap);
-  SDL_SetTextureColorMod(engine.image_assets[kNumTactors], 0x37, 0x71, 0x8d);
 }
 
 // Emscripten will call this function once per frame to do event processing
@@ -99,12 +121,12 @@ static void MainTick() {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {}  // Ignore events.
 
+  const FormFactorAssets* assets =
+      &engine.form_factors[engine.selected_form_factor];
   SDL_RenderClear(engine.app.renderer);
   // Render background texture.
-  SDL_Texture* background_image = engine.image_assets[kNumTactors];
-  SDL_Rect background_rect = engine.image_asset_rects[kNumTactors];
-  SDL_RenderCopy(engine.app.renderer, background_image,
-                 nullptr, &background_rect);
+  SDL_RenderCopy(engine.app.renderer, assets->images[kNumTactors],
+                 nullptr, &assets->image_rects[kNumTactors]);
 
   for (int c = 0; c < kNumTactors; ++c) {
     // Get the RMS value of the cth tactor.
@@ -119,9 +141,9 @@ static void MainTick() {
     // Render the cth texture with color according to `activation`.
     const int index = static_cast<int>(std::round(255 * activation));
     const uint8_t* rgb = &engine.colormap[3 * index];
-    SDL_SetTextureColorMod(engine.image_assets[c], rgb[0], rgb[1], rgb[2]);
-    SDL_RenderCopy(engine.app.renderer, engine.image_assets[c],
-                   nullptr, &engine.image_asset_rects[c]);
+    SDL_SetTextureColorMod(assets->images[c], rgb[0], rgb[1], rgb[2]);
+    SDL_RenderCopy(engine.app.renderer, assets->images[c],
+                   nullptr, &assets->image_rects[c]);
   }
 
   SDL_RenderPresent(engine.app.renderer);
@@ -137,10 +159,9 @@ extern "C" void EMSCRIPTEN_KEEPALIVE TactileInitAudio(
   params.frontend_params.block_size = kBlockSize;
   params.frontend_params.input_sample_rate_hz = sample_rate_hz;
 
-  const float master_gain = 0.5f;
-  params.baseband_channel_params.output_gain *= master_gain;
-  params.vowel_channel_params.output_gain *= master_gain;
-  params.fricative_channel_params.output_gain *= master_gain;
+  for (int c = 0; c < kEnveloperNumChannels; ++c) {
+    params.enveloper_params.channel_params[c].output_gain *= 0.5f;
+  }
 
   engine.tactile_processor = TactileProcessorMake(&params);
   if (!engine.tactile_processor) {
@@ -185,15 +206,31 @@ extern "C" void EMSCRIPTEN_KEEPALIVE TactileProcessAudio(
   }
 }
 
-// Generates a colormap that fades from a dark blue color to white.
+// Sets the selected form factor, bracelet (0) or sleeve (1).
+extern "C" void EMSCRIPTEN_KEEPALIVE SelectFormFactor(int index) {
+  engine.selected_form_factor = index;
+}
+
+// Generates a colormap fading from a dark gray to orange to white. `colormap`
+// should have space for 256 * 3 elements.
 static void GenerateColormap(uint8_t* colormap) {
-  const uint8_t kStartR = 0x14;
-  const uint8_t kStartG = 0x2a;
-  const uint8_t kStartB = 0x38;
+  const int kColorA[3] = {0x51, 0x43, 0x31};
+  const int kColorB[3] = {0xff, 0x6f, 0x00};
+  const float kKnot = 0.348f;
+
   for (int i = 0; i < 256; ++i, colormap += 3) {
     const float x = i / 255.0f;
-    colormap[0] = static_cast<int>(std::round(kStartR + (255 - kStartR) * x));
-    colormap[1] = static_cast<int>(std::round(kStartG + (255 - kStartG) * x));
-    colormap[2] = static_cast<int>(std::round(kStartB + (255 - kStartB) * x));
+    if (x <= kKnot) {
+      const float w = x / kKnot;
+      for (int c = 0; c < 3; ++c) {
+        colormap[c] =
+            static_cast<int>(kColorA[c] + (kColorB[c] - kColorA[c]) * w);
+      }
+    } else {
+      const float w = (x - kKnot) / (1.0f - kKnot);
+      for (int c = 0; c < 3; ++c) {
+        colormap[c] = static_cast<int>(kColorB[c] + (255 - kColorB[c]) * w);
+      }
+    }
   }
 }

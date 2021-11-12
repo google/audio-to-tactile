@@ -17,9 +17,13 @@
 
 package(licenses = ["notice"])
 
-# Embedded development tools don't necessarily support the latest C++
-# standard, so we set "-std=c++11" to check that code builds in C++11.
-DEFAULT_COPTS = ["-std=c++11"]
+DEFAULT_COPTS = [
+    # Embedded development tools don't necessarily support the latest C++
+    # standard, so we set "-std=c++11" to check that code builds in C++11.
+    "-std=c++11",
+    "-Wno-enum-compare",
+    "-Wno-unused-function",
+]
 
 cc_test(
     name = "message_test",
@@ -40,6 +44,17 @@ cc_test(
     deps = [
         "//:cpp",
         "//:dsp",
+    ],
+)
+
+cc_test(
+    name = "settings_test",
+    srcs = ["settings_test.cpp"],
+    copts = DEFAULT_COPTS,
+    deps = [
+        "//:cpp",
+        "//:dsp",
+        "//:tactile",
     ],
 )
 

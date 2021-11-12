@@ -37,7 +37,7 @@
  * geometrically spaced with a spacing of 12% for energies around 10^-4 (in
  * terms of amplitudes, 6% around 10^-2), and spaced a little tighter the larger
  * the energy. So the representation is unlikely to over or under flow and is
- * quantized finely enough to approximate the energy within a few precent.
+ * quantized finely enough to approximate the energy within a few percent.
  */
 static uint8_t EncodeEnergy(float energy) {
   float value = 255.0f * FastPow(energy, 1.0f / 6);
@@ -51,7 +51,7 @@ static float DecodeEnergy(uint8_t value) {
 }
 
 /* Encodes an integer delta as a 3-bit code between 0 and 7.
- * The correspodence between codes and deltas is:
+ * The correspondence between codes and deltas is:
  *
  *   code  delta      code  delta
  *      0      0         4      0 (redundant with code 0)

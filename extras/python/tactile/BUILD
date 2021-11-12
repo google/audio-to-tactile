@@ -23,20 +23,20 @@ package(
 )
 
 py_extension(
-    name = "energy_envelope",
-    srcs = ["energy_envelope_python_bindings.c"],
+    name = "enveloper",
+    srcs = ["enveloper_python_bindings.c"],
     deps = [
         "//:tactile",
     ],
 )
 
 py_test(
-    name = "energy_envelope_test",
-    srcs = ["energy_envelope_test.py"],
+    name = "enveloper_test",
+    srcs = ["enveloper_test.py"],
     python_version = "PY3",
     srcs_version = "PY3",
     deps = [
-        ":energy_envelope",
+        ":enveloper",
     ],
 )
 

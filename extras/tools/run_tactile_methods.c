@@ -22,7 +22,7 @@
  *   Method         Output channels
  *   Bratakos2001                 1
  *   Yuan2005                     2
- *   EnergyEnvelope               4
+ *   Enveloper                    4
  *
  * Use --channels to map tactile signals to output channels. For instance,
  * --channels=3,1,2,2 plays signal 3 on channel 1, signal 1 on channel 2, and
@@ -30,7 +30,7 @@
  * is filled with zeros, e.g. --channels=1,0,2 sets channel 2 to zeros.
  *
  * Flags:
- *  --method=<name>            'Bratakos2001', 'Yuan2005', or 'EnergyEnvelope'.
+ *  --method=<name>            'Bratakos2001', 'Yuan2005', or 'Enveloper'.
  *  --input=<name>             Input device to read source audio from.
  *  --output=<name>            Output device to play tactor signals to.
  *  --sample_rate_hz=<int>     Sample rate. Note that most devices only support
@@ -59,7 +59,7 @@
 #include <string.h>
 
 #include "src/dsp/auto_gain_control.h"
-#include "src/tactile/energy_envelope.h"
+#include "src/tactile/enveloper.h"
 #include "extras/references/bratakos2001/bratakos2001.h"
 #include "extras/references/yuan2005/yuan2005.h"
 #include "extras/tools/channel_map_tui.h"
@@ -83,7 +83,7 @@ struct {
   float* tactile_output;
 
   void (*method_fun)(const float*, int, float*);
-  EnergyEnvelope channel_states[4];
+  Enveloper enveloper;
   Bratakos2001State bratakos2001;
   Yuan2005State yuan2005;
 
@@ -133,12 +133,8 @@ static void PrintVolumeMeters() {
   }
 }
 
-void RunEnergyEnvelope(const float* input, int num_samples, float* output) {
-  int c;
-  for (c = 0; c < 4; ++c) {
-    EnergyEnvelopeProcessSamples(&engine.channel_states[c], input, num_samples,
-                                 output + c, 4);
-  }
+void RunEnveloper(const float* input, int num_samples, float* output) {
+  EnveloperProcessSamples(&engine.enveloper, input, num_samples, output);
 }
 
 void RunBratakos2001(const float* input, int num_samples, float* output) {
@@ -165,18 +161,19 @@ int TactorCallback(const void *input_buffer, void *output_buffer,
 
   const float* input = (const float*) input_buffer;
   float* output = (float*) output_buffer;
+  const int num_frames = (int)frames_per_buffer;
 
   int i;
-  for (i = 0; i < frames_per_buffer; ++i) {
+  for (i = 0; i < num_frames; ++i) {
     AutoGainControlProcessSample(&engine.agc, input[i] * input[i]);
     engine.agc_output[i] = input[i] * AutoGainControlGetGain(&engine.agc);
   }
 
-  engine.method_fun(engine.agc_output, frames_per_buffer,
+  engine.method_fun(engine.agc_output, num_frames,
                     engine.tactile_output);
 
-  UpdateVolumeMeters(engine.tactile_output, frames_per_buffer);
-  ChannelMapApply(&engine.channel_map, engine.tactile_output, frames_per_buffer,
+  UpdateVolumeMeters(engine.tactile_output, num_frames);
+  ChannelMapApply(&engine.channel_map, engine.tactile_output, num_frames,
                   output);
 
   return paContinue;
@@ -258,24 +255,14 @@ int main(int argc, char** argv) {
     if (!Yuan2005Init(&engine.yuan2005, &yuan2005_params)) {
       goto fail;
     }
-  } else if (StringEqualIgnoreCase(method, "EnergyEnvelope")) {
-    printf("method: EnergyEnvelope\n");
-    engine.method_fun = RunEnergyEnvelope;
-    num_tactors = 4;
+  } else if (StringEqualIgnoreCase(method, "Enveloper")) {
+    printf("method: Enveloper\n");
+    engine.method_fun = RunEnveloper;
+    num_tactors = kEnveloperNumChannels;
 
-    if (!EnergyEnvelopeInit(&engine.channel_states[0],
-                            &kEnergyEnvelopeBasebandParams,
-                            sample_rate_hz, 1) ||
-        !EnergyEnvelopeInit(&engine.channel_states[1],
-                            &kEnergyEnvelopeVowelParams,
-                            sample_rate_hz, 1) ||
-        !EnergyEnvelopeInit(&engine.channel_states[2],
-                            &kEnergyEnvelopeShFricativeParams,
-                            sample_rate_hz, 1) ||
-        !EnergyEnvelopeInit(&engine.channel_states[3],
-                            &kEnergyEnvelopeFricativeParams,
-                            sample_rate_hz, 1)) {
-      fprintf(stderr, "Error: EnergyEnvelopeInit failed.\n");
+    if (!EnveloperInit(&engine.enveloper, &kDefaultEnveloperParams,
+                       sample_rate_hz, 1)) {
+      fprintf(stderr, "Error: EnveloperInit failed.\n");
       goto fail;
     }
   } else {

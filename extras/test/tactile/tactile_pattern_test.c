@@ -54,7 +54,7 @@ static void TestCompareWithGolden(const char* name, const char* pattern) {
   float* actual = SynthesizePattern(pattern, num_frames);
 
   int i;
-  for (i = 0; i < num_frames; ++i) {
+  for (i = 0; i < (int)num_frames; ++i) {
     const float expected =  ConvertSampleInt16ToFloat(golden[i]);
     CHECK(fabs(expected - actual[i]) < 1e-4f);
   }
@@ -97,7 +97,7 @@ static void TestStreaming(const char* name, const char* pattern) {
 }
 
 /* Test that kTactilePatternSilence produces zeros as expected. */
-static void TestSilence() {
+static void TestSilence(void) {
   puts("TestSilence");
   TactilePattern p;
   TactilePatternInit(&p, kSampleRateHz);
@@ -116,7 +116,7 @@ static void TestSilence() {
   }
 }
 
-static void TestMultichannel() {
+static void TestMultichannel(void) {
   puts("TestMultichannel");
   const int kNumChannels = 5;
   const int kNumFrames = 250;
@@ -141,7 +141,7 @@ static void TestMultichannel() {
   free(samples);
 }
 
-static void TestCalibrationTones() {
+static void TestCalibrationTones(void) {
   puts("TestCalibrationTones");
   const int kNumChannels = 5;
   const int kNumFrames = 250;
@@ -174,6 +174,57 @@ static void TestCalibrationTones() {
     } else if (time > 0.34f) { /* Second tone plays on channel 1. */
       CHECK(energy[3] == 0.0f);
       CHECK(energy[1] > 0.1f);
+    }
+
+    for (c = 0; c < kNumChannels; ++c) { /* Other channels are silent. */
+      if (c != 3 && c != 1) {
+        CHECK(energy[c] == 0.0f);
+      }
+    }
+  }
+
+  free(samples);
+}
+
+static void TestCalibrationTonesThresholds(void) {
+  puts("TestCalibrationTonesThresholds");
+  const int kNumChannels = 5;
+  const int kNumFrames = 250;
+  float* samples =
+      (float*)CHECK_NOTNULL(malloc(kNumFrames * kNumChannels * sizeof(float)));
+
+  TactilePattern p;
+  TactilePatternInit(&p, kSampleRateHz);
+  /* Play calibration tones on channels 3 and 1. */
+  TactilePatternStartCalibrationTonesThresholds(&p, 3, 1, 0.1f);
+  CHECK(TactilePatternIsActive(&p));
+  float time = 0.0f;
+
+  while (TactilePatternSynthesize(&p, kNumFrames, kNumChannels, samples)) {
+    time += (float)kNumFrames / kSampleRateHz;
+
+    const float* src = samples;
+    float energy[5] = {};
+    int i;
+    int c;
+    for (i = 0; i < kNumFrames; ++i, src += kNumChannels) {
+      for (c = 0; c < kNumChannels; ++c) {
+        energy[c] += src[c] * src[c];
+      }
+    }
+
+    /* First tone plays on channel 3. */
+    if (time < 0.4f) {
+      CHECK(energy[3] > 0.1f);
+      CHECK(energy[1] == 0.0f);
+    /* Second tone plays on channel 1. */
+    } else if (time > 0.7f && time < 1.1f) {
+      CHECK(energy[3] == 0.0f);
+      CHECK(energy[1] > 0.1f);
+    /* Third tone plays on channel 3 (0.01 time buffer to sample after ramp.) */
+    } else if (time > 1.41f) {
+      CHECK(energy[3] > 0.1f);
+      CHECK(energy[1] == 0.0f);
     }
 
     for (c = 0; c < kNumChannels; ++c) { /* Other channels are silent. */
@@ -238,6 +289,7 @@ int main(int argc, char** argv) {
   TestSilence();
   TestMultichannel();
   TestCalibrationTones();
+  TestCalibrationTonesThresholds();
 
   puts("PASS");
   return EXIT_SUCCESS;

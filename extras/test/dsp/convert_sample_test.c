@@ -21,9 +21,9 @@
 
 #include "src/dsp/logging.h"
 
-static double RandUniform() { return (double)rand() / RAND_MAX; }
+static double RandUniform(void) { return (double)rand() / RAND_MAX; }
 
-static void TestConvertInt16ToFromFloat() {
+static void TestConvertInt16ToFromFloat(void) {
   puts("TestConvertInt16ToFromFloat");
 
   CHECK(ConvertSampleInt16ToFloat(0) == 0);
@@ -68,7 +68,7 @@ static void TestConvertInt16ToFromFloat() {
   free(as_float);
 }
 
-static void TestConvertInt32ToFromFloat() {
+static void TestConvertInt32ToFromFloat(void) {
   puts("TestConvertInt32ToFromFloat");
 
   CHECK(ConvertSampleInt32ToFloat(0) == 0);
@@ -112,7 +112,7 @@ static void TestConvertInt32ToFromFloat() {
   free(as_float);
 }
 
-static void TestConvertFloatTo0_MaxValue() {
+static void TestConvertFloatTo0_MaxValue(void) {
   puts("TestConvertFloatTo0_MaxValue");
 
   CHECK(ConvertSampleFloatTo0_MaxValue(0, 512) == 256);

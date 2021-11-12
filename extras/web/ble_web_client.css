@@ -1,0 +1,132 @@
+/*
+* Copyright 2021 Google LLC
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     https://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
+button {
+  font-size: 110%;
+}
+
+fieldset {
+  padding: 0.01em 0 0 0;
+}
+
+.channelEnable {
+  margin-right: 1em;
+}
+
+#channelEnableAll {
+  margin-right: 1em;
+}
+
+#channelMap {
+  width: 29em;
+}
+
+#channelMap .knobSlider {
+  width: 12em;
+}
+
+.channelTest {
+  margin-left: 1em;
+}
+
+#clientConnectButton {
+  font-size: 110%;
+  float: left;
+  margin-right: 1em;
+}
+
+#connectionPanel {
+  padding: 1em;
+}
+
+#deviceName {
+  font-family: monospace;
+  font-size: 125%;
+  float: left;
+}
+
+.deviceNameLegend {
+  float: left;
+}
+
+.knobLabel {
+  margin-right: 0.8em;
+}
+
+.knobTextValue {
+  width: 3.5em;
+  text-align: right;
+  font-family: monospace;
+}
+
+#logDisplay {
+  color: #eee;
+  background-color: #222;
+  resize: none;
+}
+
+#OtaBootloadMode {
+  float:left;
+  font-size: 110%;
+  margin-left: 2em;
+  background-color: #ea5;
+}
+
+.panel {
+  width: 26em;
+  border:1px solid #bbb;
+  margin: 0 1ex 1ex 0;
+  padding: 1em;
+  border-radius: 3pt;
+  float:  left;
+}
+
+.panel button {
+  padding: 4pt;
+  margin-right: 0.3em;
+}
+
+.panel legend {
+  font-size: 120%;
+}
+
+.panel table {
+  margin-top: 1.5ex;
+}
+
+.panel-clear {
+  clear: both;
+}
+
+#playTactilePattern {
+  float: left;
+  margin-left: 1ex;
+}
+
+.plot-legend {
+  margin: 0;
+  padding: 0;
+}
+
+#tactilePattern {
+  font-family: monospace;
+  font-size: 125%;
+  float:left;
+}
+
+#tuningKnobs .knobSlider {
+  width: 15em;
+}

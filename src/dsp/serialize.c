@@ -30,8 +30,8 @@ uint8_t Fletcher8(const uint8_t* data, size_t size, uint8_t init) {
      *
      * So sum2 <= 2^32 - 1 for n <= 5803.
      */
-    const int kMaxBlockSize = 5803;
-    const int block_size = size < kMaxBlockSize ? size : kMaxBlockSize;
+    const size_t kMaxBlockSize = 5803;
+    const int block_size = (int)(size < kMaxBlockSize ? size : kMaxBlockSize);
 
     int i;
     for (i = 0; i < block_size; ++i) {
@@ -65,8 +65,8 @@ uint16_t Fletcher16(const uint8_t* data, size_t size, uint16_t init) {
      *
      * So sum2 <= 2^32 - 1 for n <= 5802.
      */
-    const int kMaxBlockSize = 5802;
-    const int block_size = size < kMaxBlockSize ? size : kMaxBlockSize;
+    const size_t kMaxBlockSize = 5802;
+    const int block_size = (int)(size < kMaxBlockSize ? size : kMaxBlockSize);
 
     int i;
     for (i = 0; i < block_size; ++i) {

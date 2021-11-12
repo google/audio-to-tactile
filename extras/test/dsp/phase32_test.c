@@ -22,9 +22,9 @@
 #include "src/dsp/logging.h"
 #include "src/dsp/math_constants.h"
 
-static double RandUniform() { return (double)rand() / RAND_MAX; }
+static double RandUniform(void) { return (double)rand() / RAND_MAX; }
 
-static void TestSineTable() {
+static void TestSineTable(void) {
   puts("TestSineTable");
   const int table_size = 1 << kPhase32TableBits;
   CHECK(kPhase32SinTable[0] == 0.0f);
@@ -40,7 +40,7 @@ static void TestSineTable() {
   }
 }
 
-static void TestPhaseConversion() {
+static void TestPhaseConversion(void) {
   puts("TestPhaseConversion");
   Phase32 p = Phase32FromFloat(0.0f);
   CHECK(p == 0);

@@ -19,16 +19,32 @@
  * producing a visualization and 10-channel tactile signal output. The 10 output
  * channels (with base-1 indexing) are
  *
- *   1: baseband  6: eh                        (7)-(6)   sh fricative
- *   2: aa        7: ae                        /     \      (9)
- *   3: uw        8: uh               (1)    (2) (8) (5)
- *   4: ih        9: sh fricative   baseband   \     /     (10)
- *   5: iy       10: fricative                 (3)-(4)   fricative
- *                                          vowel cluster
+ *   1: baseband  6: eh
+ *   2: aa        7: ae
+ *   3: uw        8: uh
+ *   4: ih        9: sh fricative
+ *   5: iy       10: fricative
  *
- * The intention is that these tactile channels are rendered on the TAPS sleeve
- * with tactors in the above arrangement. Tactile output is sent as audio
- * output using PortAudio to the device set by --output.
+ * Tactile output is sent as audio output using PortAudio to the device set by
+ * --output. The intention is that these channels are rendered with tactors on
+ * the wrist to implement the "bracelet" form factor, arranged as:
+ *
+ *           (9)--(4)   Dorsal
+ *          /        \
+ *        (6)        (1)
+ *         |          |
+ *        (5)        (2)
+ *          \        /
+ *   Volar  (10)--(3)
+ *
+ * Or rendered on the volar side of the forearm for the "sleeve" form factor as:
+ *
+ *                        (7)-(6)   sh fricative
+ *                        /     \      (9)
+ *   Proximal    (1)    (2) (8) (5)               Distal
+ *             baseband   \     /     (10)
+ *                        (3)-(4)   fricative
+ *                     vowel cluster
  *
  * Use --channels to map tactile signals to output channels. For instance,
  * --channels=3,1,2,2 plays signal 3 on channel 1, signal 1 on channel 2, and
@@ -54,6 +70,10 @@
  *  --chunk_size=<int>         Frames per PortAudio buffer. (Default 256).
  *  --cutoff_hz=<float>        Cutoff in Hz for energy smoothing filters.
  *  --fullscreen               Fullscreen display.
+ *
+ * Use keyboard buttons to control the program:
+ *   Tab       Switches visualization between bracelet and sleeve form factors.
+ *   Q, Esc    Quit the program.
  */
 
 #include <math.h>
@@ -75,17 +95,27 @@
 #include "extras/tools/util.h"
 #include "portaudio.h"
 
+/* The visualization has nominally 10 tactors even for the bracelet. The unused
+ * tactors are simply mapped to blank images.
+ */
 #define kNumTactors 10
 
-/* Defined in run_tactile_processor_assets.c. */
+#define kNumFormFactors 2
 #define kNumImageAssets (kNumTactors + 1)
-extern const uint8_t* kImageAssetsRle[kNumImageAssets];
+/* Defined in run_tactile_processor_assets.c. */
+extern const uint8_t* kBraceletImageAssetsRle[kNumImageAssets];
+extern const uint8_t* kSleeveImageAssetsRle[kNumImageAssets];
+
+typedef struct {
+  SDL_Texture* images[kNumImageAssets];
+  SDL_Rect image_rects[kNumImageAssets];
+} FormFactorAssets;
 
 typedef struct {
   /* SDL variables. */
   BasicSdlApp app;
-  SDL_Texture* image_assets[kNumImageAssets];
-  SDL_Rect image_asset_rects[kNumImageAssets];
+  FormFactorAssets form_factors[kNumFormFactors];
+  int selected_form_factor;        /* 0 => bracelet, 1 => sleeve.            */
 
   /* PortAudio variables. */
   int pa_initialized;              /* Whether PortAudio was initialized.     */
@@ -108,6 +138,22 @@ typedef struct {
   PostProcessor post_processor;
   float* tactile_output;
 } Engine;
+
+/* Loads the assets for a form factor. */
+static int LoadFormFactorAssets(SDL_Renderer* renderer, int window_fullscreen,
+    const uint8_t* data[kNumImageAssets], FormFactorAssets* form_factor) {
+  int i;
+  for (i = 0; i < kNumImageAssets; ++i) {
+    form_factor->images[i] = CreateTextureFromRleData(
+        data[i], renderer, &form_factor->image_rects[i]);
+    if (!form_factor->images[i]) { return 0; }
+    if (window_fullscreen) {
+      form_factor->image_rects[i].x += 167;
+    }
+  }
+  SDL_SetTextureColorMod(form_factor->images[kNumTactors], 0x9d, 0x8c, 0x78);
+  return 1;
+}
 
 int StartSdl(Engine* engine, int window_fullscreen, int window_borderless,
              int window_on_top) {
@@ -134,18 +180,12 @@ int StartSdl(Engine* engine, int window_fullscreen, int window_borderless,
   SetWindowIcon(engine->app.window);
 
   /* Create SDL_Textures from embedded image assets. */
-  int i;
-  for (i = 0; i < kNumImageAssets; ++i) {
-    engine->image_assets[i] = CreateTextureFromRleData(
-        kImageAssetsRle[i], engine->app.renderer,
-        &engine->image_asset_rects[i]);
-    if (!engine->image_assets[i]) { return 0; }
-    if (window_fullscreen) {
-      engine->image_asset_rects[i].x += 167;
-    }
-  }
-
-  return 1;
+  return LoadFormFactorAssets(engine->app.renderer, window_fullscreen,
+                              kBraceletImageAssetsRle,
+                              &engine->form_factors[0]) &&
+         LoadFormFactorAssets(engine->app.renderer, window_fullscreen,
+                              kSleeveImageAssetsRle,
+                              &engine->form_factors[1]);
 }
 
 /* Reads input WAV file. */
@@ -261,11 +301,12 @@ int PortAudioCallback(const void *input_buffer, void *output_buffer,
 
   /* WAV input. */
   if (engine->input_wav_samples) {
-    if (engine->input_wav_pos + chunk_size > engine->input_wav_size) {
+    const int num_frames = (int)chunk_size;
+    if (engine->input_wav_pos + num_frames > engine->input_wav_size) {
       engine->input_wav_pos = 0;
     }
     input = engine->input_wav_samples + engine->input_wav_pos;
-    engine->input_wav_pos += chunk_size;
+    engine->input_wav_pos += num_frames;
   }
 
   ProcessChunk(engine, (float*)input, output);
@@ -349,8 +390,11 @@ int EngineInit(Engine* engine, int argc, char** argv) {
   int i;
 
   BasicSdlAppInit(&engine->app);
-  for (i = 0; i < kNumImageAssets; ++i) {
-    engine->image_assets[i] = NULL;
+  for (i = 0; i < kNumFormFactors; ++i) {
+    int j;
+    for (j = 0; j < kNumImageAssets; ++j) {
+      engine->form_factors[i].images[j] = NULL;
+    }
   }
   engine->pa_initialized = 0;
   engine->pa_error = paNoError;
@@ -358,6 +402,7 @@ int EngineInit(Engine* engine, int argc, char** argv) {
   engine->input_wav_samples = NULL;
   engine->tactile_processor = NULL;
   engine->tactile_output = NULL;
+  engine->selected_form_factor = 0;
   engine->keep_running = 1;
 
   TactileProcessorParams params;
@@ -453,11 +498,7 @@ int EngineInit(Engine* engine, int argc, char** argv) {
    */
   params.frontend_params.input_sample_rate_hz = engine->sample_rate_hz;
   params.frontend_params.block_size = block_size;
-
-  params.baseband_channel_params.energy_cutoff_hz = cutoff_hz;
-  params.vowel_channel_params.energy_cutoff_hz = cutoff_hz;
-  params.sh_fricative_channel_params.energy_cutoff_hz = cutoff_hz;
-  params.fricative_channel_params.energy_cutoff_hz = cutoff_hz;
+  params.enveloper_params.energy_cutoff_hz = cutoff_hz;
 
   engine->tactile_processor = TactileProcessorMake(&params);
   if (engine->tactile_processor == NULL) {
@@ -513,9 +554,12 @@ void EngineTerminate(Engine* engine) {
   free(engine->input_wav_samples);
 
   int i;
-  for (i = 0; i < kNumImageAssets; ++i) {
-    if (engine->image_assets[i]) {
-      SDL_DestroyTexture(engine->image_assets[i]);
+  for (i = 0; i < kNumFormFactors; ++i) {
+    int j;
+    for (j = 0; j < kNumImageAssets; ++j) {
+      if (engine->form_factors[i].images[j]) {
+        SDL_DestroyTexture(engine->form_factors[i].images[j]);
+      }
     }
   }
 
@@ -523,17 +567,28 @@ void EngineTerminate(Engine* engine) {
   SDL_Quit();
 }
 
-/* Generates a colormap that fades from a dark blue color to white. */
+/* Generates a colormap fading from a dark gray to orange to white. `colormap`
+ * should have space for 256 * 3 elements.
+ */
 void GenerateColormap(uint8_t* colormap) {
-  const uint8_t kStartR = 0x14;
-  const uint8_t kStartG = 0x2a;
-  const uint8_t kStartB = 0x38;
+  const int kColorA[3] = {0x51, 0x43, 0x31};
+  const int kColorB[3] = {0xff, 0x6f, 0x00};
+  const float kKnot = 0.348f;
   int i;
+  int c;
   for (i = 0; i < 256; ++i, colormap += 3) {
     const float x = i / 255.0f;
-    colormap[0] = (int)(kStartR + (255 - kStartR) * x + 0.5f);
-    colormap[1] = (int)(kStartG + (255 - kStartG) * x + 0.5f);
-    colormap[2] = (int)(kStartB + (255 - kStartB) * x + 0.5f);
+    if (x <= kKnot) {
+      const float w = x / kKnot;
+      for (c = 0; c < 3; ++c) {
+        colormap[c] = (int)(kColorA[c] + (kColorB[c] - kColorA[c]) * w);
+      }
+    } else {
+      const float w = (x - kKnot) / (1.0f - kKnot);
+      for (c = 0; c < 3; ++c) {
+        colormap[c] = (int)(kColorB[c] + (255 - kColorB[c]) * w);
+      }
+    }
   }
 }
 
@@ -544,11 +599,7 @@ int main(int argc, char** argv) {
 
   uint8_t colormap[256 * 3];
   GenerateColormap(colormap);
-
   SDL_SetRenderDrawColor(engine.app.renderer, 0x0, 0x0, 0x0, 0xff);
-  SDL_Texture* background_image = engine.image_assets[kNumTactors];
-  SDL_Rect background_rect = engine.image_asset_rects[kNumTactors];
-  SDL_SetTextureColorMod(background_image, 0x37, 0x71, 0x8d);
 
   while (engine.keep_running) {  /* Engine main loop. */
     SDL_Event event;
@@ -559,13 +610,18 @@ int main(int argc, char** argv) {
            event.key.keysym.sym == SDLK_q))) {
         engine.keep_running = 0;  /* Quit program. */
         break;
+      } else if (event.type == SDL_KEYDOWN &&
+                 event.key.keysym.sym == SDLK_TAB) {
+        engine.selected_form_factor ^= 1;
       }
     }
 
+    const FormFactorAssets* assets =
+        &engine.form_factors[engine.selected_form_factor];
     SDL_RenderClear(engine.app.renderer);
     /* Render background texture. */
-    SDL_RenderCopy(engine.app.renderer, background_image,
-                   NULL, &background_rect);
+    SDL_RenderCopy(engine.app.renderer, assets->images[kNumTactors],
+                   NULL, &assets->image_rects[kNumTactors]);
 
     int c;
     for (c = 0; c < kNumTactors; ++c) {
@@ -582,9 +638,9 @@ int main(int argc, char** argv) {
       /* Render the cth texture with color according to `activation`. */
       const int index = (int)(255 * activation + 0.5f);
       const uint8_t* rgb = &colormap[3 * index];
-      SDL_SetTextureColorMod(engine.image_assets[c], rgb[0], rgb[1], rgb[2]);
-      SDL_RenderCopy(engine.app.renderer, engine.image_assets[c],
-                     NULL, &engine.image_asset_rects[c]);
+      SDL_SetTextureColorMod(assets->images[c], rgb[0], rgb[1], rgb[2]);
+      SDL_RenderCopy(engine.app.renderer, assets->images[c],
+                     NULL, &assets->image_rects[c]);
     }
 
     SDL_RenderPresent(engine.app.renderer);

@@ -140,8 +140,8 @@ static void TestRandomInt() {
   const int kNumSamples = 500;
   int hist[101];
 
-  int i;
   static const int kMaxValuesList[] = {0, 1, 2, 10, 100};
+  size_t i;
   for (i = 0; i < sizeof(kMaxValuesList) / sizeof(*kMaxValuesList); ++i) {
     const int max_value = kMaxValuesList[i];
     memset(hist, 0, (max_value + 1) * sizeof(int));
@@ -207,7 +207,7 @@ static void TestGammaFilterSmootherCoeff() {
   puts("TestGammaFilterSmootherCoeff");
   static const float kCutoffs[] = {350.0f, 500.0f, 3200.0f};
   const float kSampleRateHz = 8000.0f;
-  int i;
+  size_t i;
   for (i = 0; i < sizeof(kCutoffs) / sizeof(*kCutoffs); ++i) {
     const float cutoff_frequency_hz = kCutoffs[i];
     GammaFilter filter;
@@ -248,8 +248,8 @@ static void TestGammaFilterSmootherCoeff() {
 static void TestTukeyWindow() {
   puts("TestTukeyWindow");
   const float kDuration = 0.4f;
-  int i;
   static const float kTransitionsList[] = {0.05f, 0.1f, 0.2f};
+  size_t i;
   for (i = 0; i < sizeof(kTransitionsList) / sizeof(*kTransitionsList); ++i) {
     const float transition = kTransitionsList[i];
 

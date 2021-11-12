@@ -15,13 +15,12 @@
  *
  * Python bindings for phoneme classifier inference C implementation.
  *
- * These bindings wrap the classify_phoneme.c library in
- * audio/tactile/phone_embedding as a `classify_phoneme` Python module to
- * perform phoneme classification from consecutive CARL+PCEN frames. The
- * CarlFrontend must run with the parameters:
+ * These bindings wrap the classify_phoneme.c library in src/phonetics as a
+ * `classify_phoneme` Python module to perform phoneme classification from
+ * consecutive CARL+PCEN frames. The CarlFrontend must run with the parameters:
  *
  *   input_sample_rate_hz = 16000 Hz
- *   block_size = 128 samples (8ms)
+ *   block_size = 128 samples (8 ms)
  *   pcen_cross_channel_diffusivity = 60.0
  *
  * and otherwise default parameters. There is an example use in the unit test

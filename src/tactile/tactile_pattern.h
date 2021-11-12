@@ -52,9 +52,17 @@ typedef struct {
   int fade_counter;
   /* If nonzero, start fading out when segment_counter == fade_start_index. */
   int fade_start_index;
+  /* Amplitude in [0.0, 1.0]. */
+  float amplitude;
+  /* Seconds to play a tone for. */
+  float tone_duration;
+  /* Seconds to play a pause for. */
+  float pause_duration;
 
   /* The channel that the pattern plays on, or -1 to play on all channels. */
   int active_channel;
+  /* For calibration tones, the channel index for the first tone. */
+  int first_channel;
   /* For calibration tones, the channel index for the second tone. */
   int second_channel;
 } TactilePattern;
@@ -74,6 +82,18 @@ void TactilePatternStart(TactilePattern* p, const char* pattern);
  */
 void TactilePatternStartCalibrationTones(TactilePattern* p, int first_channel,
                                          int second_channel);
+
+/* Resets synthesizer to produce calibration tones on channels `first_channel`
+ * and `second_channel`. If `first_channel == second_channel`, a single tone is
+ * played on that channel for a duration of 5 tone increments at the specified
+ * amplitude. Otherwise, the synthesizer plays an A-B-A pattern: (1) a tone on
+ * first_channel, (2) a pause, (3) a tone on second_channel, (4) a pause, (5)
+ * a tone on first_channel.
+ */
+void TactilePatternStartCalibrationTonesThresholds(TactilePattern* p,
+                                                   int first_channel,
+                                                   int second_channel,
+                                                   float amplitude);
 
 /* Synthesizes `num_frames` of output to `num_channels` output channels in a
  * streaming manner. The `output` pointer should point to an array with space

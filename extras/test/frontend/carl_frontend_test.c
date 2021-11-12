@@ -42,7 +42,7 @@ static double GammaFilterFrequencyMagnitudeResponse(
 }
 
 /* Tests CarlFrontend filter design. */
-static void TestDesign() {
+static void TestDesign(void) {
   puts("TestDesign");
   CarlFrontendParams params = kCarlFrontendDefaultParams;
   CarlFrontend* frontend = CHECK_NOTNULL(CarlFrontendMake(&params));
@@ -115,7 +115,7 @@ static float FindMax(const float* values, int size, int* max_index) {
 }
 
 /* Tests response to sine wave inputs. */
-static void TestResponse() {
+static void TestResponse(void) {
   puts("TestResponse");
   CarlFrontendParams params = kCarlFrontendDefaultParams;
   CarlFrontend* frontend = CHECK_NOTNULL(CarlFrontendMake(&params));
@@ -183,7 +183,7 @@ static void TestResponse() {
 }
 
 /* Spot checks that invalid parameters are correctly rejected. */
-static void TestInvalidParameters() {
+static void TestInvalidParameters(void) {
   puts("TestInvalidParameters");
   { /* Invalid pole range, highest pole above input Nyquist. */
     CarlFrontendParams params = kCarlFrontendDefaultParams;

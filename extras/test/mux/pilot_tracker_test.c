@@ -23,7 +23,7 @@
 
 #define kSampleRateHz 32000.0f
 
-static double RandUniform() { return (double)rand() / RAND_MAX; }
+static double RandUniform(void) { return (double)rand() / RAND_MAX; }
 
 /* Test tracking of a steady tone plus a little noise:
  *   amplitude * exp(2i * pi * frequency_hz * t + initial_phase) + noise.
@@ -62,7 +62,7 @@ static void TestSteadyTone(float amplitude, float frequency_hz,
 }
 
 /* Test tracking of a warbling tone that varies in frequency. */
-static void TestWarblingTone() {
+static void TestWarblingTone(void) {
   puts("TestWarblingTone");
   const float kMinFrequency = 295.0f;
   const float kMaxFrequency = 305.0f;

@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -355,7 +355,7 @@ static size_t ReadBytesAsSamples(WavReader* w, ReadWavInfo* info,
   }
 
   if (w == NULL || w->io_ptr == NULL || info == NULL ||
-      info->remaining_samples < info->num_channels ||
+      info->remaining_samples < (size_t)info->num_channels ||
       dst_samples == NULL || num_samples <= 0) {
     return 0;
   }

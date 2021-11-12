@@ -77,7 +77,7 @@ const float* Lis3dh::ReadXyzAccelerationFloat() {
 
   // The conversion constant from 16-bit integer to gravity (g).
   // The constant is calculated as following: (2^16 bit / 2) / Max acceleration.
-  // The converstion constant will need to be adjusted if different max
+  // The conversion constant will need to be adjusted if different max
   // acceleration is set.
   const float kAccelerationRange =
       2.0f;  // Current max acceleration is set to 2 Gs.

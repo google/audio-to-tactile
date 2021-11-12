@@ -233,7 +233,7 @@ static void TestPhone(const char* phone, int intended_tactor) {
 
   int start;
   int i;
-  for (start = 0; start + kBlockSize < num_samples; start += kBlockSize) {
+  for (start = 0; start + kBlockSize < (int)num_samples; start += kBlockSize) {
     for (i = 0; i < kBlockSize; ++i) {
       input[i] = input_int16[start + i] / 32768.0f;
     }

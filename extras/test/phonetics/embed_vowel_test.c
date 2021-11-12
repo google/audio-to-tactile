@@ -26,7 +26,7 @@
 #define kBlockSize 64
 
 /* Tests that target lookup functions work. */
-static void TestTargetLookup() {
+static void TestTargetLookup(void) {
   puts("TestTargetLookup");
   int i;
   for (i = 0; i < kEmbedVowelNumTargets; ++i) {
@@ -71,7 +71,7 @@ static void TestPhone(const char* phone) {
 
   int start;
   int i;
-  for (start = 0; start + kBlockSize < num_samples; start += kBlockSize) {
+  for (start = 0; start + kBlockSize < (int)num_samples; start += kBlockSize) {
     float input_float[kBlockSize];
     for (i = 0; i < kBlockSize; ++i) {
       input_float[i] = input_int16[start + i] / 32768.0f;

@@ -14,6 +14,8 @@
 
 #include "ble_com.h"  // NOLINT(build/include)
 
+#include "cpp/std_shim.h"
+
 namespace audio_tactile {
 
 AudioTactileBleCom BleCom;
@@ -32,6 +34,36 @@ void OnBleUartRx(uint16_t connection_handle) {
   BleCom.ReadFromBleUart();
 }
 
+namespace {
+// By default, the SoftDevice has memory for an advertising name of up to
+// BLE_GAP_DEVNAME_DEFAULT_LEN (= 31 chars). Otherwise, either `vloc` in the
+// ble_gap_cfg_device_name_t struct must be set to BLE_GATTS_VLOC_USER, or the
+// attribute table size must be increased. It doesn't seem that Bluefruit
+// handles this or exposes an API for either of these things. If we try to set a
+// name longer than 31 chars, it uses the name "Feather nRF52840 Express".
+constexpr int kMaxAdvertisingNameLength = BLE_GAP_DEVNAME_DEFAULT_LEN;
+
+// Makes the name to use for BLE advertising. We concatenate "Audio-to-Tactile "
+// with the customizable `device_name` as the name used in BLE advertising,
+// truncating as needed. The Android app identifies our devices from the
+// "Audio-to-Tactile" prefix. The `advertising_name` output buffer must have
+// space for (kMaxAdvertisingNameLength + 1) chars.
+void MakeAdvertisingName(const char* device_name, char* advertising_name) {
+  // TODO: Investigate instead using `BLEDis` to identify devices.
+  constexpr const char* kPrefix = "Audio-to-Tactile ";
+  const int kPrefixLength = strlen(kPrefix);
+  // Calculate device_name length that keeps the result under the max length.
+  const int truncated_device_name_length = std_shim::min<int>(
+      kMaxAdvertisingNameLength - kPrefixLength, strlen(device_name));
+
+  memcpy(advertising_name, kPrefix, kPrefixLength);
+  advertising_name += kPrefixLength;
+  memcpy(advertising_name, device_name, truncated_device_name_length);
+  advertising_name += truncated_device_name_length;
+  *advertising_name = '\0';
+}
+}  // namespace
+
 void AudioTactileBleCom::Init(const char* device_name, void (*event_fun)()) {
   event_fun_ = event_fun;
 
@@ -39,12 +71,17 @@ void AudioTactileBleCom::Init(const char* device_name, void (*event_fun)()) {
   Bluefruit.configPrphBandwidth(BANDWIDTH_MAX);
   Bluefruit.begin();
   Bluefruit.setTxPower(4);
-  Bluefruit.setName(device_name);
+  char advertising_name[kMaxAdvertisingNameLength + 1];
+  MakeAdvertisingName(device_name, advertising_name);
+  Bluefruit.setName(advertising_name);
   Bluefruit.Periph.setConnectCallback(OnBleConnect);
   Bluefruit.Periph.setDisconnectCallback(OnBleDisconnect);
 
   ble_uart_.begin();
   ble_uart_.setRxCallback(OnBleUartRx, true);
+
+  // Start the OTA (Over-the-air) DFU (Device Firmware Update) functionality.
+  bledfu_.begin();
 
   // Start advertising.
   Bluefruit.Advertising.addFlags(BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE);
@@ -63,6 +100,10 @@ void AudioTactileBleCom::Init(const char* device_name, void (*event_fun)()) {
   Bluefruit.Advertising.setInterval(32, 510);  // Units of 0.625 ms.
   Bluefruit.Advertising.setFastTimeout(30);  // Units of seconds.
   Bluefruit.Advertising.start(300);  // Units of seconds.
+
+  Serial.print("BleCom: Advertising as \"");
+  Serial.print(advertising_name);
+  Serial.println("\"");
 }
 
 void AudioTactileBleCom::ReadFromBleUart() {

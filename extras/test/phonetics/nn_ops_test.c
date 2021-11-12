@@ -20,7 +20,7 @@
 
 #include "src/dsp/logging.h"
 
-static void TestDenseLayers() {
+static void TestDenseLayers(void) {
   puts("TestDenseLayers");
   float* in = (float*) CHECK_NOTNULL(malloc(3 * sizeof(float)));
   float* out = (float*) CHECK_NOTNULL(malloc(2 * sizeof(float)));
@@ -116,7 +116,7 @@ static void TestConv1DReluLayer(int in_channels, int out_channels) {
   free(in);
 }
 
-static void TestMaxPool1DLayer() {
+static void TestMaxPool1DLayer(void) {
   puts("TestMaxPool1DLayer");
   /* Input with 7 frames and 2 channels. */
   static const float in[7 * 2] = {-2.1f, 3.9f,
@@ -141,7 +141,7 @@ static void TestMaxPool1DLayer() {
   free(out);
 }
 
-static void TestSoftmax() {
+static void TestSoftmax(void) {
   puts("TestSoftmax");
   float x[4] = {-0.2f, -1200.0f, 0.0f, 0.1f};
 

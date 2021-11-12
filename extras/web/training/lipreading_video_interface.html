@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <!--
+  Copyright 2021 Google LLC
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      https://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+  -->
+  <link rel="stylesheet" href="lipreading_video_interface.css">
+  <title>Lipreading Training</title>
+</head>
+
+<body>
+  <div class="configurations-wrapper landing-section">
+    <h1 class="title">Lipreading Training</h1>
+    <h2>Configure Session</h2>
+
+    <div>
+      <table class="half-page-column">
+        <tbody>
+          <tr>
+            <td>
+              <label for="answer-mode" class="heavy-label">
+                Multiple Choice:
+              </label>
+            <td>
+              <input type="checkbox" name="answer-mode"
+                  class="answer-mode big-checkbox" checked>
+          <tr>
+            <td>
+              <label for="shuffle-flag" class="heavy-label">
+                Shuffle order of words:
+              </label>
+            <td>
+              <input type="checkbox" name="shuffle-flag"
+                  class="shuffle-flag big-checkbox" checked>
+          <tr>
+            <td>
+              <label for="without-caption" class="heavy-label">
+                See without caption first:
+              </label>
+            <td>
+              <input type="checkbox" name="without-caption"
+                  class="without-caption big-checkbox">
+          <tr>
+            <td>
+              <label for="num-repeats" class="heavy-label">
+                Number of times to repeat each word:
+              </label>
+            <td>
+              <input type="number" name="num-repeats"
+                  value="1" min="1" class="num-repeats big-number-input">
+      </table>
+
+      <div class="half-page-column">
+        <label for="words" class="heavy-label">Select Words:</label>
+        <button class="select-all-words ui-button"
+            onclick="selectAllWords('.word-selector')">
+          Select All
+        </button>
+        <select name="words" class="word-selector" multiple>
+        </select>
+      </div>
+    </div>
+
+    <div class="mode-buttons">
+      <div class="begin-session-error-message error-message"></div>
+      <button class="ui-button" onclick="runSession('train')">
+        Train
+      </button>
+      <button class="ui-button" onclick="runSession('practice')">
+        Practice
+      </button>
+      <button class="ui-button" onclick="runSession('test')">
+        Test
+      </button>
+    </div>
+
+  </div> <!-- /configuration-wrapper -->
+
+  <div class="video-wrapper" hidden>
+    <div>
+      <button class="pause-session ui-button" onclick="pauseSession()">
+        Pause
+      </button>
+      <button class="cancel-training ui-button" onclick="endSession()">
+        Cancel
+      </button>
+    </div>
+
+    <div>Progress: <span class="progress-string"></span></div>
+
+    <div class="video-players-wrapper">
+      <div class="video-player-wrapper">
+        <video id="video-player-1" class="video-player">
+          <source src="" type="video/mp4" class="video-player-source">
+          HTML5 Video Element Not Supported
+        </video>
+        <div class="caption"></div>
+      </div>
+
+      <div class="video-player-wrapper">
+        <video id="video-player-2" class="video-player">
+          <source src="" type="video/mp4" class="video-player-source">
+          HTML5 Video Element Not Supported
+        </video>
+        <div class="caption"></div>
+      </div>
+    </div>
+
+  </div> <!-- /video-wrapper -->
+
+  <div class="answer-wrapper centering" hidden>
+    <div>
+      <span class="free-response small-spacer">
+        <label for="answer">Word:</label>
+        <input type="text" class="answer-input" name="answer">
+      </span>
+      <div class="multiple-choice small-spacer" tabindex="-1">
+      </div>
+      <button class="ui-button" onclick="submitAnswer()" class="small-spacer">
+        Submit [space or enter]
+      </button>
+    </div>
+
+    <div>
+      <button class="ui-button" onclick="replay()" class="small-spacer">
+        Replay
+      </button>
+      <button class="ui-button" onclick="skip()" class="small-spacer">
+        Skip
+      </button>
+    </div>
+  </div> <!-- /answer-wrapper -->
+
+  <div class="feedback-wrapper centering" hidden>
+    <h2 class="feedback-display"></h2>
+    <button class="ui-button" onclick="replay()">Replay</button>
+    <button class="continue-button ui-button" onclick="continueToNextWord()">
+      Continue
+    </button>
+  </div> <!-- /feedback-wrapper -->
+
+  <div class="results-wrapper landing-section" hidden>
+    <h2>Results</h2>
+
+    <div>
+      <label for="name" class="heavy-label">Participant ID / Name: </label>
+      <input type="text" name="name" class="username"
+          oninput="enableDownload()">
+    </div>
+
+    <div class="all-answers">
+    </div>
+    <div class="small-spacer">
+      Total Words Correct:
+      <span class="score"></span>
+    </div>
+    <a class="download-results plain-link">
+      <button class="download-button ui-button"
+          onclick="changeWrapperView(configurationsWrapper)" disabled>
+        Save Results and Continue
+      </button>
+    </a>
+    <div class="name-warning">
+      Please enter a participant ID to download results.
+    </div>
+
+  </div> <!-- /results-wrapper -->
+
+   <!-- Contains a json formatted list of words with video filnames -->
+  <script type="text/javascript" src="configurations/words_data.js"></script>
+
+  <script>
+    /* Mode enums */
+    answerModes = {
+      MULTIPLE_CHOICE: 'multipleChoice',
+      FREE_RESPONSE: 'freeResponse'
+    }
+
+    /* Setup constants: */
+    const basePath = 'segments/';
+
+    /* Global variables: */
+    let /** Object */ configuration = {};
+    let /** number */ repeatCounter = 0;
+    let /** Boolean */ sessionPaused = false;
+    let /** Boolean */ sessionActive = false;
+    let /** number */ wordIndex = 0;
+    let /** Array<string> */ selectedWords = [];
+    let /** number */ replays = 0;
+    let /** number */ activeVideoIndex = 0;
+
+    /**
+     * An object defining a test result.
+     * @typedef {{ word: string, guess: string }} ResultRecord
+    */
+    let /** Array<ResultRecord> */ results = [];
+
+    /* Shared element handles: */
+    const answerWrapper = document.querySelector('.answer-wrapper');
+    const configurationsWrapper =
+        document.querySelector('.configurations-wrapper');
+    const feedbackWrapper = document.querySelector('.feedback-wrapper');
+    const resultsWrapper = document.querySelector('.results-wrapper');
+    const videoWrapper = document.querySelector('.video-wrapper');
+
+    const answerInput = document.querySelector('.answer-input');
+    const downloadLink = document.querySelector('.download-results');
+    const errorMessage = document.querySelector('.begin-session-error-message');
+    const feedbackDisplay = document.querySelector('.feedback-display');
+    const pauseButton = document.querySelector('.pause-session');
+    const progressSpan = document.querySelector('.progress-string');
+    const videoPlayers = document.querySelectorAll('.video-player');
+    const videoContainers = document.querySelectorAll('.video-player-wrapper');
+    const wordSelector = document.querySelector('.word-selector');
+    const continueButton = document.querySelector('.continue-button');
+    const multipleChoiceRadioGroup = document.querySelector('.multiple-choice');
+
+    /**
+     * Begins a video playback session.
+     * @param {string} mode A string indicating the session mode;
+     *    one of [practice, test, train].
+     */
+    function runSession(mode) {
+      resetSession();
+      configureSession(mode);
+      if (validSession()) {
+        sessionActive = true;
+        displayVideo();
+        preLoadVideo(0);
+        playVideo();
+      }
+    }
+
+    /** Clears all shared state from the prior session. */
+    function resetSession() {
+      wordIndex = 0;
+      repeatCounter = 0;
+      sessionPaused = false;
+      sessionActive = false;
+      pauseButton.innerText = 'Pause';
+      answerInput.value = '';
+      results = [];
+      replays = 0;
+      activeVideoIndex = 0;
+      videoPlayers.forEach(vp => {
+        vp.setAttribute('src', '');
+      });
+    }
+
+    /**
+     * Sets up a new session based on configuration parameters.
+     * @param {string} mode A string indicating the session mode;
+     *    one of [practice, test, train].
+     */
+    function configureSession(mode) {
+      // Get selected words.
+      selectedWords = Array.from(wordSelector.selectedOptions)
+          .map((o) => o.value);
+
+      let shuffleFlag = document.querySelector('.shuffle-flag').checked;
+      let numRepeats = parseInt(document.querySelector('.num-repeats').value);
+      let withoutCaptionFlag =
+          document.querySelector('.without-caption').checked;
+      let answerMode = document.querySelector('.answer-mode').checked ?
+        answerModes.MULTIPLE_CHOICE : answerModes.FREE_RESPONSE;
+
+      // Store configuration.
+      configuration = {
+        shuffle: shuffleFlag,
+        numRepeats: numRepeats,
+        // Videos must play 2x numRepeats if also shown without captions.
+        numPlays: (withoutCaptionFlag && mode === 'train') ?
+            numRepeats * 2 : numRepeats,
+        withoutCaptionFlag: withoutCaptionFlag,
+        mode: mode,
+        answerMode: answerMode,
+        words: selectedWords
+      };
+
+      // Randomize the order of videos.
+      if (shuffleFlag) {
+        randomizedOrder = selectedWords.flatMap((entry) =>
+            [{key: Math.random(), value: entry}]);
+        randomizedOrder.sort((a, b) => a.key - b.key);
+        selectedWords = randomizedOrder.flatMap((entry) => [entry.value]);
+      }
+
+      // Add repeats to the selectedWords ordering.
+      selectedWords = selectedWords.flatMap((entry) => {
+        let result = [];
+        for (let i = 0; i < configuration.numPlays; i++) {
+          result.push(entry);
+        }
+        return result;
+      });
+
+      // Prepare to show appropriate response view.
+      document.querySelector('.free-response').hidden =
+          answerMode != answerModes.FREE_RESPONSE;
+      document.querySelector('.multiple-choice').hidden =
+          answerMode != answerModes.MULTIPLE_CHOICE;
+    }
+
+    /**
+     * Checks if a session's configuration is valid;
+     * i.e. is at least one word selected.
+     * @return {Boolean}
+     */
+    function validSession() {
+      if (!selectedWords.length) {
+        errorMessage.innerText = 'No words selected';
+        return false;
+      } else {
+        errorMessage.innerText = '';
+        return true;
+      }
+    }
+
+    /**
+     * Prepares for the next word by pre-loading the indicated word in the
+     * hidden video player. If there are multiple options for a
+     * training video, chooses a random one.
+     * @param {number} index Indicates the word to load as an index into
+     *   selectedWords.
+     */
+    function preLoadVideo(index) {
+      if (index < selectedWords.length) {
+        let nextVideoPlayer = videoPlayers[(activeVideoIndex + 1) % 2]
+        let wordEntry = wordsAndVideos[selectedWords[index]];
+        let source = '';
+
+        if (configuration.mode == 'test') {
+          source = wordEntry['testVideos'][0];
+        } else {
+          let randomIndex =
+              Math.floor(Math.random() * wordEntry['trainVideos'].length);
+          source = wordEntry['trainVideos'][randomIndex];
+        }
+
+        nextVideoPlayer.setAttribute('src', basePath + source);
+        nextVideoPlayer.load();
+      }
+    }
+
+    /**
+     * If there are no words remaining, ends the session.  Otherwise,
+     * updates the repeat counter, reveals the current video,
+     * updates caption and progress UI, then begins pre-loading
+     * the next video. Plays the current video after a short delay.
+     */
+    function playVideo() {
+      if (wordIndex >= selectedWords.length) {
+        endSession();
+      } else {
+        // Reset the counters if have advanced to a new word.
+        if (repeatCounter === configuration.numPlays) {
+          repeatCounter = 0;
+          replays = 0;
+        }
+        repeatCounter += 1;
+        // Show the prepared video player.
+        updateActiveVideoPlayer();
+
+        // Update progress UI.
+        progressSpan.innerText = (wordIndex + 1) + ' / ' + selectedWords.length;
+
+        // Show caption.
+        let showCaption = configuration.mode == 'train' &&
+          !(configuration.withoutCaptionFlag && (repeatCounter % 2 == 1));
+        let caption = videoContainers[activeVideoIndex]
+            .querySelector('.caption');
+        if (showCaption) {
+          caption.innerText = wordsAndVideos[selectedWords[wordIndex]]['word'];
+        } else {
+          caption.innerText = '';
+        }
+
+        // Pre-load the next video.
+        preLoadVideo(wordIndex + 1);
+
+        // Play current video after a short delay.
+        setTimeout(function() {
+          if (sessionActive && !sessionPaused) {
+            fadeVideoIn(videoPlayers[activeVideoIndex]);
+          }
+        }, 500);
+      }
+    }
+
+    /**
+     * Fade audio from silent to full volume to reduce initial noise
+     * before speaker begins the word.
+     * @param {Element} videoPlayer Handle to the video element.
+     */
+    function fadeVideoIn(videoPlayer) {
+      let fadeTotalMs = 200;
+      let intervalMs = 10;
+      let volumeStep = intervalMs / fadeTotalMs;
+
+      videoPlayer.volume = 0;
+      videoPlayer.play();
+      let fader = setInterval(function() {
+        videoPlayer.volume = Math.min(1.0, videoPlayer.volume + volumeStep);
+        if (videoPlayer.volume == 1) {
+          clearInterval(fader);
+        }
+      }, intervalMs);
+    }
+
+    /**
+     * Toggles the active video player by updating the active index and
+     * bringing the new active player to the top of the view.
+     */
+    function updateActiveVideoPlayer() {
+      let oldVideoPlayer = activeVideoIndex;
+      activeVideoIndex = (activeVideoIndex + 1) % 2;
+      videoContainers[activeVideoIndex].style.zIndex = "1";
+      videoContainers[oldVideoPlayer].style.zIndex = "0";
+    }
+
+    /**
+     * Begins a video session by changing the view and attaching
+     * callbacks for onVideoEnd to each video player.
+     */
+    function displayVideo() {
+      changeWrapperView(videoWrapper);
+      videoPlayers.forEach(vp => {
+        vp.addEventListener('ended', onVideoEnd);
+      });
+    }
+
+    /**
+     * Wraps a string in <span> elements to apply formatting to
+     * only part of the string.
+     * @param {number} highlightStart Index indicating the start of the
+     *    formatted section.
+     * @param {number} highlightEnd Index indicating the end of the
+     *    formatted section.
+     * @param {string} word String to be formatted.
+     * @param {string} highlightClass Class name to apply to formatted section.
+     * @return {Element} The span wrapping the formatted string.
+     */
+    function formatWord(highlightStart, highlightEnd, word, highlightClass) {
+      let span = document.createElement('span');
+      let highlightSection = document.createElement('span');
+      let front = document.createElement('span');
+      let back = document.createElement('span');
+
+      highlightSection.setAttribute('class', highlightClass);
+      highlightSection.textContent =
+          word.substring(highlightStart, highlightEnd).toUpperCase();
+      front.textContent = word.substring(0, highlightStart);
+      back.textContent = word.substring(highlightEnd);
+
+      span.appendChild(front);
+      span.appendChild(highlightSection);
+      span.appendChild(back);
+
+      return span;
+    }
+
+    /**
+     * Updates the multiple choice radio buttons to show options
+     * for the current word's grouping.
+     */
+    function generateNewMultipleChoiceSelects() {
+        let multipleChoiceWrapper = multipleChoiceRadioGroup.firstChild;
+        let newMultipleChoiceWrapper = document.createElement('span');
+
+        let multipleChoiceOptions =
+            wordsAndVideos[selectedWords[wordIndex]].grouping;
+        multipleChoiceOptions.sort();
+        multipleChoiceOptions.map((option, index) => {
+          option = wordsAndVideos[option]['word'];
+          let newRadio = document.createElement('input');
+          newRadio.setAttribute('type', 'radio');
+          newRadio.setAttribute('name', 'word-choice');
+          newRadio.setAttribute('value', option);
+          newRadio.setAttribute('class', `big-checkbox hotkey-${index + 1}`);
+
+          let newLabel = document.createElement('label');
+          newLabel.setAttribute('for', option);
+          newLabel.setAttribute('class', 'big-text space-right');
+          newLabel.textContent = '[' + (index + 1) +'] ';
+          newLabel.appendChild(formatWord(0, 1, option, 'highlighted-letters'));
+
+          newMultipleChoiceWrapper.appendChild(newRadio);
+          newMultipleChoiceWrapper.appendChild(newLabel);
+        });
+
+        multipleChoiceWrapper.replaceWith(newMultipleChoiceWrapper);
+    }
+
+    /**
+     * Moves to the next screen after a video completes.
+     * In practice or test mode, this will be an answer screen.
+     * In train mode, this will play the next video.
+     */
+    function onVideoEnd() {
+      // Ask for answer when complete last repeat in practice and test modes.
+      if ((configuration.mode === 'practice' || configuration.mode === 'test')
+          && repeatCounter === configuration.numPlays) {
+        changeWrapperView(answerWrapper);
+        if (configuration.answerMode == answerModes.FREE_RESPONSE) {
+          answerInput.focus();
+        } else if (configuration.answerMode == answerModes.MULTIPLE_CHOICE) {
+          generateNewMultipleChoiceSelects();
+          multipleChoiceRadioGroup.focus();
+        }
+      } else {
+        continueToNextWord();
+      }
+    }
+
+    /**
+     * Allows the multiple choice radio buttons to be selected with number keys
+     * and submitted via enter or space bar.
+     */
+    multipleChoiceRadioGroup.addEventListener("keyup", function(event) {
+      let keyChar = String.fromCharCode(event.keyCode);
+      if (" \r".includes(keyChar)) { // Space or return key press.
+        event.preventDefault();
+        submitAnswer();
+      } else {
+        let hotkeyElement = document.querySelector(".hotkey-" + keyChar);
+        if (hotkeyElement) {
+          event.preventDefault();
+          hotkeyElement.checked = true;
+        }
+      }
+    });
+
+    /**
+     * Catches when "enter" is pressed inside of answerInput
+     * to submit the answer.
+     */
+    answerInput.addEventListener("keyup", function(event) {
+      let keyChar = String.fromCharCode(event.keyCode);
+      if (" \r".includes(keyChar)) { // Space or return key press.
+        event.preventDefault();
+        submitAnswer();
+      }
+    });
+
+    /** Plays the current video again. */
+    function replay() {
+      changeWrapperView(videoWrapper);
+      fadeVideoIn(videoPlayers[activeVideoIndex]);
+      replays += 1;
+    }
+
+    /**
+     * Responds to the "skip" button on the answer screen
+     * by recording a blank response and beginning the next word.
+     */
+    function skip() {
+      results.push({word: wordsAndVideos[selectedWords[wordIndex]]['word'],
+                    guess: '',
+                    replays: replays});
+      answerInput.value = ''; // clear the input
+      continueToNextWord();
+    }
+
+    /**
+     * Reads input from the answer field and stores it in results.
+     * If in practice mode, displays feedback on correctness.
+     * Otherwise continues to the next word.
+     */
+    function submitAnswer() {
+      let answer = '';
+      if (configuration.answerMode == answerModes.FREE_RESPONSE) {
+        answer = answerInput.value.toLowerCase();
+        answer = answer.trim();
+        answerInput.value = '';  // Clear the input.
+      } else {
+        let radioChoices =
+            document.querySelectorAll('input[name="word-choice"]');
+        radioChoices.forEach((radio) => {
+          if (radio.checked) {
+            answer = radio.value;
+          }
+        });
+      }
+      let currentWord = wordsAndVideos[selectedWords[wordIndex]]['word'];
+      results.push({word: currentWord, guess: answer, replays: replays});
+
+      if (configuration.mode === 'practice') {
+        changeWrapperView(feedbackWrapper);
+        feedbackDisplay.innerText =
+            `Guess: ${answer} -- Correct: ${currentWord}`;
+        // Style the feedback based on correctness:
+        if (currentWord === answer) {
+          feedbackDisplay.classList.add('correct');
+          feedbackDisplay.classList.remove('incorrect')
+        } else {
+          feedbackDisplay.classList.add('incorrect');
+          feedbackDisplay.classList.remove('correct')
+        }
+        continueButton.focus();
+      } else {
+        continueToNextWord();
+      }
+    }
+
+    /** Sets up view for next video and increments the current word. */
+    function continueToNextWord() {
+      changeWrapperView(videoWrapper);
+      wordIndex += 1;
+      playVideo();
+    }
+
+    /**
+     * Hides all UI sections except the one indicated.
+     * @param {Element} wrapper Handle for a UI section to be shown.
+     */
+    function changeWrapperView(wrapper) {
+      configurationsWrapper.hidden = true;
+      resultsWrapper.hidden = true;
+      answerWrapper.hidden = true;
+      feedbackWrapper.hidden = true;
+      videoWrapper.hidden = true;
+      if (wrapper) {
+        wrapper.hidden = false;
+      }
+    }
+
+    /**
+     * Ends the session by pausing any active video,
+     * returning the UI view to the configurations page,
+     * and displaying results if not in training mode.
+     */
+    function endSession() {
+      videoPlayers[activeVideoIndex].pause();
+      sessionActive = false;
+      if (configuration.mode !== 'train') {
+        changeWrapperView(resultsWrapper);
+        displayResults();
+      } else {
+        changeWrapperView(configurationsWrapper);
+      }
+    }
+
+    /** Pauses video playback and updates UI button text. */
+    function pauseSession() {
+      if (!sessionPaused) {
+        videoPlayers[activeVideoIndex].pause();
+        pauseButton.innerText = 'Restart';
+        sessionPaused = true;
+      } else {
+        videoPlayers[activeVideoIndex].play();
+        pauseButton.innerText = 'Pause';
+        sessionPaused = false;
+      }
+    }
+
+    /**
+     * Creates an html table from the arguments.
+     * @param {Array<string>} headerData Cell contents for the header row
+     * @param {Array<Array<string|number>>} tableData
+     * @param {string} tableClass A class name to be applied to the
+     *    table element
+     * @param {string} cellClass A class name to be applied to all cell elements
+     * @return {Element} The generated table
+     */
+    function generateTable(headerData, tableData, tableClass, cellClass) {
+      let table = document.createElement('table');
+      table.classList.add(tableClass);
+
+      let tableHeader = table.createTHead();
+      let tableHeaderRow = tableHeader.insertRow(0);
+      for (const entryData of headerData) {
+        let cell = tableHeaderRow.insertCell();
+        cell.innerText = entryData;
+        cell.classList.add(cellClass);
+      }
+
+      let tableBody = document.createElement('tbody');
+      for (const rowData of tableData) {
+        let row = tableBody.insertRow();
+        for (const entryData of rowData) {
+          let cell = row.insertCell();
+          cell.innerText = entryData;
+          cell.classList.add(cellClass);
+        }
+      }
+      table.appendChild(tableBody);
+
+      return table;
+    }
+
+    /**
+    * Ensures that the download button is only enabled when
+    * a valid username is provided.
+    */
+    function enableDownload() {
+      if (document.querySelector('.username').value) {
+        document.querySelector('.download-button').disabled = false;
+        document.querySelector('.name-warning').hidden = true;
+        generateDownloadData();
+      } else {
+        document.querySelector('.download-button').disabled = true;
+        document.querySelector('.name-warning').hidden = false;
+      }
+    }
+
+    /**
+     * Formats data from the prior session for downloading,
+     * including date, username, configuration, and results,
+     * then attaches this to the download button's link.
+     */
+    function generateDownloadData() {
+      // Create string for csv output.
+      let csvContents = document.querySelector('.username').value + '\n';
+      const date = new Date().toISOString();
+      csvContents += date + '\n';
+      csvContents += JSON.stringify(configuration) + '\n';
+      csvContents += ['Word', 'Guess', 'Score', 'Replays'].join() + '\n';
+      results.map((entry) => {
+        let correct = entry.word === entry.guess;
+        csvContents +=
+            [entry.word, entry.guess, correct, entry.replays].join() + '\n';
+      });
+
+      // Set up download for results.
+      const resultsBlob = new Blob([csvContents], { type: 'text/plain' });
+      downloadLink.setAttribute('download', `results_${date}.txt`);
+      downloadLink.setAttribute('href',
+          window.URL.createObjectURL(resultsBlob));
+    }
+
+    /**
+     * Shows the results UI section and populates it with the latest
+     * session results.  Creates a text file for downloading that contains
+     * the session configuration as well as session results.
+     */
+    function displayResults() {
+      resultsWrapper.removeAttribute('hidden');
+
+      // Display table of results.
+      let resultsArray = results.map((entry) => {
+        let correct = entry.word === entry.guess ? 1 : 0;
+        let firstLetterCorrect = 0;
+        if (entry.guess) {
+          firstLetterCorrect =
+              entry.word.substring(0,1) === entry.guess.substring(0,1) ? 1 : 0;
+        }
+        return [entry.word, entry.guess, correct, firstLetterCorrect];
+      });
+      let answersTable = null;
+      let score = 0;
+      if (configuration.answerMode === answerModes.MULTIPLE_CHOICE) {
+        let resultsHeader = ['Word', 'Guess', 'Correct'];
+        // remove "correct word" column in multiple choice case
+        let mulitpleChoiceResultsArray = resultsArray.map((row) =>
+            row.splice(2,1));
+        answersTable = generateTable(resultsHeader, resultsArray,
+          'results-table', 'results-table-border');
+        if (resultsArray.length) {
+          score = resultsArray.map((row) => row[2]).reduce((accumulator, val) =>
+              accumulator + val);
+        }
+      } else if (configuration.answerMode === answerModes.FREE_RESPONSE) {
+        let resultsHeader =
+            ['Word', 'Guess', 'Word Correct', 'First Letter Correct'];
+        answersTable = generateTable(resultsHeader, resultsArray,
+          'results-table', 'results-table-border');
+        score = resultsArray.map((row) => row[2]).reduce((accumulator, val) =>
+           accumulator + val);
+      }
+
+      // Replace the results table.
+      document.querySelector('.all-answers').firstChild
+          .replaceWith(answersTable);
+      // Update the overall score.
+      document.querySelector('.score').innerText =
+            `${score} out of ${resultsArray.length}`;
+
+      generateDownloadData();
+    }
+
+    /**
+     * Selects all options in a multiselect element.
+     * @param {string} selectorClass String indicating which multiselect
+     *    element to address.
+     */
+    function selectAllWords(selectorClass) {
+      let options = document.querySelector(selectorClass)
+          .querySelectorAll('option');
+      for (option of options) {
+        option.selected = true;
+      }
+    }
+
+  </script>
+
+  <script>
+    // Initial page setup populates the word selector from json.
+    for (const [word, value] of Object.entries(wordsAndVideos)) {
+      let option = document.createElement('option');
+      option.text = word;
+      option.value = word;
+      wordSelector.add(option);
+    }
+  </script>
+</body>

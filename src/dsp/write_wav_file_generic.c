@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,6 +65,34 @@ static void WriteUint32(uint32_t value, WavWriter* w) {
   WriteUnsignedChar(value >> 24, w);
 }
 
+/* Gets the fmt extension channel mask, which specifies the speakers to play the
+ * WAV on. Following SoX, we assume a likely configuration from `num_channels`.
+ * Bit meanings [see e.g. https://tech.ebu.ch/docs/tech/tech3306v1_0.pdf]:
+ *
+ *   Speaker                    Bit mask
+ *   Front Left                 0x001
+ *   Front Right                0x002
+ *   Front Center               0x004
+ *   Low Frequency (subwoofer)  0x008
+ *   Back Left                  0x010
+ *   Back Right                 0x020
+ *   Front Left of Center       0x040
+ *   Front Right of Center      0x080
+ *   Back Center                0x100
+ *   Side Left                  0x200
+ *   Side Right                 0x400
+ */
+static uint32_t GetChannelMask(int num_channels) {
+  switch (num_channels) {
+    case 1: return 0x004; /* Play 1 channel (mono) on Front Center.           */
+    case 2: return 0x003; /* 2 channels (stereo): Front Left and Front Right. */
+    case 4: return 0x033; /* 4 channels (quad): FL, FR, BL, BR                */
+    case 6: return 0x03f; /* 6 channels (5.1): FL, FR, FC, LF, BL, BR         */
+    case 8: return 0x63f; /* 8 channels (7.1): FL, FR, FC, LF, BL, BR, SL, SR */
+    default: return 0;    /* Default to an unassigned speaker mapping.        */
+  }
+}
+
 int WriteWavHeaderGenericInternal(WavWriter* w, size_t num_samples,
                                   int sample_rate_hz, int num_channels,
                                   int bits_per_sample) {
@@ -108,7 +136,7 @@ int WriteWavHeaderGenericInternal(WavWriter* w, size_t num_samples,
   if (extended) {
     WriteUint16(22, w);             /* Size of the fmt extension. */
     WriteUint16(bits_per_sample, w); /* Valid bits per sample. */
-    WriteUint32(bits_per_sample > 16 ? 4 : 0, w); /* Channel mask. */
+    WriteUint32(GetChannelMask(num_channels), w); /* Channel mask. */
     WriteUint16(kWavPcmCode, w);    /* Set linear PCM sample format. */
     WriteWithErrorCheck(kWavPcmGuid, 14, w);
 
@@ -141,7 +169,7 @@ int WriteWavHeaderGeneric24Bit(WavWriter* w, size_t num_samples,
 
 int WriteWavSamplesGeneric(WavWriter* w, const int16_t* samples,
                            size_t num_samples) {
-  int i;
+  size_t i;
   if (w == NULL || w->io_ptr == NULL || samples == NULL) {
     return 0;
   }
@@ -158,7 +186,7 @@ int WriteWavSamplesGeneric(WavWriter* w, const int16_t* samples,
 
 int WriteWavSamplesGeneric24Bit(WavWriter* w, const int32_t* samples,
                                 size_t num_samples) {
-  int i;
+  size_t i;
   if (w == NULL || w->io_ptr == NULL || samples == NULL) {
     return 0;
   }

@@ -23,13 +23,13 @@
 #define kGoldenRatio 1.618033988749894903  /* = (1 + sqrt(5)) / 2. */
 
 /* Check RoundUpToMultiple() function. */
-static void TestRoundUpToMultiple() {
+static void TestRoundUpToMultiple(void) {
   puts("TestRoundUpToMultiple");
   CHECK(RoundUpToMultiple(33, 5) == 35);
   CHECK(RoundUpToMultiple(-33, 5) == -30);
 
   static const int kFactors[] = {3, 4, 7, 10};
-  int i;
+  size_t i;
   for (i = 0; i < sizeof(kFactors) / sizeof(*kFactors); ++i) {
     const int factor = kFactors[i];
     int multiple;
@@ -44,7 +44,7 @@ static void TestRoundUpToMultiple() {
 }
 
 /* Check GreatestCommonDivisor() function. */
-static void TestGreatestCommonDivisor() {
+static void TestGreatestCommonDivisor(void) {
   puts("TestGreatestCommonDivisor");
   CHECK(25 == GreatestCommonDivisor(200, 75));
   CHECK(25 == GreatestCommonDivisor(75, 200));
@@ -57,7 +57,7 @@ static void TestGreatestCommonDivisor() {
 }
 
 /* RationalApproximation() represents ratios of small integers exactly. */
-static void TestRationalApproximationOfSimpleRatios() {
+static void TestRationalApproximationOfSimpleRatios(void) {
   puts("TestRationalApproximationOfSimpleRatios");
   int a;
   for (a = 1; a <= 12; ++a) {
@@ -83,19 +83,19 @@ static void TestRationalApproximationOfSimpleRatios() {
 }
 
 /* Similar to the previous test, but with perturbation in the ratios. */
-static void TestRationalApproximationOfPerturbedRatios() {
+static void TestRationalApproximationOfPerturbedRatios(void) {
   puts("TestRationalApproximationOfPerturbedRatios");
 
   static const int kTestRatios[][2] = {{1, 1}, {1, 3}, {1, 12}, {2, 3}, {7, 5},
                                        {11, 12}, {12, 1}, {12, 11}};
-  int i;
+  size_t i;
   for (i = 0; i < sizeof(kTestRatios) / sizeof(*kTestRatios); ++i) {
     const int a = kTestRatios[i][0];
     const int b = kTestRatios[i][1];
     const double ratio = ((double) a) / b;
 
     static const double kPerturbations[] = {-1.1e-9, 1.1e-9, -1e-4, 1e-4};
-    int j;
+    size_t j;
     for (j = 0; j < sizeof(kPerturbations) / sizeof(*kPerturbations); ++j) {
       int numerator;
       int denominator;
@@ -115,7 +115,7 @@ static void TestRationalApproximationOfPerturbedRatios() {
  * giving many chances to check the special-case behavior with
  * n = continued_fraction_term / 2 semiconvergents.
  */
-static void TestRationalApproximationOfSqrt2() {
+static void TestRationalApproximationOfSqrt2(void) {
   puts("TestRationalApproximationOfSqrt2");
   static const int kBestRationalApproximations[][2] = {
         {1, 1},   /* Convergent [1;].                      */
@@ -149,7 +149,7 @@ static void TestRationalApproximationOfSqrt2() {
   }
 }
 
-static void TestRationalApproximationOfPi() {
+static void TestRationalApproximationOfPi(void) {
   puts("TestRationalApproximationOfPi");
   static const int kBestRationalApproximations[][2] = {
         {3, 1},     /* Convergent [3;].           */
@@ -185,7 +185,7 @@ static void TestRationalApproximationOfPi() {
  * Furthermore, it has no semiconvergents since all of its continued fraction
  * terms are one. The convergents are ratios of consecutive Fibonacci numbers.
  */
-static void TestRationalApproximationOfGoldenRatio() {
+static void TestRationalApproximationOfGoldenRatio(void) {
   puts("TestRationalApproximationOfGoldenRatio");
   int fibonacci_prev = 1;
   int fibonacci = 2;
@@ -256,7 +256,7 @@ static void TestRationalApproximationIsOptimal(int max_denominator) {
   }
 }
 
-static void TestRationalApproximationMaxTerms() {
+static void TestRationalApproximationMaxTerms(void) {
   puts("TestRationalApproximationMaxTerms");
   int numerator;
   int denominator;
@@ -293,7 +293,7 @@ typedef struct {
  *   print(fractions.Fraction(math.pi).limit_denominator(1000000))
  *   # Prints: 3126535/995207
  */
-static void TestLargeArguments() {
+static void TestLargeArguments(void) {
   puts("TestLargeArguments");
 
   static const TestCase kTestCases[] = {
@@ -326,7 +326,7 @@ static void TestLargeArguments() {
     {1e30,                  INT_MAX, 1},
     {-1e30,                 INT_MIN, 1},
   };
-  int i;
+  size_t i;
   for (i = 0; i < sizeof(kTestCases) / sizeof(*kTestCases); ++i) {
     const TestCase* test_case = &kTestCases[i];
     int numerator;

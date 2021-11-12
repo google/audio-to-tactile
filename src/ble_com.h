@@ -77,6 +77,7 @@ class AudioTactileBleCom {
   Message tx_message_;
   void (*event_fun_)();
   BleEvent event_;
+  BLEDfu bledfu_;
 };
 
 extern AudioTactileBleCom BleCom;

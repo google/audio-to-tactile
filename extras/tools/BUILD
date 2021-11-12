@@ -63,27 +63,6 @@ c_library(
 )
 
 c_binary(
-    name = "run_energy_envelope",
-    srcs = ["run_energy_envelope.c"],
-    deps = [
-        ":portaudio_device",
-        ":util",
-        "//:dsp",
-        "//:tactile",
-    ],
-)
-
-c_binary(
-    name = "run_energy_envelope_on_wav",
-    srcs = ["run_energy_envelope_on_wav.c"],
-    deps = [
-        ":util",
-        "//:dsp",
-        "//:tactile",
-    ],
-)
-
-c_binary(
     name = "run_demuxer_on_wav",
     srcs = ["run_demuxer_on_wav.c"],
     deps = [
@@ -136,7 +115,10 @@ c_binary(
 
 c_library(
     name = "run_tactile_processor_assets",
-    srcs = ["run_tactile_processor_assets.c"],
+    srcs = [
+        "run_tactile_processor_bracelet_assets.c",
+        "run_tactile_processor_sleeve_assets.c",
+    ],
 )
 
 c_binary(

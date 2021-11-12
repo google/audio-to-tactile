@@ -251,7 +251,7 @@ class Dataset:
 
   @property
   def example_counts(self) -> Dict[str, int]:
-    return _map_dict_values(len, self.examples)
+    return _map_dict_values(len, self.examples)  # pytype: disable=wrong-arg-types
 
   def get_xy_arrays(self,
                     phones: Iterable[str],

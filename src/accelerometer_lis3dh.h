@@ -32,7 +32,7 @@
 // direction. In the anatomical terms, it is "superficial" direction.
 //
 // A picture of the axis is shown in
-// audio_to_tatile/extras/doc/axis_accelerometer_left_hand.jpg
+// audio_to_tactile/extras/doc/axis_accelerometer_left_hand.jpg
 //
 // A simple graphic is shown below (Looking at the inner side of left hand,
 // "left lateral direction ")
@@ -58,11 +58,11 @@ class Lis3dh {
   // Enable accelerometer, wake up from sleep.
   void Enable();
 
-  // Disable acceleromter, put to sleep.
+  // Disable accelerometer, put to sleep.
   void Disable();
 
   // Read the XYZ acceleration data.
-  // The data is returned as a array of three int16_t values corresponsing to X,
+  // The data is returned as a array of three int16_t values corresponding to X,
   // Y and Z axis respectively.
   const int16_t* ReadXyzAccelerationRaw();
 

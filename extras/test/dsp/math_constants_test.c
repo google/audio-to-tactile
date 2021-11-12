@@ -25,23 +25,15 @@
  * it were implemented nonstatically as `#define M_SQRT2 sqrt(2)`.
  */
 enum {
-  CHECK_M_E_IS_STATICALLY_DEFINED = (int)M_E
-};
-enum {
-  CHECK_M_LN2_IS_STATICALLY_DEFINED = (int)M_LN2
-};
-enum {
-  CHECK_M_LN10_IS_STATICALLY_DEFINED = (int)M_LN10
-};
-enum {
-  CHECK_M_PI_IS_STATICALLY_DEFINED = (int)M_PI
-};
-enum {
-  CHECK_M_SQRT2_IS_STATICALLY_DEFINED = (int)M_SQRT2
+  CHECK_M_E_IS_STATICALLY_DEFINED = (int)M_E,
+  CHECK_M_LN2_IS_STATICALLY_DEFINED = (int)M_LN2,
+  CHECK_M_LN10_IS_STATICALLY_DEFINED = (int)M_LN10,
+  CHECK_M_PI_IS_STATICALLY_DEFINED = (int)M_PI,
+  CHECK_M_SQRT2_IS_STATICALLY_DEFINED = (int)M_SQRT2,
 };
 
 /* Test that constants have the correct values. */
-static void TestConstants() {
+static void TestConstants(void) {
   puts("TestConstants");
   CHECK(fabs(M_E - exp(1.0)) < 1e-16);
   CHECK(fabs(M_LN2 - log(2.0)) < 1e-16);

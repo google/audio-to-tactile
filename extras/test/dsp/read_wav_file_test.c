@@ -131,7 +131,7 @@ static void WriteBytesAsFile(const char* file_name,
   fclose(f);
 }
 
-static void TestReadMonoWav() {
+static void TestReadMonoWav(void) {
   puts("TestReadMonoWav");
   static const int16_t kExpectedSamples[4] = {7, -2, INT16_MAX, INT16_MIN};
   const char* wav_file_name = NULL;
@@ -155,7 +155,7 @@ static void TestReadMonoWav() {
   remove(wav_file_name);
 }
 
-static void TestReadMonoWav16BitGeneric() {
+static void TestReadMonoWav16BitGeneric(void) {
   puts("TestReadMonoWav16BitGeneric");
   static const int32_t kExpectedSamples[4] = {7 << 16,
                                               -(2 << 16),
@@ -188,7 +188,7 @@ static void TestReadMonoWav16BitGeneric() {
   remove(wav_file_name);
 }
 
-static void TestReadMonoWav24BitGeneric() {
+static void TestReadMonoWav24BitGeneric(void) {
   puts("TestReadMonoWav24BitGeneric");
   static const int32_t kExpectedSamples[4] = {
       7 << 16,
@@ -215,7 +215,7 @@ static void TestReadMonoWav24BitGeneric() {
   remove(wav_file_name);
 }
 
-static void TestReadMonoWavFloatGeneric() {
+static void TestReadMonoWavFloatGeneric(void) {
   puts("TestReadMonoWavFloatGeneric");
   /* The LSBs are going to be empty since we're reading 16 bits into a 32-bit
    * container (third element). */
@@ -243,7 +243,7 @@ static void TestReadMonoWavFloatGeneric() {
   remove(wav_file_name);
 }
 
-static void TestReadMonoWavStreaming() {
+static void TestReadMonoWavStreaming(void) {
   puts("TestReadMonoWavStreaming");
   const char* wav_file_name = NULL;
   FILE* f;
@@ -270,7 +270,7 @@ static void TestReadMonoWavStreaming() {
   remove(wav_file_name);
 }
 
-static void TestRead3ChannelWav() {
+static void TestRead3ChannelWav(void) {
   puts("TestRead3ChannelWav");
   static const int16_t kExpectedSamples[6] = {0, 1, 2, 3, 4, 5};
   const char* wav_file_name = NULL;
@@ -293,7 +293,7 @@ static void TestRead3ChannelWav() {
   remove(wav_file_name);
 }
 
-static void TestReadMulawWav() {
+static void TestReadMulawWav(void) {
   puts("TestReadMulawWav");
   static const int16_t kExpectedSamples[8] = {
     29052, 20860, 18812, 31100, -7164, 716, -25980, -24956
@@ -318,7 +318,7 @@ static void TestReadMulawWav() {
   remove(wav_file_name);
 }
 
-static void TestReadMulawWavGeneric() {
+static void TestReadMulawWavGeneric(void) {
   puts("TestReadMulawWavGeneric");
   static const int16_t kExpected16BitSamples[8] = {
     29052, 20860, 18812, 31100, -7164, 716, -25980, -24956
@@ -348,7 +348,7 @@ static void TestReadMulawWavGeneric() {
   remove(wav_file_name);
 }
 
-static void TestReadBadWavTruncatedFile() {
+static void TestReadBadWavTruncatedFile(void) {
   puts("TestReadBadWavTruncatedFile");
   const char* wav_file_name = NULL;
   int16_t* samples = NULL;
@@ -370,7 +370,7 @@ static void TestReadBadWavTruncatedFile() {
   remove(wav_file_name);
 }
 
-static void TestReadBadFactChunk() {
+static void TestReadBadFactChunk(void) {
   puts("TestReadBadFactChunk");
   const char* wav_file_name = NULL;
   int16_t* samples = NULL;
@@ -392,7 +392,7 @@ static void TestReadBadFactChunk() {
   remove(wav_file_name);
 }
 
-static void TestWriteReadRoundTrips() {
+static void TestWriteReadRoundTrips(void) {
   puts("TestWriteReadRoundTrips");
   const char* wav_file_name = NULL;
   int num_channels;
@@ -408,7 +408,7 @@ static void TestWriteReadRoundTrips() {
     size_t read_num_samples;
     int read_num_channels;
     int read_sample_rate_hz;
-    int i;
+    size_t i;
 
     /* Write a WAV file with random samples. */
     num_samples -= num_samples % num_channels;

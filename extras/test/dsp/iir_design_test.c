@@ -24,9 +24,7 @@
 #include "src/dsp/logging.h"
 #include "src/dsp/math_constants.h"
 
-static double RandUnif() {
-  return (double) rand() / RAND_MAX;
-}
+static double RandUnif(void) { return (double) rand() / RAND_MAX; }
 
 /* Shuffle an array of complex values using the Fisher-Yates algorithm. */
 static void ShuffleComplexArray(ComplexDouble* array, int size) {
@@ -208,7 +206,7 @@ fail:
   return 0;
 }
 
-static void TestZpkEval() {
+static void TestZpkEval(void) {
   puts("TestZpkEval");
   Zpk zpk;
 
@@ -235,7 +233,7 @@ static void TestZpkEval() {
 }
 
 /* Test ZpkSort(), utility that sorts and pairs complex roots. */
-static void TestZpkSort() {
+static void TestZpkSort(void) {
   puts("TestZpkSort");
   Zpk zpk;
   zpk.num_zeros = 8;
@@ -319,7 +317,7 @@ static void TestZpkSort() {
   }
 }
 
-static void TestZpkBilinearTransform() {
+static void TestZpkBilinearTransform(void) {
   puts("TestZpkBilinearTransform");
   int trial;
   for (trial = 0; trial < 10; ++trial) {
@@ -347,7 +345,7 @@ static void TestZpkBilinearTransform() {
   }
 }
 
-static void TestZpkAnalogPrototypeToLowpass() {
+static void TestZpkAnalogPrototypeToLowpass(void) {
   puts("TestZpkAnalogPrototypeToLowpass");
   int trial;
   for (trial = 0; trial < 10; ++trial) {
@@ -372,7 +370,7 @@ static void TestZpkAnalogPrototypeToLowpass() {
   }
 }
 
-static void TestZpkAnalogPrototypeToHighpass() {
+static void TestZpkAnalogPrototypeToHighpass(void) {
   puts("TestZpkAnalogPrototypeToHighpass");
   int trial;
   for (trial = 0; trial < 10; ++trial) {
@@ -398,7 +396,7 @@ static void TestZpkAnalogPrototypeToHighpass() {
   }
 }
 
-static void TestZpkAnalogPrototypeToBandpass() {
+static void TestZpkAnalogPrototypeToBandpass(void) {
   puts("TestZpkAnalogPrototypeToBandpass");
   int trial;
   for (trial = 0; trial < 10; ++trial) {
@@ -429,7 +427,7 @@ static void TestZpkAnalogPrototypeToBandpass() {
   }
 }
 
-static void TestZpkAnalogPrototypeToBandstop() {
+static void TestZpkAnalogPrototypeToBandstop(void) {
   puts("TestZpkAnalogPrototypeToBandstop");
   int trial;
   for (trial = 0; trial < 10; ++trial) {
@@ -460,7 +458,7 @@ static void TestZpkAnalogPrototypeToBandstop() {
   }
 }
 
-static void TestZpkToBiquads() {
+static void TestZpkToBiquads(void) {
   puts("TestZpkToBiquads");
   int trial;
   for (trial = 0; trial < 10; ++trial) {
@@ -490,7 +488,7 @@ static void TestZpkToBiquads() {
 }
 
 /* Compare with lowpass filters designed by scipy.signal.butter. */
-static void TestButterworthLowpassCompareWithScipy() {
+static void TestButterworthLowpassCompareWithScipy(void) {
   puts("TestButterworthLowpassCompareWithScipy");
   BiquadFilterCoeffs coeffs[4];
 
@@ -541,7 +539,7 @@ static void TestButterworthLowpassCompareWithScipy() {
 }
 
 /* Compare with highpass filters designed by scipy.signal.butter. */
-static void TestButterworthHighpassCompareWithScipy() {
+static void TestButterworthHighpassCompareWithScipy(void) {
   puts("TestButterworthHighpassCompareWithScipy");
   BiquadFilterCoeffs coeffs[4];
 
@@ -570,7 +568,7 @@ static void TestButterworthHighpassCompareWithScipy() {
 }
 
 /* Compare with bandpass filters designed by scipy.signal.butter. */
-static void TestButterworthBandpassCompareWithScipy() {
+static void TestButterworthBandpassCompareWithScipy(void) {
   puts("TestButterworthBandpassCompareWithScipy");
   BiquadFilterCoeffs coeffs[8];
 
@@ -610,7 +608,7 @@ static void TestButterworthBandpassCompareWithScipy() {
 }
 
 /* Compare with bandstop filters designed by scipy.signal.butter. */
-static void TestButterworthBandstopCompareWithScipy() {
+static void TestButterworthBandstopCompareWithScipy(void) {
   puts("TestButterworthBandstopCompareWithScipy");
   BiquadFilterCoeffs coeffs[8];
 
@@ -631,7 +629,7 @@ static void TestButterworthBandstopCompareWithScipy() {
 }
 
 /* Compare with lowpass filters designed by scipy.signal.cheby1. */
-static void TestChebyshev1LowpassCompareWithScipy() {
+static void TestChebyshev1LowpassCompareWithScipy(void) {
   puts("TestChebyshev1LowpassCompareWithScipy");
   BiquadFilterCoeffs coeffs[4];
 
@@ -660,7 +658,7 @@ static void TestChebyshev1LowpassCompareWithScipy() {
 }
 
 /* Compare with lowpass filters designed by scipy.signal.cheby2. */
-static void TestChebyshev2LowpassCompareWithScipy() {
+static void TestChebyshev2LowpassCompareWithScipy(void) {
   puts("TestChebyshev2LowpassCompareWithScipy");
   BiquadFilterCoeffs coeffs[4];
 
@@ -694,7 +692,7 @@ static void TestChebyshev2LowpassCompareWithScipy() {
  * hard-coded stopping tolerance of 1e-4. Mathematica's implementation on the
  * other hand can execute with arbitrarily high precision.
  */
-static void TestEllipticLowpassCompareWithMathematica() {
+static void TestEllipticLowpassCompareWithMathematica(void) {
   puts("TestEllipticLowpassCompareWithMathematica");
   BiquadFilterCoeffs coeffs[4];
 

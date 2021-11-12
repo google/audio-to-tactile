@@ -53,6 +53,16 @@ void ChannelMapInit(ChannelMap* channel_map, int num_channels);
 void ChannelMapApply(const ChannelMap* channel_map, const float* input,
                      int num_frames, float* output);
 
+/* Maps a control value in the range 0-63 to a linear gain. Control value 0 maps
+ * to gain 0.0. Control values 1-63 map linearly in dB space to -18 to 0 dB, and
+ * is converted to linear gain. This is used to serialize channel maps.
+ */
+float ChannelGainFromControlValue(int control_value);
+
+/* The inverse of ChannelGainFromControlValue(). */
+int ChannelGainToControlValue(float gain);
+
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

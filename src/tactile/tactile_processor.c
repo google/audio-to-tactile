@@ -26,10 +26,7 @@ const int kTactileProcessorNumTactors = 10;
 
 void TactileProcessorSetDefaultParams(TactileProcessorParams* params) {
   if (params) {
-    params->baseband_channel_params = kEnergyEnvelopeBasebandParams;
-    params->vowel_channel_params = kEnergyEnvelopeVowelParams;
-    params->sh_fricative_channel_params = kEnergyEnvelopeShFricativeParams;
-    params->fricative_channel_params = kEnergyEnvelopeFricativeParams;
+    params->enveloper_params = kDefaultEnveloperParams;
     params->decimation_factor = 1;
     params->frontend_params = kCarlFrontendDefaultParams;
   }
@@ -60,25 +57,16 @@ TactileProcessor* TactileProcessorMake(TactileProcessorParams* params) {
   const int sample_rate_hz = params->frontend_params.input_sample_rate_hz;
   processor->decimation_factor = params->decimation_factor;
 
-  /* Create EnergyEnvelopes. */
-  if (!EnergyEnvelopeInit(&processor->channel_states[0],
-                          &params->baseband_channel_params,
-                          sample_rate_hz, params->decimation_factor) ||
-      !EnergyEnvelopeInit(&processor->channel_states[1],
-                          &params->vowel_channel_params,
-                          sample_rate_hz, params->decimation_factor) ||
-      !EnergyEnvelopeInit(&processor->channel_states[2],
-                          &params->sh_fricative_channel_params,
-                          sample_rate_hz, params->decimation_factor) ||
-      !EnergyEnvelopeInit(&processor->channel_states[3],
-                          &params->fricative_channel_params,
-                          sample_rate_hz, params->decimation_factor)) {
-    fprintf(stderr, "Error: EnergyEnvelopeInit failed.\n");
+  /* Create Enveloper. */
+  if (!EnveloperInit(&processor->enveloper, &params->enveloper_params,
+                     sample_rate_hz, params->decimation_factor)) {
+    fprintf(stderr, "Error: EnveloperInit failed.\n");
     goto fail;
   }
 
   /* Create CarlFrontend. */
   const int block_size = params->frontend_params.block_size;
+  const int decimated_block_size = block_size / params->decimation_factor;
   if (block_size % params->decimation_factor != 0) {
     fprintf(stderr, "Error: block_size must be an "
             "integer multiple of decimation_factor.\n");
@@ -89,7 +77,9 @@ TactileProcessor* TactileProcessorMake(TactileProcessorParams* params) {
     fprintf(stderr, "Error: CarlFrontendMake failed.\n");
     goto fail;
   }
-  processor->workspace = (float*)malloc(sizeof(float) * block_size);
+  int workspace_size = kEnveloperNumChannels * decimated_block_size;
+  if (workspace_size < block_size) { workspace_size = block_size; }
+  processor->workspace = (float*)malloc(workspace_size * sizeof(float));
   processor->frame = (float*)malloc(
       sizeof(float) * CarlFrontendNumChannels(processor->frontend));
   if (processor->workspace == NULL || processor->frame == NULL) {
@@ -114,11 +104,9 @@ void TactileProcessorFree(TactileProcessor* processor) {
 }
 
 void TactileProcessorReset(TactileProcessor* processor) {
-  int i;
-  for (i = 0; i < 4; ++i) {
-    EnergyEnvelopeReset(&processor->channel_states[i]);
-  }
+  EnveloperReset(&processor->enveloper);
   CarlFrontendReset(processor->frontend);
+  int i;
   for (i = 0; i < 7; ++i) {
     processor->vowel_hex_weights[i] = 0.0f;
   }
@@ -128,6 +116,7 @@ void TactileProcessorProcessSamples(TactileProcessor* processor,
     const float* input, float* output) {
   const int block_size = CarlFrontendBlockSize(processor->frontend);
   const int decimation_factor = processor->decimation_factor;
+  const int decimated_block_size = block_size / decimation_factor;
   /* Run the CARL frontend. */
   float* workspace = processor->workspace;
   memcpy(workspace, input, sizeof(float) * block_size);
@@ -136,9 +125,19 @@ void TactileProcessorProcessSamples(TactileProcessor* processor,
   float vowel_coord[2];
   EmbedVowel(processor->frame, vowel_coord);
 
-  /* Run vowel channel to get the fine-time signal. */
-  EnergyEnvelopeProcessSamples(&processor->channel_states[1], input, block_size,
-                               workspace, 1);
+  /* Compute energy envelopes, writing into `workspace`. */
+  EnveloperProcessSamples(&processor->enveloper, input, block_size, workspace);
+
+  const float* src = workspace;
+  float* dest = output;
+  int i;
+  for (i = 0; i < decimated_block_size; ++i) {
+    dest[0] = src[0]; /* Map baseband envelope to output channel 0. */
+    dest[8] = src[2]; /* Map sh fricative envelope to output channel 8. */
+    dest[9] = src[3]; /* Map fricative envelope to output channel 9. */
+    src += kEnveloperNumChannels;
+    dest += kTactileProcessorNumTactors;
+  }
 
   float* vowel_hex_weights = processor->vowel_hex_weights;
   float next_vowel_hex_weights[7];
@@ -157,28 +156,20 @@ void TactileProcessorProcessSamples(TactileProcessor* processor,
   }
 
   /* Map to the vowel hex cluster. */
-  const int decimated_block_size = block_size / decimation_factor;
   const float blend_step = 1.0f / decimated_block_size;
   float blend = 0.0f;
-  float* dest = output + 1;
-  int i;
+  src = workspace + 1; /* Get the vowel channel energy envelope. */
+  dest = output + 1;
   for (i = 0; i < decimated_block_size; ++i) {
     blend += blend_step;
-    const float sample = workspace[i];  /* Get the next fine-time sample. */
+    const float sample = *src; /* Get the next fine-time sample. */
     int c;
     for (c = 0; c < 7; ++c) {  /* Fill the vowel channels. */
       dest[c] = (vowel_hex_weights[c] + blend * weights_diff[c]) * sample;
     }
+    src += kEnveloperNumChannels;
     dest += kTactileProcessorNumTactors;
   }
-
-  /* Run baseband and fricative channels. */
-  EnergyEnvelopeProcessSamples(&processor->channel_states[0], input, block_size,
-                               output, kTactileProcessorNumTactors);
-  EnergyEnvelopeProcessSamples(&processor->channel_states[2], input, block_size,
-                               output + 8, kTactileProcessorNumTactors);
-  EnergyEnvelopeProcessSamples(&processor->channel_states[3], input, block_size,
-                               output + 9, kTactileProcessorNumTactors);
 
   memcpy(vowel_hex_weights, next_vowel_hex_weights,
          sizeof(next_vowel_hex_weights));
@@ -191,6 +182,8 @@ void TactileProcessorApplyTuning(TactileProcessor* processor,
   /* Convert dB to linear amplitude ratio. */
   const float output_gain = FastExp2((float)(M_LN10 / (20.0 * M_LN2)) *
                                      output_gain_db);
+  const float cross_channel_tau_s = TuningMapControlValue(
+      kKnobCrossChannelTau, knobs->values[kKnobCrossChannelTau]);
   const float agc_strength =
       TuningMapControlValue(kKnobAgcStrength, knobs->values[kKnobAgcStrength]);
   const float noise_tau =
@@ -200,21 +193,24 @@ void TactileProcessorApplyTuning(TactileProcessor* processor,
   const float compressor_exponent =
       TuningMapControlValue(kKnobCompressor, knobs->values[kKnobCompressor]);
 
-  int i;
-  for (i = 0; i < 4; ++i) {  /* Update each EnergyEvelope instance. */
+  Enveloper* enveloper = &processor->enveloper;
+  enveloper->cross_channel_diffusion_coeff =
+      EnveloperCrossChannelDiffusionCoeff(enveloper, cross_channel_tau_s);
+  enveloper->agc_exponent = -agc_strength;
+  enveloper->noise_smoother_coeff =
+      EnveloperSmootherCoeff(enveloper, noise_tau);
+  enveloper->gain_smoother_coeffs[1] =
+      EnveloperSmootherCoeff(enveloper, gain_tau_release);
+  enveloper->compressor_exponent = compressor_exponent;
+
+  int c;
+  for (c = 0; c < kEnveloperNumChannels; ++c) {
+    EnveloperChannel* enveloper_c = &enveloper->channels[c];
     const float denoise_thresh_factor = TuningMapControlValue(
-        kKnobDenoising0 + i, knobs->values[kKnobDenoising0 + i]);
-
-    processor->channel_states[i].output_gain = output_gain;
-    processor->channel_states[i].denoise_thresh_factor = denoise_thresh_factor;
-    processor->channel_states[i].agc_exponent = -agc_strength;
-    processor->channel_states[i].noise_smoother_coeff =
-        EnergyEnvelopeSmootherCoeff(&processor->channel_states[i], noise_tau);
-    processor->channel_states[i].gain_smoother_coeffs[1] =
-        EnergyEnvelopeSmootherCoeff(&processor->channel_states[i],
-                                    gain_tau_release);
-    processor->channel_states[i].compressor_exponent = compressor_exponent;
-
-    EnergyEnvelopeUpdatePrecomputedParams(&processor->channel_states[i]);
+        kKnobDenoisingBaseband + c, knobs->values[kKnobDenoisingBaseband + c]);
+    enveloper_c->output_gain = output_gain;
+    enveloper_c->denoise_thresh_factor = denoise_thresh_factor;
   }
+
+  EnveloperUpdatePrecomputedParams(enveloper);
 }
