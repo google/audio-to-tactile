@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright 2021 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:importantForAutofill="no"
+    tools:context=".ChannelMapFragment">
+
+    <Button
+        android:id="@+id/channel_map_reset_all"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/activity_horizontal_margin"
+        android:backgroundTint="?colorSecondary"
+        android:text="@string/reset_all_button_label"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/channel_map_tactor_header"
+        android:layout_width="@dimen/channel_map_tactor_header_width"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/widget_small_horizontal_spacing"
+        android:text="@string/channel_map_tactor_label"
+        android:textAlignment="textStart"
+        android:textSize="@dimen/large_text_size"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/channel_map_source_header"
+        app:layout_constraintBottom_toBottomOf="@+id/channel_map_source_header" />
+
+    <ImageView
+        android:id="@+id/channel_map_source_header"
+        android:layout_width="@dimen/icon_size"
+        android:layout_height="@dimen/icon_size"
+        android:layout_marginStart="@dimen/channel_map_source_header_margin_start"
+        android:adjustViewBounds="false"
+        android:scaleType="center"
+        app:layout_constraintStart_toEndOf="@+id/channel_map_tactor_header"
+        app:layout_constraintTop_toBottomOf="@+id/channel_map_reset_all"
+        app:srcCompat="@drawable/ic_channel_map_source"
+        app:tint="?colorPrimaryVariant" />
+
+    <ImageView
+        android:id="@+id/channel_map_gain_header"
+        android:layout_width="@dimen/icon_size"
+        android:layout_height="@dimen/icon_size"
+        android:layout_marginStart="@dimen/channel_map_gain_header_margin_start"
+        android:adjustViewBounds="false"
+        android:scaleType="center"
+        app:layout_constraintStart_toEndOf="@+id/channel_map_source_header"
+        app:layout_constraintTop_toTopOf="@+id/channel_map_source_header"
+        app:srcCompat="@drawable/ic_volume"
+        app:tint="?colorPrimaryVariant" />
+
+    <View
+        android:id="@+id/channel_map_divider"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:background="?android:attr/listDivider"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/channel_map_tactor_header" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/channel_map_recycler_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:clipToPadding="false"
+        android:paddingTop="@dimen/list_top_padding"
+        android:scrollbars="vertical"
+        app:layoutManager="LinearLayoutManager"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/channel_map_divider" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

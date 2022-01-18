@@ -21,13 +21,9 @@
 #include "nrf_pwm.h"     // NOLINT(build/include)
 #include "pwm_common.h"  // NOLINT(build/include)
 
-#if SLEEVE_BOARD || SLIM_BOARD
-
 namespace audio_tactile {
 
 Pwm SleeveTactors;
-
-Pwm::Pwm() {}
 
 void Pwm::Initialize() {
   // Configure amplifiers shutdowns pin.
@@ -42,9 +38,9 @@ void Pwm::Initialize() {
   EnableAmplifiers();
 
   // Configure the pins.
-  uint32_t pins_pwm0[4] = {kPwmL1Pin, kPwmR1Pin, kPwmL2Pin, kPwmR2Pin};
-  uint32_t pins_pwm1[4] = {kPwmL3Pin, kPwmR3Pin, kPwmL4Pin, kPwmR4Pin};
-  uint32_t pins_pwm2[4] = {kPwmL5Pin, kPwmR5Pin, kPwmL6Pin, kPwmR6Pin};
+  uint32_t pins_pwm0[4] = {kL1Pin, kR1Pin, kL2Pin, kR2Pin};
+  uint32_t pins_pwm1[4] = {kL3Pin, kR3Pin, kL4Pin, kR4Pin};
+  uint32_t pins_pwm2[4] = {kL5Pin, kR5Pin, kL6Pin, kR6Pin};
 
   InitializePwmModule(NRF_PWM0, pins_pwm0);
   InitializePwmModule(NRF_PWM1, pins_pwm1);
@@ -63,11 +59,11 @@ void Pwm::Initialize() {
   nrf_pwm_seq_ptr_set(NRF_PWM2, 0, pwm_buffer_ + 2 * kSamplesPerModule);
 
   // Enable global interrupts for PWM.
-  NVIC_SetPriority(PWM0_IRQn, kPWMIrqPriority);
+  NVIC_SetPriority(PWM0_IRQn, kIrqPriority);
   NVIC_EnableIRQ(PWM0_IRQn);
-  NVIC_SetPriority(PWM1_IRQn, kPWMIrqPriority);
+  NVIC_SetPriority(PWM1_IRQn, kIrqPriority);
   NVIC_EnableIRQ(PWM1_IRQn);
-  NVIC_SetPriority(PWM2_IRQn, kPWMIrqPriority);
+  NVIC_SetPriority(PWM2_IRQn, kIrqPriority);
   NVIC_EnableIRQ(PWM2_IRQn);
 }
 
@@ -78,14 +74,13 @@ void Pwm::InitializePwmModule(NRF_PWM_Type* pwm_module, uint32_t pins[4]) {
   // Configure the pins.
   nrf_pwm_pins_set(pwm_module, pins);
 
-  // `kPwmTopValue` is half the number of clock ticks per PWM sample. The PWM
-  // sample value should be in [0, kPwmTopValue], and is the clock tick to flip
-  // output between high and low (we use NRF_PWM_MODE_UP counter mode).
-  // The PWM sample rate is 16 MHz / kPwmTopValue.
+  // `kTopValue` is half the number of clock ticks per PWM sample. The PWM
+  // sample value should be in [0, kTopValue], and is the clock tick to flip
+  // output between high and low (we use NRF_PWM_MODE_UP counter mode). The PWM
+  // sample rate is 16 MHz / kTopValue.
   //
-  // E.g. with kPwmTopValue = 1024, the sample rate is 15625 Hz.
-  nrf_pwm_configure(pwm_module, NRF_PWM_CLK_8MHz, NRF_PWM_MODE_UP,
-                    kPwmTopValue);
+  // E.g. with kTopValue = 1024, the sample rate is 15625 Hz.
+  nrf_pwm_configure(pwm_module, NRF_PWM_CLK_8MHz, NRF_PWM_MODE_UP, kTopValue);
 
   // Refresh is 1 by default, which means that each PWM pulse is repeated twice.
   // Set it to zero to avoid repeats. Also can be set whatever with kNumRepeats.
@@ -183,7 +178,7 @@ void Pwm::UpdateChannel(int channel, const float* data) {
 void Pwm::UpdateChannelWithGain(int channel, float gain, const float* data,
                                 int stride) {
   uint16_t* dest = GetChannelPointer(channel);
-  const float scale = 0.5f * kPwmTopValue * gain;
+  const float scale = 0.5f * kTopValue * gain;
   const float offset = scale + 0.5f;
   for (int i = 0; i < kNumPwmValues; ++i, data += stride) {
     dest[i * kChannelsPerModule] =
@@ -204,7 +199,7 @@ void Pwm::UpdatePwmAllChannelsByte(const uint8_t* data) {
 }
 
 uint16_t Pwm::FloatToPwmSample(float sample) {
-  constexpr float kScale = 0.5f * kPwmTopValue;
+  constexpr float kScale = 0.5f * kTopValue;
   constexpr float kOffset = kScale + 0.5f;
   return static_cast<uint16_t>(kScale * sample + kOffset);
 }
@@ -216,5 +211,3 @@ void Pwm::OnSequenceEnd(void (*function)(void)) {
 uint8_t Pwm::GetEvent() { return get_pwm_event(); }
 
 }  // namespace audio_tactile
-
-#endif  // #if SLEEVE_BOARD || SLIM_BOARD

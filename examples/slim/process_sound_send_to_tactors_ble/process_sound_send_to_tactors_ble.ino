@@ -1,4 +1,4 @@
-// Copyright 2021 Google LLC
+// Copyright 2021-2022 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -105,8 +105,6 @@ EnvelopeTracker g_envelope_tracker;
 
 // Tactile pattern synthesizer.
 TactilePattern g_tactile_pattern;
-// Buffer for holding the tactile pattern string to play.
-char g_tactile_pattern_buffer[kMaxTactilePatternLength + 1];
 // True when a tactile pattern is active.
 bool g_tactile_pattern_active = false;
 
@@ -165,7 +163,8 @@ void setup() {
   EnvelopeTrackerInit(&g_envelope_tracker, kSaadcSampleRateHz);
 
   TactilePatternInit(&g_tactile_pattern,
-                     g_tactile_processor.GetOutputSampleRate());
+                     g_tactile_processor.GetOutputSampleRate(),
+                     g_tactile_processor.GetOutputNumberTactileChannels());
   TactilePatternStart(&g_tactile_pattern, kTactilePatternConfirm);
   g_tactile_pattern_active = true;
 
@@ -258,14 +257,25 @@ void HandleMessage(const Message& message) {
         g_write_settings_countdown = kSettingsWriteDelayCycles;
       }
       break;
-    case MessageType::kTactilePattern:
-      // Message to play a tactile pattern.
+    case MessageType::kTactilePattern: {
+      // Message to play a (simple) tactile pattern.
+      // TODO: Remove this message type and use extended patterns.
       Serial.println("Message: TactilePattern.");
-      if (message.ReadTactilePattern(g_tactile_pattern_buffer)) {
-        TactilePatternStart(&g_tactile_pattern, g_tactile_pattern_buffer);
+      char simple_pattern[kMaxTactilePatternLength + 1];
+      if (message.ReadTactilePattern(simple_pattern)) {
+        TactilePatternStart(&g_tactile_pattern, simple_pattern);
         g_tactile_pattern_active = true;
       }
-      break;
+    } break;
+    case MessageType::kTactileExPattern: {
+      // Message to play a tactile extended-format pattern.
+      Serial.println("Message: TactileExPattern.");
+      if (message.ReadTactileExPattern(Slice<uint8_t>(
+              g_tactile_pattern.buffer, kTactilePatternBufferSize))) {
+        TactilePatternStartEx(&g_tactile_pattern, g_tactile_pattern.buffer);
+        g_tactile_pattern_active = true;
+      }
+    } break;
     case MessageType::kGetChannelMap:
       // Request message to get the current channel map.
       Serial.println("Message: GetChannelMap.");
@@ -413,7 +423,6 @@ void loop() {
     if (g_tactile_pattern_active) {
       g_tactile_pattern_active = TactilePatternSynthesize(
           &g_tactile_pattern, g_tactile_processor.GetOutputBlockSize(),
-          g_tactile_processor.GetOutputNumberTactileChannels(),
           g_tactile_output);
     } else {
       // Process samples.

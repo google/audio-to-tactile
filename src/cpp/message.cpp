@@ -1,4 +1,4 @@
-// Copyright 2021 Google LLC
+// Copyright 2021-2022 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -463,6 +463,13 @@ bool Message::ReadOnConnectionBatch(int* firmware_build_date,
                                    &settings->channel_map);
   src += block_size;
   return success;
+}
+
+bool Message::ReadTactileExPattern(Slice<uint8_t> pattern) const {
+  if (pattern.size() < payload_size() + 1) { return false; }
+  pattern.CopyFrom(payload());
+  pattern[payload_size()] = 0;  // Append null terminator (end op).
+  return true;
 }
 
 }  // namespace audio_tactile

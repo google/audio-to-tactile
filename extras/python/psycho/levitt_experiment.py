@@ -132,7 +132,17 @@ class LevittExp(object):
             self.run_trial_history)
 
   def calculate_threshold(self):
-    start, end = self.run_boundaries(every_nth=1)
+    """Calculate the unbiased threshold from the runs we have seen.
+
+    Note: We want to take an even number of runs, and then average the extreme
+    values of every other run.  We use every other because the intermediate runs
+    have the same endpoints, and we don't want to overcount the runs in the
+    middle.
+
+    Returns:
+      The unbiased estimate of the center point of (every other) run.
+    """
+    start, end = self.run_boundaries(every_nth=2)
     num_runs = 2 * (len(start) // 2)  # Even number of runs
     start_levels = [self.level_history[i] for i in start[-num_runs:]]
     end_levels = [self.level_history[i] for i in end[-num_runs:]]
@@ -141,6 +151,8 @@ class LevittExp(object):
 
   def run_boundaries(self, every_nth=2):
     """Finds the boundaries between runs, defined as a stretch of ups or downs.
+
+    Note: we check and don't add runs that have zero length like the last one.
 
     Args:
       every_nth: Return every n'th boundary (so we can get every other one
@@ -152,7 +164,9 @@ class LevittExp(object):
     """
 
     # Add alternating color background for each run
-    run_lengths = [len(sublist) for sublist in self.run_trial_history]
+    # pylint: disable=g-explicit-length-test #  because length is more logical
+    run_lengths = [len(sublist) for sublist in self.run_trial_history
+                   if len(sublist) > 0]
     run_boundaries = np.cumsum([0] + run_lengths)
     start = [i - 1 for i in run_boundaries[1::every_nth]]
     end = [i - 1 for i in run_boundaries[2::every_nth]]
@@ -161,7 +175,8 @@ class LevittExp(object):
   def plot_response(self, title: str = '') -> None:
     """Create a graph to summarize an experiment.
 
-    Plot each test and its result, show vertical bars for each run.
+    Plot each test and its result, show colored vertical bars for every other
+    run.
 
     Args:
       title: Text to put at the top fo the graph.

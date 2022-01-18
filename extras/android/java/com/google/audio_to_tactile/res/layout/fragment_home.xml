@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright 2021 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".HomeFragment">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAutofill="no" >
+
+        <!-- BLE connect/disconnect button. -->
+        <Button
+            android:id="@+id/connect_button"
+            android:layout_width="@dimen/connect_button_width"
+            android:layout_height="wrap_content"
+            android:backgroundTint="?colorSecondary"
+            android:layout_marginStart="@dimen/activity_horizontal_margin"
+            android:layout_marginTop="@dimen/activity_vertical_margin"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- Battery voltage display. -->
+        <ImageView
+            android:id="@+id/battery_voltage_icon"
+            android:layout_width="@dimen/icon_size"
+            android:layout_height="@dimen/icon_size"
+            android:layout_marginStart="@dimen/activity_horizontal_margin"
+            android:layout_marginTop="@dimen/widget_vertical_spacing"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/connect_button"
+            app:srcCompat="@drawable/ic_battery_full"
+            app:tint="?colorPrimary" />
+        <TextView
+            android:id="@+id/battery_voltage"
+            android:layout_width="@dimen/battery_voltage_width"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/widget_small_horizontal_spacing"
+            app:layout_constraintStart_toEndOf="@+id/battery_voltage_icon"
+            app:layout_constraintTop_toTopOf="@+id/battery_voltage_icon"
+            app:layout_constraintBottom_toBottomOf="@+id/battery_voltage_icon"/>
+
+        <!-- Temperature display. -->
+        <ImageView
+            android:id="@+id/temperature_icon"
+            android:layout_width="@dimen/icon_size"
+            android:layout_height="@dimen/icon_size"
+            android:layout_marginStart="@dimen/widget_horizontal_spacing"
+            android:layout_marginTop="@dimen/widget_vertical_spacing"
+            app:layout_constraintStart_toEndOf="@+id/battery_voltage"
+            app:layout_constraintTop_toBottomOf="@+id/connect_button"
+            app:srcCompat="@drawable/ic_thermostat"
+            app:tint="?colorPrimary" />
+        <TextView
+            android:id="@+id/temperature"
+            android:layout_width="@dimen/temperature_width"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/widget_small_horizontal_spacing"
+            app:layout_constraintStart_toEndOf="@+id/temperature_icon"
+            app:layout_constraintTop_toTopOf="@+id/temperature_icon"
+            app:layout_constraintBottom_toBottomOf="@+id/temperature_icon"/>
+
+        <!-- Input level plot. -->
+        <TextView
+            android:id="@+id/input_level_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/activity_horizontal_margin"
+            android:layout_marginTop="@dimen/widget_vertical_spacing"
+            android:text="@string/input_level_label"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/battery_voltage" />
+
+        <ImageView
+            android:id="@+id/input_level_plot"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/input_level_plot_height"
+            android:layout_marginStart="@dimen/activity_horizontal_margin"
+            android:layout_marginEnd="@dimen/activity_horizontal_margin"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/input_level_label" />
+
+        <!-- Device name. -->
+        <TextView
+            android:id="@+id/device_name_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/activity_horizontal_margin"
+            android:layout_marginTop="@dimen/widget_large_vertical_spacing"
+            android:text="@string/device_name_label"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/input_level_plot" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/device_name_text_field"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/activity_horizontal_margin"
+            android:hint=""
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/device_name_label"
+            app:counterEnabled="true"
+            app:counterMaxLength="@dimen/device_name_max_length"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:layout_width="@dimen/home_text_field_width"
+                android:layout_height="wrap_content"
+                android:maxLength="@dimen/device_name_max_length"
+                android:fontFamily="monospace"
+                android:imeOptions="actionDone"
+                android:inputType="textShortMessage|textNoSuggestions|text" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Tactile playback UI. -->
+        <TextView
+            android:id="@+id/tactile_pattern_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/activity_horizontal_margin"
+            android:layout_marginTop="@dimen/widget_vertical_spacing"
+            android:text="@string/tactile_pattern_label"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/device_name_text_field" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/tactile_pattern_text_field"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:hint=""
+            android:layout_marginStart="@dimen/activity_horizontal_margin"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/tactile_pattern_label"
+            app:endIconDrawable="@drawable/ic_button_play"
+            app:endIconMode="custom"
+            app:endIconCheckable="false"
+            app:endIconTint="?colorSecondary"
+            app:counterEnabled="true"
+            app:counterMaxLength="@dimen/tactile_pattern_max_length"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:layout_width="@dimen/home_text_field_width"
+                android:layout_height="wrap_content"
+                android:maxLength="@dimen/tactile_pattern_max_length"
+                android:fontFamily="monospace"
+                android:imeOptions="actionDone"
+                android:inputType="textShortMessage|textNoSuggestions|text|textCapCharacters"
+                android:text="@string/default_tactile_pattern" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</ScrollView>

@@ -133,34 +133,36 @@ class Slice {
   constexpr bool empty() const noexcept { return size() == 0; }
 
   // begin/end iterators.
-  constexpr iterator begin() noexcept { return data(); }
-  constexpr iterator end() noexcept { return data() + size(); }
+  constexpr iterator begin() const noexcept { return data(); }
+  constexpr iterator end() const noexcept { return data() + size(); }
   constexpr const_iterator cbegin() const noexcept { return data(); }
   constexpr const_iterator cend() const noexcept { return data() + size(); }
 
   // Methods for extracting sub-slices.
 
   // `head(n)` extracts a Slice of the first `n` elements.
-  constexpr Slice<T> head(int n) noexcept { return segment(0, n); }
+  constexpr Slice<T> head(int n) const noexcept { return segment(0, n); }
   // `head<n>()` is the same as above, but for compile-time fixed size n.
   template <int kSegmentSize>
-  constexpr Slice<T, kSegmentSize> head() noexcept {
+  constexpr Slice<T, kSegmentSize> head() const noexcept {
     return segment<kSegmentSize>(0);
   }
   // `tail(n)` extracts a Slice of the last `n` elements.
-  constexpr Slice<T> tail(int n) noexcept { return segment(size() - n, n); }
+  constexpr Slice<T> tail(int n) const noexcept {
+    return segment(size() - n, n);
+  }
   // `tail<n>()` is the same as above, but for compile-time fixed size n.
   template <int kSegmentSize>
-  constexpr Slice<T, kSegmentSize> tail() noexcept {
+  constexpr Slice<T, kSegmentSize> tail() const noexcept {
     return segment<kSegmentSize>(size() - kSegmentSize);
   }
   // `segment(start, n)` extracts a Slice of `n` elements beginning at `start`.
-  constexpr Slice<T> segment(int start, int n) noexcept {
+  constexpr Slice<T> segment(int start, int n) const noexcept {
     return Slice<T>(data() + start, n);
   }
   // `segment<n>(start)` is the same as above, but for fixed size n.
   template <int kSegmentSize>
-  constexpr Slice<T, kSegmentSize> segment(int start) noexcept {
+  constexpr Slice<T, kSegmentSize> segment(int start) const noexcept {
     static_assert(kSegmentSize >= 0, "Segment size must be nonnegative");
     static_assert(kSize == kDynamic || kSegmentSize <= kSize,
                   "Segment size must be <= Slice size");

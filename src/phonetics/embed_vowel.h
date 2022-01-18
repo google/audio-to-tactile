@@ -66,10 +66,10 @@ extern const int kEmbedVowelNumChannels;
  * be an array of size 2. The predicted 2-D vowel space coordinate is written to
  * (coord[0], coord[1]).
  */
-void EmbedVowel(const float* frame, float coord[2]);
+void EmbedVowel(const float* frame, float* coord);
 
 /* Returns index in `kEmbedVowelTargets` of the target closest to `coord`. */
-int EmbedVowelClosestTarget(const float coord[2]);
+int EmbedVowelClosestTarget(const float* coord);
 
 /* Finds index in `kEmbedVowelTargets` of the target with `target_name`. Returns
  * -1 if the name is invalid.

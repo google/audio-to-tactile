@@ -1,0 +1,418 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright 2021-2022 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:importantForAutofill="no"
+    tools:context=".PatternEditorFragment">
+
+    <Button
+        android:id="@+id/pattern_editor_file"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/activity_horizontal_margin"
+        android:layout_marginTop="@dimen/widget_small_vertical_spacing"
+        android:backgroundTint="?colorPrimary"
+        android:text="@string/pattern_editor_file_label"
+        app:icon="@drawable/ic_dropdown_arrow"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/pattern_editor_play"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/activity_horizontal_margin"
+        android:layout_marginTop="@dimen/widget_small_vertical_spacing"
+        android:backgroundTint="?colorPrimary"
+        android:text="@string/pattern_editor_play_label"
+        app:icon="@drawable/ic_button_play"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <View
+        android:id="@+id/pattern_editor_divider_top"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_marginTop="@dimen/widget_small_vertical_spacing"
+        android:background="?android:attr/listDivider"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/pattern_editor_file" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/pattern_recycler_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:clipToPadding="false"
+        android:paddingTop="@dimen/list_top_padding"
+        android:paddingBottom="@dimen/list_top_padding"
+        android:scrollbars="vertical"
+        app:layoutManager="LinearLayoutManager"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/pattern_editor_divider_top"
+        app:layout_constraintBottom_toTopOf="@+id/pattern_editor_divider_bottom" />
+
+    <View
+        android:id="@+id/pattern_editor_divider_bottom"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:background="?android:attr/listDivider"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/pattern_add_op" />
+
+    <!-- Row of editing buttons below the RecycleView. -->
+    <Button
+        android:id="@+id/pattern_add_op"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/activity_horizontal_margin"
+        android:layout_marginBottom="@dimen/activity_vertical_margin"
+        android:backgroundTint="?colorPrimary"
+        android:minWidth="0dp"
+        app:icon="@drawable/ic_add"
+        app:iconPadding="0dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/pattern_play_op" />
+
+    <Button
+        android:id="@+id/pattern_move_op_up"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/widget_horizontal_spacing"
+        android:backgroundTint="?colorPrimary"
+        android:minWidth="0dp"
+        app:icon="@drawable/ic_move_up"
+        app:iconPadding="0dp"
+        app:layout_constraintStart_toEndOf="@+id/pattern_add_op"
+        app:layout_constraintTop_toTopOf="@+id/pattern_add_op" />
+
+    <Button
+        android:id="@+id/pattern_move_op_down"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/widget_horizontal_spacing"
+        android:backgroundTint="?colorPrimary"
+        android:minWidth="0dp"
+        app:icon="@drawable/ic_move_down"
+        app:iconPadding="0dp"
+        app:layout_constraintStart_toEndOf="@+id/pattern_move_op_up"
+        app:layout_constraintTop_toTopOf="@+id/pattern_add_op" />
+
+    <Button
+        android:id="@+id/pattern_remove_op"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/activity_horizontal_margin"
+        android:backgroundTint="?colorSecondary"
+        android:minWidth="0dp"
+        app:icon="@drawable/ic_clear"
+        app:iconPadding="0dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/pattern_add_op" />
+
+    <!-- Play op settings. -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/pattern_play_op"
+        android:layout_marginStart="@dimen/activity_horizontal_margin"
+        android:layout_marginEnd="@dimen/activity_horizontal_margin"
+        android:layout_width="fill_parent"
+        android:layout_height="@dimen/pattern_editor_op_layout_height"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:orientation="vertical"
+        android:visibility="invisible">
+
+        <ImageView
+            android:id="@+id/pattern_play_op_duration_icon"
+            android:layout_width="@dimen/icon_size"
+            android:layout_height="@dimen/icon_size"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:srcCompat="@drawable/ic_duration"
+            app:tint="?colorPrimary" />
+
+        <TextView
+            android:id="@+id/pattern_play_op_duration_label"
+            android:layout_width="@dimen/pattern_editor_label_width"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/widget_horizontal_spacing"
+            android:text="@string/pattern_play_op_duration_label"
+            app:layout_constraintStart_toEndOf="@+id/pattern_play_op_duration_icon"
+            app:layout_constraintTop_toTopOf="@+id/pattern_play_op_duration_icon"
+            app:layout_constraintBottom_toBottomOf="@+id/pattern_play_op_duration_icon" />
+
+        <TextView
+            android:id="@+id/pattern_play_op_duration_value"
+            android:layout_width="@dimen/pattern_editor_value_width"
+            android:layout_height="wrap_content"
+            android:textAlignment="textEnd"
+            app:layout_constraintStart_toEndOf="@+id/pattern_play_op_duration_label"
+            app:layout_constraintBottom_toBottomOf="@+id/pattern_play_op_duration_label" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/pattern_play_op_duration_slider"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/widget_small_horizontal_spacing"
+            android:valueFrom="@dimen/pattern_play_op_duration_value_min"
+            android:valueTo="@dimen/pattern_play_op_duration_value_max"
+            android:stepSize="@dimen/pattern_play_op_duration_value_step"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/pattern_play_op_duration_icon"
+            app:layout_constraintTop_toBottomOf="@+id/pattern_play_op_duration_icon" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Wave op settings. -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/pattern_wave_op"
+        android:layout_marginStart="@dimen/activity_horizontal_margin"
+        android:layout_marginEnd="@dimen/activity_horizontal_margin"
+        android:layout_width="fill_parent"
+        android:layout_height="@dimen/pattern_editor_op_layout_height"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:orientation="vertical"
+        android:visibility="invisible">
+
+        <ImageView
+            android:id="@+id/pattern_wave_op_channel_icon"
+            android:layout_width="@dimen/icon_size"
+            android:layout_height="@dimen/icon_size"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/pattern_wave_op_channel_field"
+            app:layout_constraintBottom_toBottomOf="@+id/pattern_wave_op_channel_field"
+            app:srcCompat="@drawable/ic_channel_map_item"
+            app:tint="?colorPrimary" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/pattern_wave_op_channel_field"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            android:layout_width="@dimen/pattern_editor_dropdown_width"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/widget_horizontal_spacing"
+            android:hint="@string/pattern_editor_channel_label"
+            app:layout_constraintStart_toEndOf="@+id/pattern_wave_op_channel_icon"
+            app:layout_constraintTop_toTopOf="parent" >
+
+            <AutoCompleteTextView
+                android:id="@+id/pattern_wave_op_channel_dropdown"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none"
+                app:layout_constraintTop_toTopOf="parent" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <ImageView
+            android:id="@+id/pattern_wave_op_waveform_icon"
+            android:layout_width="@dimen/icon_size"
+            android:layout_height="@dimen/icon_size"
+            android:layout_marginTop="@dimen/widget_vertical_spacing"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/pattern_wave_op_waveform_field"
+            app:layout_constraintBottom_toBottomOf="@+id/pattern_wave_op_waveform_field"
+            app:srcCompat="@drawable/ic_waveform"
+            app:tint="?colorPrimary" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/pattern_wave_op_waveform_field"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            android:layout_width="@dimen/pattern_editor_dropdown_width"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/widget_horizontal_spacing"
+            android:layout_marginTop="@dimen/widget_vertical_spacing"
+            android:hint="@string/pattern_wave_op_waveform_label"
+            app:layout_constraintStart_toEndOf="@+id/pattern_wave_op_waveform_icon"
+            app:layout_constraintTop_toBottomOf="@+id/pattern_wave_op_channel_field" >
+
+            <AutoCompleteTextView
+                android:id="@+id/pattern_wave_op_waveform_dropdown"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none"
+                app:layout_constraintTop_toTopOf="parent" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Gain op settings. -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/pattern_gain_op"
+        android:layout_marginStart="@dimen/activity_horizontal_margin"
+        android:layout_marginEnd="@dimen/activity_horizontal_margin"
+        android:layout_width="fill_parent"
+        android:layout_height="@dimen/pattern_editor_op_layout_height"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:orientation="vertical"
+        android:visibility="invisible">
+
+        <ImageView
+            android:id="@+id/pattern_gain_op_channel_icon"
+            android:layout_width="@dimen/icon_size"
+            android:layout_height="@dimen/icon_size"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/pattern_gain_op_channel_field"
+            app:layout_constraintBottom_toBottomOf="@+id/pattern_gain_op_channel_field"
+            app:srcCompat="@drawable/ic_channel_map_item"
+            app:tint="?colorPrimary" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/pattern_gain_op_channel_field"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            android:layout_width="@dimen/pattern_editor_dropdown_width"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/widget_horizontal_spacing"
+            android:hint="@string/pattern_editor_channel_label"
+            app:layout_constraintStart_toEndOf="@+id/pattern_gain_op_channel_icon"
+            app:layout_constraintTop_toTopOf="parent" >
+
+            <AutoCompleteTextView
+                android:id="@+id/pattern_gain_op_channel_dropdown"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none"
+                app:layout_constraintTop_toTopOf="parent" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <ImageView
+            android:id="@+id/pattern_gain_op_gain_icon"
+            android:layout_width="@dimen/icon_size"
+            android:layout_height="@dimen/icon_size"
+            android:layout_marginTop="@dimen/widget_vertical_spacing"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/pattern_gain_op_channel_field"
+            app:srcCompat="@drawable/ic_volume"
+            app:tint="?colorPrimary" />
+
+        <TextView
+            android:id="@+id/pattern_gain_op_gain_label"
+            android:layout_width="@dimen/pattern_editor_label_width"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/widget_small_horizontal_spacing"
+            android:text="@string/pattern_gain_op_gain_label"
+            app:layout_constraintStart_toEndOf="@+id/pattern_gain_op_gain_icon"
+            app:layout_constraintTop_toTopOf="@+id/pattern_gain_op_gain_icon"
+            app:layout_constraintBottom_toBottomOf="@+id/pattern_gain_op_gain_icon" />
+
+        <TextView
+            android:id="@+id/pattern_gain_op_gain_value"
+            android:layout_width="@dimen/pattern_editor_value_width"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/widget_small_horizontal_spacing"
+            android:textAlignment="textEnd"
+            app:layout_constraintStart_toEndOf="@+id/pattern_gain_op_gain_label"
+            app:layout_constraintBottom_toBottomOf="@+id/pattern_gain_op_gain_label" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/pattern_gain_op_gain_slider"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:valueFrom="@dimen/pattern_gain_op_gain_value_min"
+            android:valueTo="@dimen/pattern_gain_op_gain_value_max"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="@+id/pattern_gain_op_gain_label"
+            app:layout_constraintTop_toBottomOf="@+id/pattern_gain_op_gain_label" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Move op settings. -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/pattern_move_op"
+        android:layout_marginStart="@dimen/activity_horizontal_margin"
+        android:layout_marginEnd="@dimen/activity_horizontal_margin"
+        android:layout_width="fill_parent"
+        android:layout_height="@dimen/pattern_editor_op_layout_height"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:orientation="vertical"
+        android:visibility="invisible">
+
+        <ImageView
+            android:id="@+id/pattern_move_op_from_icon"
+            android:layout_width="@dimen/icon_size"
+            android:layout_height="@dimen/icon_size"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/pattern_move_op_from_field"
+            app:layout_constraintBottom_toBottomOf="@+id/pattern_move_op_from_field"
+            app:srcCompat="@drawable/ic_channel_map_item"
+            app:tint="?colorPrimary" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/pattern_move_op_from_field"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            android:layout_width="@dimen/pattern_editor_dropdown_width"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/widget_horizontal_spacing"
+            android:hint="@string/pattern_move_op_from_label"
+            app:layout_constraintStart_toEndOf="@+id/pattern_move_op_from_icon"
+            app:layout_constraintTop_toTopOf="parent" >
+
+            <AutoCompleteTextView
+                android:id="@+id/pattern_move_op_from_dropdown"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none"
+                app:layout_constraintTop_toTopOf="parent" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <ImageView
+            android:id="@+id/pattern_move_op_to_icon"
+            android:layout_width="@dimen/icon_size"
+            android:layout_height="@dimen/icon_size"
+            android:layout_marginTop="@dimen/widget_vertical_spacing"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/pattern_move_op_to_field"
+            app:layout_constraintBottom_toBottomOf="@+id/pattern_move_op_to_field"
+            app:srcCompat="@drawable/ic_channel_map_item"
+            app:tint="?colorPrimary" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/pattern_move_op_to_field"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+            android:layout_width="@dimen/pattern_editor_dropdown_width"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/widget_horizontal_spacing"
+            android:layout_marginTop="@dimen/widget_vertical_spacing"
+            android:hint="@string/pattern_move_op_to_label"
+            app:layout_constraintStart_toEndOf="@+id/pattern_move_op_to_icon"
+            app:layout_constraintTop_toBottomOf="@+id/pattern_move_op_from_field" >
+
+            <AutoCompleteTextView
+                android:id="@+id/pattern_move_op_to_dropdown"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="none"
+                app:layout_constraintTop_toTopOf="parent" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

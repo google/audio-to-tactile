@@ -37,8 +37,6 @@ namespace audio_tactile {
 
 class BatteryMonitor {
  public:
-  BatteryMonitor();
-
   // Configure the battery pin and initialize interrupts.
   // This function starts the listener (interrupt handler) as well.
   void InitializeLowVoltageInterrupt();
@@ -83,6 +81,17 @@ class BatteryMonitor {
   };
 #endif
 };
+
+#if SLIM_V2_BOARD
+enum {
+  // The low power comparator (LPCOMP) and analog-to-digital converter (ADC) are
+  // connected to the same pin, but they are enumerated differently in hardware
+  // abstraction layer (HAL), so
+  // we need two separate definitions here.
+  kLowPowerCompPin = LPCOMP_PSEL_PSEL_AnalogInput6,  // AIN pin 6 (P0.30).
+  kLowPowerCompAdcPin = SAADC_CH_PSELP_PSELP_AnalogInput6
+};
+#endif
 
 extern BatteryMonitor PuckBatteryMonitor;
 

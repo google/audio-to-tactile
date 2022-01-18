@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright 2021 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:importantForAutofill="no"
+    tools:context=".DfuFragment">
+
+    <TextView
+        android:id="@+id/dfu_description"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/activity_horizontal_margin"
+        android:layout_marginEnd="@dimen/activity_horizontal_margin"
+        android:layout_marginTop="@dimen/activity_vertical_margin"
+        android:text="@string/dfu_description"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <Button
+        android:id="@+id/dfu_start_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:backgroundTint="?colorSecondary"
+        android:layout_marginStart="@dimen/activity_horizontal_margin"
+        android:layout_marginTop="@dimen/widget_large_vertical_spacing"
+        android:text="@string/dfu_start"
+        app:icon="@drawable/ic_dfu_start"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/dfu_description" />
+
+    <com.google.android.material.progressindicator.LinearProgressIndicator
+        android:id="@+id/dfu_progress_bar"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/widget_horizontal_spacing"
+        android:layout_marginEnd="@dimen/activity_horizontal_margin"
+        android:indeterminate="false"
+        app:layout_constraintStart_toEndOf="@+id/dfu_start_button"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/dfu_start_button"
+        app:layout_constraintBottom_toBottomOf="@+id/dfu_start_button" />
+
+    <TextView
+        android:id="@+id/dfu_status_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/widget_vertical_spacing"
+        app:layout_constraintStart_toStartOf="@+id/dfu_start_button"
+        app:layout_constraintTop_toBottomOf="@+id/dfu_start_button" />
+
+    <TextView
+        android:id="@+id/dfu_upload_to_text"
+        android:text="@string/upload_options_description"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/widget_vertical_spacing"
+        app:layout_constraintStart_toStartOf="@+id/dfu_status_text"
+        app:layout_constraintTop_toBottomOf="@+id/dfu_status_text" />
+
+    <CheckBox
+        android:id="@+id/dfu_upload_to_connected_checkbox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/upload_to_current_checkmark_description"
+        android:checked="true"
+        android:layout_marginTop="@dimen/widget_vertical_spacing"
+        app:layout_constraintStart_toStartOf="@+id/dfu_upload_to_text"
+        app:layout_constraintTop_toBottomOf="@+id/dfu_upload_to_text" />
+
+    <CheckBox
+        android:id="@+id/prepare_for_bootloading_checkbox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/prepare_for_bootloading_checkbox_description"
+        android:checked="true"
+        android:layout_marginTop="@dimen/widget_vertical_spacing"
+        app:layout_constraintStart_toStartOf="@+id/dfu_upload_to_connected_checkbox"
+        app:layout_constraintTop_toBottomOf="@+id/dfu_upload_to_connected_checkbox" />
+
+     <CheckBox
+        android:id="@+id/dfu_to_other_device_checkbox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/other_device_address_description"
+        android:layout_marginTop="@dimen/widget_vertical_spacing"
+        app:layout_constraintStart_toStartOf="@+id/prepare_for_bootloading_checkbox"
+        app:layout_constraintTop_toBottomOf="@+id/prepare_for_bootloading_checkbox" />
+
+
+      <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/dfu_alternative_address"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:hint=""
+        android:layout_marginStart="@dimen/activity_horizontal_margin"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/dfu_to_other_device_checkbox"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:maxLength="17"
+            android:fontFamily="monospace"
+            android:digits="-/0123456789ABCDEF"
+            android:inputType="textShortMessage|textNoSuggestions|text|textCapCharacters"
+            android:text="@string/other_device_address_textfield_default" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

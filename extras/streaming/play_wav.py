@@ -19,7 +19,7 @@ The wav file should be: 2000 Hz, signed 16-bit, PCM
 import argparse
 import struct
 import wave
-# TODO Use custon wav parser in third_party.
+# TODO Use custom wav parser in third_party.
 
 import serial
 from serial import SerialException
@@ -58,7 +58,7 @@ def get_next_audio_frames_in_byte_array(opened_wave_file) -> bytearray:
     # Nice explanation on formatting wave:
     # https://www.cameronmacleod.com/blog/reading-wave-python
 
-    audio_frame = struct.unpack('<hhhhhhhhhhhh', string)
+    audio_frame = struct.unpack('<12h', string)
 
     # Convert to bytes and add to byte array.
     for x in range(TACTILE_CHANNELS):

@@ -64,70 +64,63 @@
 
 // NOLINTEND
 
-#if SLEEVE_BOARD || SLIM_BOARD
+#if SLEEVE_BOARD || SLIM_BOARD || SLIM_V2_BOARD
 
 namespace audio_tactile {
 
-// PWM module definitions.
-enum {
-  kPWMIrqPriority = 7,  // Lowest priority.
-  kPwmTopValue = 512,   // The individual PWM values can't be above this number.
-  kUpsamplingFactor = 8,
-};
-
-// PWM definitions.
-// The pins on port 1 are always offset by 32. For example pin 7 (P1.07) is 39.
-#if SLEEVE_BOARD
-enum {
-  kPwmL1Pin = 13,  // On P0.13.
-  kPwmR1Pin = 14,  // On P0.14.
-  kPwmL2Pin = 17,  // On P0.17.
-  kPwmR2Pin = 16,  // On P0.16.
-  kPwmL3Pin = 21,  // On P0.21.
-  kPwmR3Pin = 32,  // On P0.32.
-  kPwmL4Pin = 29,  // On P0.29.
-  kPwmR4Pin = 2,   // On P0.02.
-  kPwmL5Pin = 31,  // On P0.31.
-  kPwmR5Pin = 30,  // On P0.30.
-  kPwmL6Pin = 45,  // On P1.13.
-  kPwmR6Pin = 42,  // On P1.10.
-
-  kAmpEnablePin1 = 33,  // On 1.01.
-  kAmpEnablePin2 = 15,  // On 0.15.
-  kAmpEnablePin3 = 8,   // On 0.08.
-  kAmpEnablePin4 = 41,  // On 1.09.
-  kAmpEnablePin5 = 43,  // On 1.11.
-  kAmpEnablePin6 = 19   // On 0.19.
-};
-#endif
-
-#if SLIM_BOARD
-enum {
-  kPwmL1Pin = 13,  // On P0.13.
-  kPwmR1Pin = 14,  // On P0.14.
-  kPwmL2Pin = 46,  // On P1.14.
-  kPwmR2Pin = 12,  // On P0.12.
-  kPwmL3Pin = 47,  // On P1.15.
-  kPwmR3Pin = 32,  // On P1.00.
-  kPwmL4Pin = 40,  // On P1.08.
-  kPwmR4Pin = 41,  // On P1.09.
-  kPwmL5Pin = 11,  // On P0.11.
-  kPwmR5Pin = 16,  // On P0.16.
-  kPwmL6Pin = 27,  // On P0.27.
-  kPwmR6Pin = 15,  // On P0.15.
-
-  kAmpEnablePin1 = 33,  // On 1.01.
-  kAmpEnablePin2 = 44,  // On 1.12.
-  kAmpEnablePin3 = 8,   // On 0.08.
-  kAmpEnablePin4 = 39,  // On 1.07.
-  kAmpEnablePin5 = 43,  // On 1.11.
-  kAmpEnablePin6 = 35   // On 1.03.
-};
-#endif
-
 class Pwm {
  public:
-  Pwm();
+  enum {
+    kTopValue = 512,   // Individual PWM values can't be above this number.
+    kUpsamplingFactor = 8,
+  };
+
+  // Pins on port 1 are always offset by 32. For example pin 7 (P1.07) is 39.
+  #if SLEEVE_BOARD
+  enum {
+    kL1Pin = 13,  // On P0.13.
+    kR1Pin = 14,  // On P0.14.
+    kL2Pin = 17,  // On P0.17.
+    kR2Pin = 16,  // On P0.16.
+    kL3Pin = 21,  // On P0.21.
+    kR3Pin = 32,  // On P0.32.
+    kL4Pin = 29,  // On P0.29.
+    kR4Pin = 2,   // On P0.02.
+    kL5Pin = 31,  // On P0.31.
+    kR5Pin = 30,  // On P0.30.
+    kL6Pin = 45,  // On P1.13.
+    kR6Pin = 42,  // On P1.10.
+
+    kAmpEnablePin1 = 33,  // On 1.01.
+    kAmpEnablePin2 = 15,  // On 0.15.
+    kAmpEnablePin3 = 8,   // On 0.08.
+    kAmpEnablePin4 = 41,  // On 1.09.
+    kAmpEnablePin5 = 43,  // On 1.11.
+    kAmpEnablePin6 = 19   // On 0.19.
+  };
+  #elif SLIM_BOARD || SLIM_V2_BOARD
+  enum {
+    kL1Pin = 13,  // On P0.13.
+    kR1Pin = 14,  // On P0.14.
+    kL2Pin = 46,  // On P1.14.
+    kR2Pin = 12,  // On P0.12.
+    kL3Pin = 47,  // On P1.15.
+    kR3Pin = 32,  // On P1.00.
+    kL4Pin = 40,  // On P1.08.
+    kR4Pin = 41,  // On P1.09.
+    kL5Pin = 11,  // On P0.11.
+    kR5Pin = 16,  // On P0.16.
+    kL6Pin = 27,  // On P0.27.
+    kR6Pin = 15,  // On P0.15.
+
+    kAmpEnablePin1 = 33,  // On 1.01.
+    kAmpEnablePin2 = 44,  // On 1.12.
+    kAmpEnablePin3 = 8,   // On 0.08.
+    kAmpEnablePin4 = 39,  // On 1.07.
+    kAmpEnablePin5 = 43,  // On 1.11.
+    kAmpEnablePin6 = 35   // On 1.03.
+  };
+  #endif
 
   // This function starts the tactors on the sleeve. Also, initializes amplifier
   // pins.
@@ -230,6 +223,7 @@ class Pwm {
 
  private:
   enum {
+    kIrqPriority = 7,  // Lowest priority.
     kNumModules = 3,
     kChannelsPerModule = 4,
     kSamplesPerModule = kNumPwmValues * kChannelsPerModule,
@@ -259,5 +253,5 @@ extern Pwm SleeveTactors;
 
 }  // namespace audio_tactile
 
-#endif  // #if SLEEVE_BOARD || SLIM_BOARD
+#endif  // #if SLEEVE_BOARD || SLIM_BOARD || SLIM_V2_BOARD
 #endif  // AUDIO_TO_TACTILE_SRC_PWM_SLEEVE_H_

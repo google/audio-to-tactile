@@ -48,6 +48,7 @@ I used a 1x12 inch velcro strap from
 [Amazon](https://www.amazon.com/gp/product/B01MU56DCQ/).
 
 First, cut off the buckle with scissors.
+
 ![cutting buckle with scissors](cutting_scissors_strap.jpg)
 
 Place the strap end with the cut off buckle into the small hoop in the

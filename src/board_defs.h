@@ -23,6 +23,7 @@
 #define SLEEVE_BOARD 0
 #define PUCK_BOARD 0
 #define SLIM_BOARD 1
+#define SLIM_V2_BOARD 0
 
 #if SLEEVE_BOARD
 #define kLedPinBlue 12
@@ -37,6 +38,19 @@
 #define kLedPinBlue 45
 #define kLedPinGreen 36
 #define kThermistorPin 3
+#define kCurrentAmpEnable 42
+#define kPdmClockPin 7
+#define kPdmDataPin 6
+#endif
+
+#if SLIM_V2_BOARD
+#define kLedPinBlue 45
+#define kLedPinGreen 36
+#define kThermistorPin 3
+#define kCurrentAmpEnable 42
+#define kPdmClockPin 6
+#define kPdmDataPin 7
+#define kPdmSelectPin 26
 #endif
 
 #endif  // AUDIO_TO_TACTILE_SRC_BOARD_DEFS_H_

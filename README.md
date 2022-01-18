@@ -43,4 +43,3 @@ This code uses the Apache License 2.0. See the LICENSE file for details.
 
 ## Mailing list
 audio-to-tactile-maintainers@google.com
-

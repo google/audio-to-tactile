@@ -103,7 +103,7 @@ filegroup(
     ) + [
         "BUILD",
         "LICENSE",
-        "WORKSPACE.bazel",
+        "WORKSPACE",
         "defs.bzl",
         "library.properties",
     ],

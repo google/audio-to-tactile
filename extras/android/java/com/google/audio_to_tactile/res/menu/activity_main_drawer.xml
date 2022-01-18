@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright 2021 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:tools="http://schemas.android.com/tools"
+  tools:showIn="navigation_view">
+
+  <group android:checkableBehavior="single">
+    <item
+      android:id="@+id/nav_home"
+      android:icon="@drawable/ic_menu_home"
+      android:title="@string/home_title" />
+    <item
+      android:id="@+id/nav_tuning"
+      android:icon="@drawable/ic_menu_tuning"
+      android:title="@string/tuning_title" />
+    <item
+      android:id="@+id/nav_channel_map"
+      android:icon="@drawable/ic_menu_channel_map"
+      android:title="@string/channel_map_title" />
+    <item
+      android:id="@+id/nav_sound_events"
+      android:icon="@drawable/ic_sound_events"
+      android:title="@string/sound_event_title" />
+    <item
+      android:id="@+id/nav_pattern_editor"
+      android:icon="@drawable/ic_menu_pattern_editor"
+      android:title="@string/pattern_editor_title" />
+    <item
+      android:id="@+id/nav_dfu"
+      android:icon="@drawable/ic_menu_dfu"
+      android:title="@string/dfu_title" />
+    <item
+      android:id="@+id/nav_log"
+      android:icon="@drawable/ic_menu_log"
+      android:title="@string/log_title" />
+  </group>
+</menu>

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright 2021-2022 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources>
+  <dimen name="activity_horizontal_margin">16dp</dimen>
+  <dimen name="activity_vertical_margin">16dp</dimen>
+  <dimen name="nav_header_vertical_spacing">8dp</dimen>
+  <dimen name="nav_header_height">176dp</dimen>
+  <dimen name="widget_horizontal_spacing">16dp</dimen>
+  <dimen name="widget_vertical_spacing">16dp</dimen>
+  <dimen name="widget_small_horizontal_spacing">8dp</dimen>
+  <dimen name="widget_small_vertical_spacing">8dp</dimen>
+  <dimen name="widget_large_horizontal_spacing">32dp</dimen>
+  <dimen name="widget_large_vertical_spacing">32dp</dimen>
+  <dimen name="small_text_size">12sp</dimen>
+  <dimen name="large_text_size">16sp</dimen>
+  <dimen name="icon_size">32dp</dimen>
+  <dimen name="list_top_padding">8dp</dimen>
+
+  <!-- Home fragment. -->
+  <dimen name="connect_button_width">160dp</dimen>
+  <dimen name="battery_voltage_width">90dp</dimen>
+  <dimen name="temperature_width">90dp</dimen>
+  <dimen name="input_level_plot_height">120dp</dimen>
+  <dimen name="home_text_field_width">250dp</dimen>
+  <item name="device_name_max_length" type="dimen" format="integer">16</item>
+  <item name="tactile_pattern_max_length" type="dimen" format="integer">15</item>
+
+  <!-- Tuning fragment. -->
+  <dimen name="tuning_item_layout_height">56dp</dimen>
+  <dimen name="tuning_item_name_width">120dp</dimen>
+  <dimen name="tuning_item_value_width">90dp</dimen>
+
+  <!-- Tuning dialog. -->
+  <dimen name="tuning_dialog_height">200dp</dimen>
+  <dimen name="tuning_knob_name_width">200dp</dimen>
+  <dimen name="tuning_knob_description_height">72dp</dimen>
+  <item name="tuning_knob_control_value_min" type="dimen" format="float">0.0</item>
+  <item name="tuning_knob_control_value_max" type="dimen" format="float">255.0</item>
+
+  <!-- Channel map fragment. -->
+  <dimen name="channel_map_tactor_header_width">56dp</dimen>
+  <dimen name="channel_map_source_header_margin_start">24dp</dimen>
+  <dimen name="channel_map_gain_header_margin_start">48dp</dimen>
+  <dimen name="channel_map_item_layout_height">56dp</dimen>
+  <dimen name="channel_map_item_tactor_index_width">32dp</dimen>
+  <dimen name="channel_map_item_source_index_width">56dp</dimen>
+  <dimen name="channel_map_item_gain_width">80dp</dimen>
+
+  <!-- Channel map dialog. -->
+  <dimen name="channel_map_dialog_height">200dp</dimen>
+  <dimen name="channel_map_source_field_width">160dp</dimen>
+  <dimen name="channel_map_gain_value_width">72dp</dimen>
+  <dimen name="channel_map_dialog_description_height">72dp</dimen>
+  <item name="channel_gain_control_value_min" type="dimen" format="float">1.0</item>
+  <item name="channel_gain_control_value_max" type="dimen" format="float">63.0</item>
+
+  <!-- Sound events fragment. -->
+  <dimen name="sound_events_header_width">200dp</dimen>
+  <dimen name="tactile_pattern_header_width">200dp</dimen>
+  <dimen name="tactile_pattern_header_margin_left">80dp</dimen>
+
+  <!-- Sound events dialog. -->
+  <dimen name="sound_event_source_field_width">200dp</dimen>
+  <dimen name="sound_events_gain_value_width">80dp</dimen>
+
+  <!-- Pattern editor fragment. -->
+  <dimen name="pattern_editor_op_layout_height">190dp</dimen>
+  <dimen name="pattern_editor_label_width">90dp</dimen>
+  <dimen name="pattern_editor_value_width">64dp</dimen>
+  <dimen name="pattern_editor_dropdown_width">180dp</dimen>
+  <item name="pattern_play_op_duration_value_min" type="dimen" format="float">20.0</item>
+  <item name="pattern_play_op_duration_value_max" type="dimen" format="float">640.0</item>
+  <item name="pattern_play_op_duration_value_step" type="dimen" format="float">20.0</item>
+  <item name="pattern_gain_op_gain_value_min" type="dimen" format="float">0.0</item>
+  <item name="pattern_gain_op_gain_value_max" type="dimen" format="float">1.0</item>
+  <dimen name="pattern_item_layout_height">40dp</dimen>
+  <dimen name="pattern_item_text_size">18sp</dimen>
+
+  <!-- Log fragment. -->
+  <dimen name="log_item_layout_height">20dp</dimen>
+  <dimen name="log_item_timestamp_width">72dp</dimen>
+  <dimen name="log_timestamp_text_size">8sp</dimen>
+  <dimen name="log_message_text_size">10sp</dimen>
+
+</resources>

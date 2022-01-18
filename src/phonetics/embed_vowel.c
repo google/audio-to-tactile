@@ -67,7 +67,7 @@ int EmbedVowelTargetByName(const char* target_name) {
   return -1;  /* `target_name` was not found. */
 }
 
-void EmbedVowel(const float* frame, float coord[2]) {
+void EmbedVowel(const float* frame, float* coord) {
   float buffer1[kDense1Units];
   float buffer2[kDense2Units];
 

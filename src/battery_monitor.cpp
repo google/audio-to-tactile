@@ -16,8 +16,6 @@
 
 namespace audio_tactile {
 
-BatteryMonitor::BatteryMonitor() {}
-
 void BatteryMonitor::InitializeLowVoltageInterrupt() {
   // Enable interrupt on LPCOMP CROSS event.
   NRF_LPCOMP->INTENSET = LPCOMP_INTENSET_CROSS_Msk;

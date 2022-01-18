@@ -139,8 +139,6 @@ ChannelMap g_channel_map;
 
 // Tactile pattern synthesizer.
 TactilePattern g_tactile_pattern;
-// Buffer for holding the tactile pattern string to play.
-char g_tactile_pattern_buffer[16];
 
 // Pointer to the tactile output buffer of g_tactile_processor.
 static float* g_tactile_output;
@@ -243,11 +241,12 @@ void HandleMessage(const Message& message) {
         TactilePatternStart(&g_tactile_pattern, kTactilePatternConfirm);
       }
     } break;
-    case MessageType::kTactilePattern:
-      if (message.ReadTactilePattern(g_tactile_pattern_buffer)) {
-        TactilePatternStart(&g_tactile_pattern, g_tactile_pattern_buffer);
+    case MessageType::kTactilePattern: {
+      char simple_pattern[kMaxTactilePatternLength + 1];
+      if (message.ReadTactilePattern(simple_pattern)) {
+        TactilePatternStart(&g_tactile_pattern, simple_pattern);
       }
-      break;
+    } break;
     case MessageType::kChannelMap:
       message.ReadChannelMap(&g_channel_map,
                              kTactileProcessorNumTactors,
@@ -329,7 +328,6 @@ static void TactileProcessorTaskFun(void*) {
     if (!g_receiving_audio || TactilePatternIsActive(&g_tactile_pattern)) {
       TactilePatternSynthesize(
           &g_tactile_pattern, g_tactile_processor.GetOutputBlockSize(),
-          g_tactile_processor.GetOutputNumberTactileChannels(),
           g_tactile_output);
     } else {
       // Convert ADC values to floats. The raw ADC values can swing from -2048
@@ -409,8 +407,8 @@ int main() {
   ChannelMapInit(&g_channel_map, kTactileProcessorNumTactors);
 
   TactilePatternInit(&g_tactile_pattern,
-                     g_tactile_processor.GetOutputSampleRate());
-  TactilePatternStart(&g_tactile_pattern, kTactilePatternSilence);
+                     g_tactile_processor.GetOutputSampleRate(),
+                     g_tactile_processor.GetOutputNumberTactileChannels());
 
   NRF_LOG_RAW_INFO("== TACTILE PROCESSOR SETUP DONE ==\n");
   NRF_LOG_FLUSH();

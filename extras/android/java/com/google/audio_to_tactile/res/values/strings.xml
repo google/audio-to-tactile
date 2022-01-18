@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright 2021-2022 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2"
+    xmlns:tools="http://schemas.android.com/tools">
+  <string name="app_name" translatable="false">Audio-to-Tactile</string>
+  <string name="app_tagline" tools:ignore="MissingTranslation"
+      description="Tagline for the Audio-to-Tactile project. [CHAR LIMIT=20]">Feeling sound</string>
+  <string name="nav_header_desc" tools:ignore="MissingTranslation"
+      description="Description of the navigation header. [CHAR LIMIT=20]">Navigation header</string>
+  <string name="toast_no_connection" tools:ignore="MissingTranslation"
+      description="Toast error message when device is not connected. [CHAR LIMIT=50]">
+      Not connected to device.
+  </string>
+
+  <string name="reset_button_label" tools:ignore="MissingTranslation"
+      description="Label for a reset button. [CHAR LIMIT=16]">Reset</string>
+  <string name="reset_all_button_label" tools:ignore="MissingTranslation"
+      description="Label for a reset all button. [CHAR LIMIT=20]">Reset all</string>
+
+  <!-- Title strings. -->
+  <string name="home_title" tools:ignore="MissingTranslation"
+      description="Title for the app's main home screen. [CHAR LIMIT=16]">Home</string>
+  <string name="tuning_title" tools:ignore="MissingTranslation"
+      description="Title for the tuning knobs screen. [CHAR LIMIT=16]">Tuning</string>
+  <string name="channel_map_title" tools:ignore="MissingTranslation"
+      description="Title for the channel map screen. [CHAR LIMIT=16]">Channel map</string>
+  <string name="sound_event_title" tools:ignore="MissingTranslation"
+      description="Title for sound events screen. [CHAR LIMIT=16]">Sound events</string>
+  <string name="pattern_editor_title" tools:ignore="MissingTranslation"
+      description="Title for the pattern editor. [CHAR LIMIT=16]">Pattern editor</string>
+  <string name="dfu_title" tools:ignore="MissingTranslation"
+      description="Title for device firmware update (DFU). [CHAR LIMIT=16]">Firmware</string>
+  <string name="log_title" tools:ignore="MissingTranslation"
+      description="Title for the log messages screen. [CHAR LIMIT=16]">Log</string>
+  <string name="settings_title" tools:ignore="MissingTranslation"
+      description="Title for the app settings. [CHAR LIMIT=16]">Settings</string>
+
+  <!-- Related to BLE communications. -->
+  <string name="connect_button_text" tools:ignore="MissingTranslation"
+      description="Text for button that initiates BLE connection. [CHAR LIMIT=16]">Connect</string>
+  <string name="disconnect_button_text" tools:ignore="MissingTranslation"
+      description="Text for button that disconnects BLE. [CHAR LIMIT=16]">Disconnect</string>
+  <string name="ble_connected" tools:ignore="MissingTranslation"
+      description="Toast when BLE connects. [CHAR LIMIT=50]">Successfully connected</string>
+
+  <!-- Toast messages alerting that BLE disconnected and a reason why this happened. -->
+  <string name="ble_device_disconnected" tools:ignore="MissingTranslation"
+      description="Toast when BLE device disconnects. [CHAR LIMIT=50]">Device disconnected</string>
+  <string name="ble_app_disconnected" tools:ignore="MissingTranslation"
+      description="Toast when the app disconnects. [CHAR LIMIT=50]">App disconnected</string>
+  <string name="ble_mtu_negotiation_failed" tools:ignore="MissingTranslation" description="Toast
+      when MTU negotiation failed. [CHAR LIMIT=50]">Disconnected: failed to negotiate MTU</string>
+  <string name="ble_service_discovery_failed" tools:ignore="MissingTranslation"
+      description="Toast when connection failed because BLE service discovery failed.
+      [CHAR LIMIT=50]">Disconnected: service discovery failed</string>
+  <string name="ble_nus_service_not_found" tools:ignore="MissingTranslation"
+      description="Toast when the BLE Nordic UART Service (NUS) is not found. The device is likely
+      incompatible. [CHAR LIMIT=50]">Disconnected: Nordic UART Service (NUS) not found</string>
+  <string name="ble_characteristic_not_found" tools:ignore="MissingTranslation"
+      description="Toast when NUS is found, but characteristics are missing. Shouldn't happen unless
+      the device is buggy. [CHAR LIMIT=50]">Disconnected: characteristic not found</string>
+  <string name="ble_operation_failed" tools:ignore="MissingTranslation"
+      description="Toast when a BLE operation failed, but we don't have a more specific explanation.
+      [CHAR LIMIT=50]">Disconnected: BLE operation failed</string>
+
+  <!-- Home fragment. -->
+  <string name="battery_voltage_display" tools:ignore="MissingTranslation"
+      description="Format string for displaying voltage. [CHAR LIMIT=20]">
+    <xliff:g id="battery_voltage" example="4.22">%1$.2f</xliff:g> V
+  </string>
+  <string name="temperature_display" tools:ignore="MissingTranslation"
+      description="Format string for displaying temperature. [CHAR LIMIT=20]">
+    <xliff:g id="temperature_celsius" example="29.5">%1$.1f</xliff:g> \u00B0C
+  </string>
+  <string name="device_name_label" tools:ignore="MissingTranslation"
+      description="Edit box label for device name. [CHAR LIMIT=30]">Device name</string>
+  <string name="tactile_pattern_label" tools:ignore="MissingTranslation"
+      description="Edit box label for pattern playback. [CHAR LIMIT=30]">Tactile pattern</string>
+  <string name="default_tactile_pattern"
+      translatable="false">C8555---5-5</string>
+  <string name="input_level_label" tools:ignore="MissingTranslation"
+      description="Label above input level plot. [CHAR LIMIT=30]">Input level</string>
+
+  <!-- Channel map fragment. -->
+  <string name="channel_map_reset_all" tools:ignore="MissingTranslation"
+      description="Button label to reset all channels. [CHAR LIMIT=20]">Reset all</string>
+  <string name="channel_map_tactor_label" tools:ignore="MissingTranslation"
+      description="Tactor label. [CHAR LIMIT=12]">Tactor</string>
+  <string name="channel_map_source_label" tools:ignore="MissingTranslation"
+      description="Label for channel source. [CHAR LIMIT=12]">Source</string>
+  <string name="channel_map_gain_label" tools:ignore="MissingTranslation"
+      description="Label for channel gain. [CHAR LIMIT=12]">Gain</string>
+  <string name="channel_map_enable_label" tools:ignore="MissingTranslation"
+      description="Label for channel enable. [CHAR LIMIT=12]">Enable</string>
+  <string name="channel_map_test_button_label" tools:ignore="MissingTranslation"
+      description="Test button label to test a tactor. [CHAR LIMIT=12]">Test</string>
+  <string name="channel_map_dialog_description" tools:ignore="MissingTranslation"
+      description="Text describing the channel map dialog. [CHAR LIMIT=80]">
+    Configure which source plays on this tactor and the gain.
+  </string>
+
+  <!-- DFU fragment. -->
+  <string name="dfu_description" tools:ignore="MissingTranslation"
+      description="Description of firmware update. [CHAR LIMIT=200]">
+    The button below sends new firmware to the device. The update takes around 2 minutes.
+  </string>
+  <string name="dfu_start" tools:ignore="MissingTranslation"
+      description="Button that starts firmware update. [CHAR LIMIT=16]">Update</string>
+  <string name="dfu_status_progress" tools:ignore="MissingTranslation"
+      description="Format string for displaying DFU progress. [CHAR LIMIT=50]">
+    Progress: <xliff:g id="dfu_status_progress_percent" example="58%">%1$d%%</xliff:g>
+  </string>
+  <string name="dfu_status_complete" tools:ignore="MissingTranslation"
+      description="Status text when DFU completes. [CHAR LIMIT=50]">Update complete.</string>
+  <string name="upload_options_description" tools:ignore="MissingTranslation"
+      description="Description of upload options. [CHAR LIMIT=50]">Upload options (advanced use)
+  </string>
+  <string name="upload_to_current_checkmark_description" tools:ignore="MissingTranslation"
+      description="Text describing upload to current device checkmark [CHAR LIMIT=50]">
+    Upload to connected device</string>
+  <string name="prepare_for_bootloading_checkbox_description" tools:ignore="MissingTranslation"
+      description="Text describing upload to current device checkmark [CHAR LIMIT=50]">
+    Send prepare for bootloading message</string>
+  <string name="other_device_address_description" tools:ignore="MissingTranslation"
+    description="Other device addres text description [CHAR LIMIT=50]">Other address</string>
+  <string name="other_device_address_textfield_default" tools:ignore="MissingTranslation"
+    description="Default other device address [CHAR LIMIT=17]">E1:A7:79:EB:A0:2E</string>
+
+  <!-- Sound Events Fragment. -->
+  <string name="sound_events_description" tools:ignore="MissingTranslation"
+      description="Description of sound events fragment. [CHAR LIMIT=200]">
+    The sound events are received from Live Transcribe app. Click on the button to test the pattern.
+    This is a non-working skeleton UI.
+  </string>
+  <string name="sound_events_enable" tools:ignore="MissingTranslation"
+      description="Enable switch [CHAR LIMIT=200]">
+    Enable
+  </string>
+  <string name="sound_events_heading" tools:ignore="MissingTranslation"
+      description="Header label for sound events [CHAR LIMIT=200]">
+    Sound event
+  </string>
+  <string name="pattern_header_text" tools:ignore="MissingTranslation"
+      description="Header label for patterns [CHAR LIMIT=200]">
+    Tactile Pattern
+  </string>
+  <string name="sound_event_dialog_description" tools:ignore="MissingTranslation"
+      description="Header label for patterns [CHAR LIMIT=200]">
+    Configure which tactile pattern will play for each event.
+  </string>
+  <string name="pattern_label_dropdown" tools:ignore="MissingTranslation"
+      description="Header label for patterns [CHAR LIMIT=200]">
+    Pattern
+  </string>
+  <string name="sound_event_gain_label" tools:ignore="MissingTranslation"
+      description="Header label for patterns [CHAR LIMIT=200]">
+    Gain
+  </string>
+
+  <!-- Pattern editor fragment. -->
+  <string name="pattern_editor_file_new" tools:ignore="MissingTranslation"
+      description="New file menu item. [CHAR LIMIT=16]">New</string>
+  <string name="pattern_editor_file_open" tools:ignore="MissingTranslation"
+      description="Open file menu item. [CHAR LIMIT=16]">Open...</string>
+  <string name="pattern_editor_file_save" tools:ignore="MissingTranslation"
+      description="Save file menu item. [CHAR LIMIT=16]">Save...</string>
+  <string name="pattern_editor_file_label" tools:ignore="MissingTranslation"
+      description="File button label. [CHAR LIMIT=16]">File</string>
+  <string name="pattern_editor_play_label" tools:ignore="MissingTranslation"
+      description="Play button label. [CHAR LIMIT=16]">Play</string>
+  <string name="pattern_editor_channel_label" tools:ignore="MissingTranslation"
+      description="Channel parameter label. [CHAR LIMIT=12]">Channel</string>
+  <string name="pattern_play_op_duration_label" tools:ignore="MissingTranslation"
+      description="Play duration parameter label. [CHAR LIMIT=12]">Duration</string>
+  <string name="pattern_wave_op_waveform_label" tools:ignore="MissingTranslation"
+      description="Waveform parameter label. [CHAR LIMIT=12]">Waveform</string>
+  <string name="pattern_gain_op_gain_label" tools:ignore="MissingTranslation"
+      description="Gain parameter label. [CHAR LIMIT=12]">Gain</string>
+  <string name="pattern_move_op_from_label" tools:ignore="MissingTranslation"
+      description="Source channel parameter label. [CHAR LIMIT=12]">From</string>
+  <string name="pattern_move_op_to_label" tools:ignore="MissingTranslation"
+      description="Destination channel parameter label. [CHAR LIMIT=12]">To</string>
+  <string name="pattern_item_tools_text" tools:ignore="MissingTranslation"
+      description="Example text for a pattern item. [CHAR LIMIT=30]">wave all chirp</string>
+  <string name="toast_pattern_empty" tools:ignore="MissingTranslation"
+      description="Toast message when attempting to play empty pattern. [CHAR LIMIT=60]">
+      Pattern is empty. Please edit or open a pattern.
+  </string>
+  <string name="toast_pattern_does_nothing" tools:ignore="MissingTranslation"
+      description="Toast message when attempting to play a do-nothing pattern. [CHAR LIMIT=60]">
+      Pattern must have at least a `wave` op followed by `play`.
+  </string>
+
+  <!-- Toast messages related to flash memory. -->
+  <string name="flash_write_success" tools:ignore="MissingTranslation"
+      description="Toast when a flash was written without issues.
+      [CHAR LIMIT=50]">Flash memory written</string>
+  <string name="flash_write_failed_unknown" tools:ignore="MissingTranslation"
+      description="Toast when a flash write failed for unknown reason
+      [CHAR LIMIT=50]">Flash write failed with unknown error!</string>
+  <string name="flash_write_failed_not_formatted" tools:ignore="MissingTranslation"
+      description="Toast when a flash write failed for not being formatted
+      [CHAR LIMIT=50]">Flash write failed. Please format with SdFat </string>
+
+</resources>

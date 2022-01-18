@@ -20,8 +20,6 @@
 
 namespace audio_tactile {
 
-PdmMic::PdmMic() {}
-
 void PdmMic::Initialize(uint16_t clock_pin, uint16_t data_pin) {
   // Set the buffer pointer for Easy DMA, thats where the PDM data goes.
   nrf_pdm_buffer_set(NRF_PDM, (uint32_t *)pdm_buffer_[0], kPdmDataSize);

@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC
+// Copyright 2020-2021 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,17 +26,10 @@
 
 #include <stdint.h>
 
+#include "board_defs.h"  // NOLINT(build/include)
 #include "nrf_pdm.h"  // NOLINT(build/include)
 
 namespace audio_tactile {
-
-// PDM hardware constants.
-enum {
-  kPdmClockPin = 6,
-  kPdmDataPin = 7,
-  kPdmIrqPriority = 6,
-  kPdmDefaultGain = 80  // set to max
-};
 
 // Buffer constants.
 const int kPdmDataSize = 64;
@@ -44,7 +37,11 @@ const int kNumberPdmBuffers = 2;
 
 class PdmMic {
  public:
-  PdmMic();
+  // Pdm buffer constants.
+  enum {
+    kPdmDataSize = 64,
+    kNumberPdmBuffers = 2,
+  };
 
   // Initialize the PDM microphone.
   void Initialize(uint16_t clock_pin, uint16_t data_pin);
@@ -53,7 +50,7 @@ class PdmMic {
   void Enable();
 
   // Get the mic data array. The data is updated automatically in IRQ.
-  void GetData(int16_t * destination_array);
+  void GetData(int16_t* destination_array);
 
   // Disable the PDM mic.
   void Disable();
@@ -81,6 +78,12 @@ class PdmMic {
 
   // Which buffer is currently ready to read.
   uint8_t which_buffer_ready_;
+
+  // PDM hardware constants.
+  enum {
+    kPdmIrqPriority = 6,
+    kPdmDefaultGain = 80  // set to max
+  };
 };
 
 extern PdmMic OnBoardMic;

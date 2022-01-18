@@ -1,4 +1,4 @@
-// Copyright 2021 Google LLC
+// Copyright 2021-2022 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -77,6 +77,7 @@ enum class MessageType {
   kOnConnectionBatch = 33,
   kGetOnConnectionBatch = 34,
   kCalibrateChannel = 35,
+  kTactileExPattern = 36,
 };
 
 // Recipients of messages.
@@ -265,7 +266,8 @@ class Message {
   // Reads flash memory status after a write.
   bool ReadFlashWriteStatus(int* status) const;
 
-
+  // Reads the extended-format pattern from a kTactileExPattern message.
+  bool ReadTactileExPattern(Slice<uint8_t> pattern) const;
 
   // For the following messages, the payload is empty and are read simply by
   // checking `type()`.

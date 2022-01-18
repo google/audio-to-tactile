@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright 2021 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:id="@+id/mobile_navigation"
+  app:startDestination="@+id/nav_home">
+
+  <fragment
+    android:id="@+id/nav_home"
+    android:name="com.google.audio_to_tactile.HomeFragment"
+    android:label="@string/home_title"
+    tools:layout="@layout/fragment_home" />
+
+  <fragment
+    android:id="@+id/nav_channel_map"
+    android:name="com.google.audio_to_tactile.ChannelMapFragment"
+    android:label="@string/channel_map_title"
+    tools:layout="@layout/fragment_channel_map" >
+    <action
+      android:id="@+id/action_nav_channel_map_to_channel_map_dialog"
+      app:destination="@id/nav_channel_map_dialog" />
+  </fragment>
+
+  <dialog
+    android:id="@+id/nav_channel_map_dialog"
+    android:name="com.google.audio_to_tactile.ChannelMapDialogFragment"
+    android:label="channel_map_dialog_fragment"
+    tools:layout="@layout/fragment_channel_map_dialog" >
+  </dialog>
+
+  <fragment
+    android:id="@+id/nav_tuning"
+    android:name="com.google.audio_to_tactile.TuningFragment"
+    android:label="@string/tuning_title"
+    tools:layout="@layout/fragment_tuning" >
+    <action
+      android:id="@+id/action_nav_tuning_to_tuning_dialog"
+      app:destination="@id/nav_tuning_dialog" />
+  </fragment>
+
+  <dialog
+    android:id="@+id/nav_tuning_dialog"
+    android:name="com.google.audio_to_tactile.TuningDialogFragment"
+    android:label="tuning_dialog_fragment"
+    tools:layout="@layout/fragment_tuning_dialog" >
+  </dialog>
+
+  <dialog
+    android:id="@+id/nav_sound_events_dialog"
+    android:name="com.google.audio_to_tactile.SoundEventsDialogFragment"
+    android:label="channel_map_dialog_fragment"
+    tools:layout="@layout/fragment_sound_event_dialog" >
+  </dialog>
+
+  <fragment
+    android:id="@+id/nav_sound_events"
+    android:name="com.google.audio_to_tactile.SoundEventsFragment"
+    android:label="@string/sound_event_title"
+    tools:layout="@layout/fragment_sound_events" />
+    <action
+      android:id="@+id/action_nav_sound_event_to_sound_event_dialog"
+      app:destination="@id/nav_sound_events_dialog" />
+
+  <fragment
+    android:id="@+id/nav_pattern_editor"
+    android:name="com.google.audio_to_tactile.PatternEditorFragment"
+    android:label="@string/pattern_editor_title"
+    tools:layout="@layout/fragment_pattern_editor" />
+
+  <fragment
+    android:id="@+id/nav_dfu"
+    android:name="com.google.audio_to_tactile.DfuFragment"
+    android:label="@string/dfu_title"
+    tools:layout="@layout/fragment_dfu" />
+
+  <fragment
+    android:id="@+id/nav_log"
+    android:name="com.google.audio_to_tactile.LogFragment"
+    android:label="@string/log_title"
+    tools:layout="@layout/fragment_log" />
+
+</navigation>

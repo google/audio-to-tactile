@@ -43,33 +43,13 @@
 #include <string.h>
 
 #include "board_defs.h"
+#include "cpp/constants.h"
 #include "nrf_gpio.h"
 #include "nrf_saadc.h"
-#include "cpp/constants.h"
 
 // NOLINTEND
 
 namespace audio_tactile {
-
-// Hardware definitions.
-enum {
-  kSaadcIrqPriority = 7,  // Lowest priority interrupt.
-};
-
-// Pin definitions.
-#if PUCK_BOARD
-enum {
-  kMicShutDownPin = 46,              // On P1.14, which maps to 32 + 14 = 46
-  kMicAdcPin = NRF_SAADC_INPUT_AIN4  // Analog input 4.
-};
-#endif
-
-#if SLIM_BOARD
-enum {
-  kMicShutDownPin = 37,              // on P1.05, maps to 32 + 5 = 37
-  kMicAdcPin = NRF_SAADC_INPUT_AIN7  // Analog input 7.
-};
-#endif
 
 class AnalogMic {
  public:
@@ -101,6 +81,26 @@ class AnalogMic {
 
   // Buffer for the collected analog data.
   nrf_saadc_value_t adc_buffer_[kAdcDataSize];
+
+  // Hardware definitions.
+  enum {
+    kSaadcIrqPriority = 7,  // Lowest priority interrupt.
+  };
+
+// Pin definitions.
+#if PUCK_BOARD
+  enum {
+    kMicShutDownPin = 46,              // On P1.14, which maps to 32 + 14 = 46
+    kMicAdcPin = NRF_SAADC_INPUT_AIN4  // Analog input 4.
+  };
+#endif
+
+#if SLIM_BOARD || SLIM_V2_BOARD
+  enum {
+    kMicShutDownPin = 37,              // on P1.05, maps to 32 + 5 = 37
+    kMicAdcPin = NRF_SAADC_INPUT_AIN7  // Analog input 7.
+  };
+#endif
 };
 
 extern AnalogMic ExternalAnalogMic;

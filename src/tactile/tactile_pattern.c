@@ -15,79 +15,26 @@
 
 #include "tactile/tactile_pattern.h"
 
-#include <stdint.h>
+#include <limits.h>
 #include <math.h>
-
+#include <string.h>
 #include "dsp/fast_fun.h"
 
-/* Tactile patterns are represented as a null-terminated char* string, each char
- * indicating one "segment" of the pattern. The synthesizer understands the
- * following codes:
- *
- *   Code  Duration        Waveform
- *   '-'   kPauseSeconds   Pause (silence).
- *   '0'   kToneSeconds     25.0 Hz sine wave.
- *   '1'   kToneSeconds     29.7 Hz sine wave.
- *   '2'   kToneSeconds     35.4 Hz sine wave.
- *   '3'   kToneSeconds     42.0 Hz sine wave.
- *   '4'   kToneSeconds     50.0 Hz sine wave.
- *   '5'   kToneSeconds     59.5 Hz sine wave.
- *   '6'   kToneSeconds     70.7 Hz sine wave.
- *   '7'   kToneSeconds     84.1 Hz sine wave.
- *   '8'   kToneSeconds    100.0 Hz sine wave.
- *   '9'   kToneSeconds    118.9 Hz sine wave.
- *   'A'   kToneSeconds    141.4 Hz sine wave.
- *   'B'   kToneSeconds    168.2 Hz sine wave.
- *   'C'   kToneSeconds    200.0 Hz sine wave.
- *   'D'   kToneSeconds    237.8 Hz sine wave.
- *   'E'   kToneSeconds    282.8 Hz sine wave.
- *   'F'   kToneSeconds    336.4 Hz sine wave.
- *   '/'   kChirpSeconds   Rising exponential chirp.
- *
- * Durations for tone and pause can be set by changing the duration fields
- * in the pattern object.
- *
- * Tactile perception has little sensitivity to frequencies above 300 Hz and a
- * frequency change JND of 20-30%. With hardware constraints, tactors have
- * difficulty producing frequencies much below 30 Hz. So all frequencies are
- * well represented with 16 tones covering 4 octaves (25--336.4 Hz) with 4 tones
- * per octave (increments of 19%).
- *
- * This makes it easy to build up an interesting signal as a sequence of simple
- * pieces. For instance, "6 A A" means "tone6, pause, toneA, pause, toneA". The
- * synthesizer takes care of fading sensibly where tones start and end.
- */
+/* Default gain in [0, 1]. SetGain and SetAllGain ops can override this. */
+static const float kDefaultGain = 0.15f;
+/* Duration of fading in or out. Must be <= 0.02 s, the min play duration. */
+static const float kFadeSeconds = 0.02f;
+/* Parameters for the Chirp waveform. */
+static const float kChirpSeconds = 0.3f;
+static const float kChirpStartHz = 40.0f;
+static const float kChirpEndHz = 120.0f;
 
-const char* kTactilePatternSilence = "";
 /* "Connect" pattern: low tone followed by two higher tones. */
 const char* kTactilePatternConnect = "66-A-A";
 /* "Disconnect" pattern: middle, high, low sequence of tones. */
 const char* kTactilePatternDisconnect = "8A-6";
 /* "Confirm" pattern: two quick tones. */
 const char* kTactilePatternConfirm = "5-5";
-
-/* Pattern used for calibration tones: tone, pause, tone.
- * Calibration tones are played in a special way. The first tone is played on
- * `active_channel`, StartSegment() recognizes the pause in this pattern to
- * switch to playing the second tone on `second_channel`.
- */
-static const char* kCalibrationTwoTonePattern = "999---999";
-static const char* kCalibrationOneTonePattern = "999";
-static const char* kCalibrationIntensityAdjustmentPattern =
-    "99---99---99";  /* 400 ms stimulus, 300 ms interstimulus */
-static const char* kCalibrationOneToneThresholdPattern = "99"; /* 400 ms */
-
-static const float kAmplitude = 0.15f; /* Amplitude in [0.0, 1.0]. */
-static const float kPauseSeconds = 0.03f;
-static const float kPauseLong = 0.1f;
-static const float kFadeSeconds = 0.02f;
-
-static const float kToneSeconds = 0.08f;
-static const float kToneLong = 0.2f;
-
-static const float kChirpSeconds = 0.3f;
-static const float kChirpStartHz = 40.0f;
-static const float kChirpEndHz = 120.0f;
 
 /* Converts seconds to frames according to p->sample_rate_hz. */
 static int SecondsToFrames(const TactilePattern* p, float seconds) {
@@ -99,91 +46,215 @@ static uint32_t FrequencyToPhase32(const TactilePattern* p, float frequency) {
   return Phase32FromFloat(frequency / p->sample_rate_hz);
 }
 
-/* Returns 1 if `c` represents a silent segment, i.e. the end or a pause. */
-static int IsSilent(char c) {
-  return c == '\0' || c == '-';
+/* Decodes a linear gain from 8-bit value. */
+static float DecodeGain(uint8_t byte) {
+  return (float) byte * 3.921569e-03 /* = 1.0 / 255 */;
 }
 
-/* Gets tone frequency where `c` is one of "0123456789ABCDEF". */
-static float GetToneFrequency(char c) {
-  /* Convert hex digit to int between 0 and 15. */
-  const int i = (c < 'A') ? (c - '0') : (c - ('A' - 10));
-  /* Lowest tone is 25 Hz, and there are four tones per octave. */
-  return 25.0f * FastExp2(0.25f * i);
+/* Sets the amplitude for channel `c` to `amplitude` and starts fading. */
+static void SetAmplitude(TactilePattern* p, int c, float amplitude) {
+  TactilePatternChannel* channel = &p->channels[c];
+
+  /* Start fading to the new amplitude. */
+  channel->amplitude_fade_delta += channel->amplitude - amplitude;
+  channel->amplitude = amplitude;
+  p->fade.phase = 0;
+  p->fade_counter = p->fade_frames;
 }
 
-/* Sets up variables for the duration and tone frequency for the next segment,
- * and also handling fading in and out between silent and non-silent segments.
- * The `first` arg indicates whether this is the first segment of the sequence.
- */
-static void StartSegment(TactilePattern* p, int first) {
-  const char segment = p->pattern[0];
+/* Sets the waveform for channel `c` to `waveform`. */
+static void SetWaveform(TactilePattern* p, int c, int waveform) {
+  TactilePatternChannel* channel = &p->channels[c];
+  if (channel->waveform == waveform && channel->amplitude > 0.0f) { return; }
+  float frequency_hz = 0.0f;
+  float amplitude = channel->gain;
 
-  /* Get the duration and tone frequency for this segment. */
-  float duration_s;
-  float frequency_hz;
-  switch (segment) {
-    case '0':
-    case '1':
-    case '2':
-    case '3':
-    case '4':
-    case '5':
-    case '6':
-    case '7':
-    case '8':
-    case '9':
-    case 'A':
-    case 'B':
-    case 'C':
-    case 'D':
-    case 'E':
-    case 'F':
-      duration_s = p->tone_duration;
-      frequency_hz = GetToneFrequency(segment);
-      break;
-    case '/':
-      duration_s = kChirpSeconds;
-      frequency_hz = kChirpStartHz;
-      break;
-    case '\0':
-      return;
-    default: /* Treat '-' (or anything unrecognized) as a pause. */
-      duration_s = p->pause_duration;
-      frequency_hz = 0.0f;
-      /* When playing calibration tones, use the pause to determine when to
-       * switch the active channel between the first and second channels.
-       * Only switch the channel on the first pause of a continuous pause
-       * segment, and only if the pause is not the first character of
-       * the pattern.
-       */
-      if (p->active_channel >= 0 && !first && !IsSilent(p->pattern[-1])) {
-        if (p->active_channel != p->second_channel) {
-          p->active_channel = p->second_channel;
-        } else {
-          p->active_channel = p->first_channel;
-        }
+  if (kTactilePatternWaveformSin25Hz <= waveform &&
+      waveform <= kTactilePatternWaveformSin350Hz) {
+    static const int16_t kFrequenciesHz[16] = {
+        25, 30, 35, 45, 50, 60, 70, 90, 100, 125, 150, 175, 200, 250, 300, 350};
+    frequency_hz = kFrequenciesHz[waveform - kTactilePatternWaveformSin25Hz];
+  } else if (waveform == kTactilePatternWaveformChirp) {
+    frequency_hz = kChirpStartHz;
+  } else {
+    amplitude = 0.0f;
+  }
+
+  channel->waveform = waveform;
+  if (frequency_hz > 0.0f) {
+    channel->tone.frequency = FrequencyToPhase32(p, frequency_hz);
+  }
+  SetAmplitude(p, c, amplitude);
+}
+
+/* Sets the linear gain for channel `c` to `gain` and starts fading. */
+static void SetGain(TactilePattern* p, int c, float gain) {
+  TactilePatternChannel* channel = &p->channels[c];
+
+  if (channel->amplitude > 0.0f) {
+    SetAmplitude(p, c, gain);
+  }
+  channel->gain = gain;
+}
+
+/* "Moves" a waveform from channel `c_from` to channel `c_to`. */
+static void MoveChannel(TactilePattern* p, int c_from, int c_to) {
+  TactilePatternChannel* channel_from = &p->channels[c_from];
+  TactilePatternChannel* channel_to = &p->channels[c_to];
+
+  channel_to->tone.frequency = channel_from->tone.frequency;
+  SetAmplitude(p, c_to,
+               channel_from->amplitude + channel_from->amplitude_fade_delta);
+}
+
+static void Stop(TactilePattern* p) {
+  p->playback_state = kTactilePatternStateStopping;
+  p->num_frames_until_next_op = INT_MAX;
+}
+
+/* Executes ops until the next Play or End op. */
+static void ExecuteOps(TactilePattern* p) {
+  if (p->playback_state != kTactilePatternStatePlaying) {  /* Pattern ended. */
+    /* Set main loop to run INT_MAX times before asking again. */
+    p->num_frames_until_next_op = INT_MAX;
+    return;
+  }
+
+  const int num_channels = p->num_channels;
+  int8_t channel_activated[kTactilePatternMaxChannels] = {0};
+
+  while (p->num_frames_until_next_op <= 0) {
+    uint_fast8_t opcode = *(p->pattern++);  /* Read next opcode. */
+
+    /* Opcodes >= 0x80 indicate an action with the high bits and a parameter
+     * (usually a channel index) with the lower bits.
+     */
+    if (opcode >= 0x80) {
+      switch (opcode & 0xf0) {
+        /* Play: synthesize for a specified duration before reading next op. */
+        case kTactilePatternOpPlay:
+        case kTactilePatternOpPlay + 0x10: {
+          /* Convert 5-bit duration code to units of frames. */
+          const float duration_s = ((opcode & 0x1f) + 1) * 0.02f;
+          p->num_frames_until_next_op = SecondsToFrames(p, duration_s);
+        } break;
+
+        /* SetWaveform: set the waveform for one channel. */
+        case kTactilePatternOpSetWaveform:
+          SetWaveform(p, /*c=*/opcode & 0xf, /*waveform=*/*(p->pattern++));
+          channel_activated[opcode & 0xf] = 1;
+          break;
+
+        /* SetGain: set the gain for one channel. */
+        case kTactilePatternOpSetGain:
+          SetGain(p, /*c=*/opcode & 0xf, /*gain=*/DecodeGain(*(p->pattern++)));
+          break;
+
+        /* For any other opcode, set state to Stopping. */
+        default:
+          Stop(p);
+          memset(channel_activated, 0, kTactilePatternMaxChannels);
       }
-      break;
-  }
-  p->segment_counter = SecondsToFrames(p, duration_s);
-  p->tone.frequency = FrequencyToPhase32(p, frequency_hz);
+    } else {
+      switch (opcode) {
+        /* SetAllWaveform: set the waveform for all channels. */
+        case kTactilePatternOpSetAllWaveform: {
+          const int waveform = *(p->pattern++);
+          int c;
+          for (c = 0; c < num_channels; ++c) {
+            SetWaveform(p, c, waveform);
+          }
+          memset(channel_activated, 1, kTactilePatternMaxChannels);
+          break;
+        }
 
-  if (!IsSilent(segment)) { /* Current segment is not silent. */
-    /* If previous segment was silent, fade in. */
-    if (first || IsSilent(p->pattern[-1])) {
-      p->fade.phase = 0;
-      p->fade_counter = p->fade_frames;
+        /* SetAllGain: set the gain for all channels. */
+        case kTactilePatternOpSetAllGain: {
+          const float gain = DecodeGain(*(p->pattern++));
+          int c;
+          for (c = 0; c < num_channels; ++c) {
+            SetGain(p, c, gain);
+          }
+          break;
+        }
+
+        /* Move: Move the waveform from one channel to another. */
+        case kTactilePatternOpMove: {
+          /* Read `c_from` and `c_to` from the next byte. */
+          const uint_fast8_t channels = *(p->pattern++);
+          const int c_from = channels >> 4;
+          const int c_to = channels & 0x0f;
+          MoveChannel(p, c_from, c_to);
+          channel_activated[c_from] = 0;
+          channel_activated[c_to] = 1;
+        } break;
+
+        /* For any other opcode, set state to Stopping. */
+        default:
+          Stop(p);
+          memset(channel_activated, 0, kTactilePatternMaxChannels);
+      }
     }
-    /* If next segment will be silent, fade out at the end of this segment. */
-    if (IsSilent(p->pattern[1])) {
-      p->fade_start_index = p->fade_frames;
+  }
+
+  /* Set any channels that didn't set a waveform to silence. */
+  int c;
+  for (c = 0; c < num_channels; ++c) {
+    if (!channel_activated[c]) {
+      SetAmplitude(p, c, 0.0f);
     }
   }
 }
 
-void TactilePatternInit(TactilePattern* p, float sample_rate_hz) {
+/* Updates fading state when a waveform is fading in/out to a new amplitude. */
+static void UpdateFadingState(TactilePattern* p) {
+  if (--p->fade_counter == 0) { /* Fading just completed. */
+    if (p->playback_state == kTactilePatternStateStopping) {
+      p->playback_state = kTactilePatternStateStopped;
+    }
+
+    int c;
+    for (c = 0; c < p->num_channels; ++c) {
+      p->channels[c].amplitude_fade_delta = 0.0f;
+    }
+    return;
+  }
+
+  /* Fade smoothly using a Hann window. */
+  OscillatorNext(&p->fade);
+  p->fade_weight = 0.5f * (1.0f + Phase32Cos(p->fade.phase));
+}
+
+/* Generate the next sample for channel `c`. */
+static float GenerateSample(TactilePattern* p, int c) {
+  TactilePatternChannel* channel = &p->channels[c];
+
+  OscillatorNext(&channel->tone);
+  float value = Phase32Sin(channel->tone.phase);
+
+  if (channel->waveform == kTactilePatternWaveformChirp) {
+    /* Grow the oscillator frequency to make an exponential chirp. */
+    channel->tone.frequency *= p->chirp_rate;
+  }
+
+  if (p->fade_counter) {
+    value *= channel->amplitude
+        + channel->amplitude_fade_delta * p->fade_weight;
+  } else {
+    value *= channel->amplitude;
+  }
+
+  return value;
+}
+
+void TactilePatternInit(TactilePattern* p, float sample_rate_hz,
+                     int num_channels) {
+  if (!(0 <= num_channels && num_channels <= kTactilePatternMaxChannels)) {
+    num_channels = 0;
+  }
+
   p->sample_rate_hz = sample_rate_hz;
+  p->num_channels = num_channels;
   /* Compute frequency such that half a cycle is kFadeSeconds. */
   p->fade.frequency = FrequencyToPhase32(p, 0.5f / kFadeSeconds);
   p->fade_frames = SecondsToFrames(p, kFadeSeconds);
@@ -192,108 +263,181 @@ void TactilePatternInit(TactilePattern* p, float sample_rate_hz) {
    */
   p->chirp_rate =
       pow(kChirpEndHz / kChirpStartHz, 1.0f / (kChirpSeconds * sample_rate_hz));
-  TactilePatternStart(p, kTactilePatternSilence);
+  TactilePatternStartEx(p, NULL);
 }
 
-void TactilePatternStart(TactilePattern* p, const char* pattern) {
-  p->pattern = pattern;
-  p->tone.phase = 0;
-  p->segment_counter = 0;
+void TactilePatternStartEx(TactilePattern* p, const uint8_t* ex_pattern) {
+  p->pattern = ex_pattern;
+  p->num_frames_until_next_op = 0;
   p->fade_counter = 0;
-  p->fade_start_index = 0;
-  p->active_channel = -1; /* All channels are active. */
-  p->amplitude = kAmplitude;
-  p->tone_duration = kToneSeconds;
-  p->pause_duration = kPauseSeconds;
-  StartSegment(p, 1);
+  p->playback_state =
+      ex_pattern ? kTactilePatternStatePlaying : kTactilePatternStateStopped;
+
+  int c;
+  for (c = 0; c < p->num_channels; ++c) {
+    TactilePatternChannel* channel = &p->channels[c];
+    channel->tone.phase = 0;
+    channel->tone.frequency = 0;
+    channel->waveform = kTactilePatternWaveformSin25Hz;
+    channel->amplitude = 0.0f;
+    channel->amplitude_fade_delta = 0.0f;
+    channel->gain = kDefaultGain;
+  }
+}
+
+int TactilePatternSynthesize(TactilePattern* p, int num_frames, float* output) {
+  const int num_channels = p->num_channels;
+
+  int i;
+  for (i = 0; i < num_frames; ++i, output += num_channels) {
+    if (p->num_frames_until_next_op <= 0) {
+      ExecuteOps(p); /* Execute ops until the next Play or End op. */
+    }
+    p->num_frames_until_next_op -= 1;
+
+    if (p->fade_counter) { /* If fading, update fading state variables. */
+      UpdateFadingState(p);
+    }
+
+    int c;
+    for (c = 0; c < num_channels; ++c) {
+      output[c] = GenerateSample(p, c);
+    }
+  }
+
+  return p->playback_state != kTactilePatternStateStopped;
 }
 
 void TactilePatternStartCalibrationTones(TactilePattern* p, int first_channel,
                                          int second_channel) {
-  TactilePatternStart(p, first_channel == second_channel
-                             ? kCalibrationOneTonePattern
-                             : kCalibrationTwoTonePattern);
-  p->active_channel = first_channel;
-  p->first_channel = first_channel;
-  p->second_channel = second_channel;
+  static uint8_t kPattern[8] = {
+      /* Play 125 Hz tone on the first channel for 240 ms. */
+      kTactilePatternOpSetWaveform /* + first_channel (added below) */,
+      kTactilePatternWaveformSin125Hz,
+      TACTILE_PATTERN_OP_PLAY_MS(240),
+      /* 100 ms pause. */
+      TACTILE_PATTERN_OP_PLAY_MS(100),
+      /* Play 125 Hz tone on the second channel for 240 ms. */
+      kTactilePatternOpSetWaveform /* + second_channel (added below) */,
+      kTactilePatternWaveformSin125Hz,
+      TACTILE_PATTERN_OP_PLAY_MS(240),
+      kTactilePatternOpEnd,
+  };
+
+  uint8_t* pattern = p->buffer;
+  memcpy(pattern, kPattern, sizeof(kPattern));
+
+  pattern[0] += first_channel;
+
+  if (second_channel == first_channel) {
+    /* If the two given channels are the same, stop after the first tone. */
+    pattern[3] = kTactilePatternOpEnd;
+  } else {
+    pattern[4] += second_channel;
+  }
+
+  TactilePatternStartEx(p, p->buffer);
 }
 
 void TactilePatternStartCalibrationTonesThresholds(TactilePattern* p,
                                                    int first_channel,
                                                    int second_channel,
                                                    float amplitude) {
-  p->active_channel = first_channel;
-  p->first_channel = first_channel;
-  p->second_channel = second_channel;
-  p->amplitude = amplitude;
-  p->pattern = first_channel == second_channel
-                             ? kCalibrationOneToneThresholdPattern
-                             : kCalibrationIntensityAdjustmentPattern;
-  p->tone.phase = 0;
-  p->segment_counter = 0;
-  p->fade_counter = 0;
-  p->fade_start_index = 0;
-  p->tone_duration = kToneLong;
-  p->pause_duration = kPauseLong;
-  StartSegment(p, 1);
+  static uint8_t kPattern[14] = {
+    /* Set the gain to the specified amplitude. */
+    kTactilePatternOpSetAllGain, 0xff /* Placeholder (set below). */,
+    /* Play 125 Hz tone on the first channel for 400 ms. */
+    kTactilePatternOpSetWaveform /* + first_channel (added below) */,
+    kTactilePatternWaveformSin125Hz,
+    TACTILE_PATTERN_OP_PLAY_MS(400),
+    /* 300 ms pause. */
+    TACTILE_PATTERN_OP_PLAY_MS(300),
+    /* Play 125 Hz tone on the second channel for 400 ms. */
+    kTactilePatternOpSetWaveform /* + second_channel (added below) */,
+    kTactilePatternWaveformSin125Hz,
+    TACTILE_PATTERN_OP_PLAY_MS(400),
+    /* 300 ms pause. */
+    TACTILE_PATTERN_OP_PLAY_MS(300),
+    /* Play 125 Hz tone on the first channel for 400 ms. */
+    kTactilePatternOpSetWaveform /* + first_channel (added below) */,
+    kTactilePatternWaveformSin125Hz,
+    TACTILE_PATTERN_OP_PLAY_MS(400),
+    kTactilePatternOpEnd,
+  };
+
+  uint8_t* pattern = p->buffer;
+  memcpy(pattern, kPattern, sizeof(kPattern));
+
+  /* Clip amplitude to [0, 1]. */
+  amplitude = (amplitude > 1.0f) ? 1.0f : (amplitude > 0.0f) ? amplitude : 0.0f;
+  pattern[1] = (uint8_t) (255 * amplitude + 0.5f);
+  pattern[2] += first_channel;
+
+  if (second_channel == first_channel) {
+    /* If the two given channels are the same, stop after the first tone. */
+    pattern[5] = kTactilePatternOpEnd;
+  } else {
+    pattern[6] += second_channel;
+    pattern[10] += first_channel;
+  }
+
+  TactilePatternStartEx(p, p->buffer);
 }
 
-int TactilePatternSynthesize(TactilePattern* p, int num_frames,
-                             int num_channels, float* output) {
-  int active_channel = p->active_channel;
-  const float amplitude = p->amplitude;
+int TactilePatternStart(TactilePattern* p, const char* simple_pattern) {
+  const int /*bool*/ success = TactilePatternTranslateSimplePattern(
+      simple_pattern, p->buffer, kTactilePatternBufferSize);
+  TactilePatternStartEx(p, success ? p->buffer : NULL);
+  return success;
+}
 
-  int i;
-  for (i = 0; i < num_frames; ++i, output += num_channels) {
-    /* Generate the next sample. */
-    const char segment = p->pattern[0];
-    float value;
-    if (segment == '\0') { /* End of the pattern. */
-      value = 0.0f;
-    } else {
-      if (segment == '-') { /* Pause segment. */
-        value = 0.0f;
-      } else {
-        /* Generate sine wave. */
-        OscillatorNext(&p->tone);
-        value = amplitude * Phase32Sin(p->tone.phase);
-        if (segment == '/') { /* Chirp segment. */
-          /* Grow the oscillator frequency to make an exponential chirp. */
-          p->tone.frequency *= p->chirp_rate;
-        }
+int TactilePatternTranslateSimplePattern(const char* simple_pattern,
+                                         uint8_t* output, int output_size) {
+  if (!simple_pattern || !output || output_size <= 0) { return 0; }
 
-        if (p->segment_counter == p->fade_start_index) {
-          /* Begin fading out. */
-          p->fade_counter = p->segment_counter;
-          p->fade_start_index = 0;
-        }
-        if (p->fade_counter > 0) { /* Fading in or out. */
-          p->fade_counter -= 1;
-          /* Modulate with a raised cosine. */
-          OscillatorNext(&p->fade);
-          value *= 0.5f * (1.0f - Phase32Cos(p->fade.phase));
-        }
-      }
+  char segment;
+  while ((segment = *(simple_pattern++)) != '\0') {
+    switch (segment) {
+      case '0': /* Tone. */
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+      case '8':
+      case '9':
+      case 'A':
+      case 'B':
+      case 'C':
+      case 'D':
+      case 'E':
+      case 'F':
+        if (output_size <= 3) { return 0; }
+        *output++ = kTactilePatternOpSetAllWaveform;
+        *output++ = kTactilePatternWaveformSin25Hz +
+          ((segment < 'A') ? (segment - '0') : (segment - ('A' - 10)));
+        *output++ = TACTILE_PATTERN_OP_PLAY_MS(80);
+        output_size -= 3;
+        break;
 
-      if (--p->segment_counter == 0) { /* Segment just ended. */
-        p->pattern += 1;
-        StartSegment(p, 0);
-        active_channel = p->active_channel;
-      }
-    }
+      case '/': /* Chirp. */
+        if (output_size <= 3) { return 0; }
+        *output++ = kTactilePatternOpSetAllWaveform;
+        *output++ = kTactilePatternWaveformChirp;
+        *output++ = TACTILE_PATTERN_OP_PLAY_MS(300);
+        output_size -= 3;
+        break;
 
-    int c;
-    if (active_channel < 0) { /* Play on all channels. */
-      for (c = 0; c < num_channels; ++c) {
-        output[c] = value;
-      }
-    } else { /* For calibration tones, play only on `active_channel`. */
-      for (c = 0; c < num_channels; ++c) {
-        output[c] = 0.0f;
-      }
-      output[active_channel] = value;
+      default: /* Pause, or an unrecognized segment. */
+        if (output_size <= 1) { return 0; }
+        *output++ = TACTILE_PATTERN_OP_PLAY_MS(40);
+        --output_size;
+        break;
     }
   }
 
-  return *p->pattern != '\0';
+  *output = kTactilePatternOpEnd;
+  return 1;
 }
