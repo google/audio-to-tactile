@@ -28,8 +28,8 @@
  * TIMER_ENABLED 1 and corresponding instance: (e.g., TIMER1_ENABLED 1)
  */
 
-#ifndef AUDIO_TO_TACTILE_SRC_BENCHMARKS_H_
-#define AUDIO_TO_TACTILE_SRC_BENCHMARKS_H_
+#ifndef AUDIO_TO_TACTILE_EXTRAS_BENCHMARK_BENCHMARKS_H_
+#define AUDIO_TO_TACTILE_EXTRAS_BENCHMARK_BENCHMARKS_H_
 
 #include <stdint.h>
 
@@ -74,4 +74,4 @@ void BenchmarkTest(int iterations);
 }  /* extern "C" */
 #endif
 
-#endif  /* AUDIO_TO_TACTILE_SRC_BENCHMARKS_H_ */
+#endif  /* AUDIO_TO_TACTILE_EXTRAS_BENCHMARK_BENCHMARKS_H_ */

@@ -89,6 +89,8 @@ void AnalogMic::Enable() {
   nrf_gpio_pin_write(kMicShutDownPin, 1);
   nrf_saadc_enable(NRF_SAADC);
   NVIC_EnableIRQ(SAADC_IRQn);
+  nrf_saadc_event_clear(NRF_SAADC, NRF_SAADC_EVENT_STARTED);
+  nrf_saadc_task_trigger(NRF_SAADC, NRF_SAADC_TASK_SAMPLE);
 }
 
 void AnalogMic::GetData(int16_t* destination_array) {

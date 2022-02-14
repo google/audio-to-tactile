@@ -60,12 +60,9 @@
 #include "tactile/tactile_pattern.h"
 #include "tactile_processor_cpp.h"
 #include "temperature_monitor.h"
+#include "ui.h"
 
 using namespace audio_tactile;
-
-// Pick which microphone to use.
-#define USING_ANALOG_MIC 1
-#define USING_PDM_MIC 0
 
 // Compile time constants.
 constexpr int kTactileDecimationFactor = 8;
@@ -115,11 +112,15 @@ SoftwareTimer g_occasional_tasks_timer;
 int g_measure_sensors_counter = 0;
 int g_write_settings_countdown = -1;
 
-void AdcNewData();
+// Using analog or digital mic.
+int g_which_mic = kUsingPdmMic;
+
+void OnAnalogNewData();
 void FlashLeds();
 void OnPwmSequenceEnd();
 void OnBleEvent();
 void OnPdmNewData();
+void OnSwitchPress();
 void OccasionalTasks(TimerHandle_t);
 
 void setup() {
@@ -127,27 +128,24 @@ void setup() {
   nrf_gpio_cfg_output(kLedPinBlue);
   nrf_gpio_cfg_output(kLedPinGreen);
 
-#if USING_ANALOG_MIC
-  // Initialize analog microphone.
-  ExternalAnalogMic.OnAdcDataReady(AdcNewData);
-  ExternalAnalogMic.Initialize();
-  // Set the TX to zero, to ground it for the microphone 3.5 mm jack
-  nrf_gpio_cfg_output(26);
-  nrf_gpio_cfg_output(4);
-  nrf_gpio_pin_write(26, 0);
-  nrf_gpio_pin_write(4, 0);
-#endif
-
-#if USING_PDM_MIC
-  // Initialize PDM microphone.
-  OnBoardMic.Initialize(4, 26);  // Using audio jack
+  // Initialize mics, start the PDM mic by default.
+  nrf_gpio_cfg_output(kPdmSelectPin);
+  nrf_gpio_pin_write(kPdmSelectPin, 0);
+  OnBoardMic.Initialize(kPdmClockPin, kPdmDataPin);
   OnBoardMic.OnPdmDataReady(OnPdmNewData);
   OnBoardMic.Enable();
-#endif
+
+  ExternalAnalogMic.OnAdcDataReady(OnAnalogNewData);
+  ExternalAnalogMic.Initialize();
+  ExternalAnalogMic.Disable();
 
   // Initialize battery monitor.
   PuckBatteryMonitor.InitializeLowVoltageInterrupt();
   PuckBatteryMonitor.OnLowBatteryEventListener(LowBatteryWarning);
+
+  // Initialize the button.
+  DeviceUi.Initialize(kTactileSwitchPin);
+  DeviceUi.OnUiEventListener(OnSwitchPress);
 
   FlashLeds();
 
@@ -175,19 +173,21 @@ void setup() {
   if (!FlashSettings.have_file_system()) {
     // Failed to find FAT file system on the external flash. This might happen
     // if the flash hasn't been formatted yet with "SdFat_format".
-    Serial.println("Warning: No file system found on external flash. Please "
-                   "run the SdFat_format example in Adafruit_SPIFlash.");
+    Serial.println(
+        "Warning: No file system found on external flash. Please "
+        "run the SdFat_format example in Adafruit_SPIFlash.");
   } else if (!FlashSettings.ReadSettingsFile(&g_settings)) {
     // Found the file system but not the settings file found. This might be the
     // first time starting up after formatting the flash. Use default settings.
-    Serial.println("Flash file system found, but did not find "
-                   kFlashSettingsFile "; using default settings.");
+    Serial.println(
+        "Flash file system found, but did not find " kFlashSettingsFile
+        "; using default settings.");
   }
 
   // Use a default name if device_name hasn't been set or is empty.
   constexpr const char* kDefaultDeviceName = "Slim";
-  const char* device_name = (*g_settings.device_name)
-      ? g_settings.device_name : kDefaultDeviceName;
+  const char* device_name =
+      (*g_settings.device_name) ? g_settings.device_name : kDefaultDeviceName;
   BleCom.Init(device_name, OnBleEvent);
 
   // Initialize PWM.
@@ -219,7 +219,7 @@ void HandleMessage(const Message& message) {
   constexpr int kSettingsWriteDelaySeconds = 15;
   // Convert to number of 2.5 second cycles by multiplying by 2/5 (= 1/2.5).
   constexpr int kSettingsWriteDelayCycles =
-    (kSettingsWriteDelaySeconds * 2 + 4) / 5;
+      (kSettingsWriteDelaySeconds * 2 + 4) / 5;
 
   switch (message.type()) {
     case MessageType::kGetOnConnectionBatch:
@@ -309,12 +309,11 @@ void HandleMessage(const Message& message) {
       int calibration_channels[2];
       float calibration_amplitude;
       if (message.ReadCalibrateChannel(&g_settings.channel_map,
-                                        calibration_channels,
-                                        &calibration_amplitude)) {
-        TactilePatternStartCalibrationTonesThresholds(&g_tactile_pattern,
-                                            calibration_channels[0],
-                                            calibration_channels[1],
-                                            calibration_amplitude);
+                                       calibration_channels,
+                                       &calibration_amplitude)) {
+        TactilePatternStartCalibrationTonesThresholds(
+            &g_tactile_pattern, calibration_channels[0],
+            calibration_channels[1], calibration_amplitude);
         g_tactile_pattern_active = true;
         // Reset countdown to update flash settings.
         g_write_settings_countdown = kSettingsWriteDelayCycles;
@@ -382,11 +381,11 @@ void loop() {
 
   if (g_write_settings_countdown == 0) {
     g_write_settings_countdown = -1;
-    if(!FlashSettings.have_file_system()) {
+    if (!FlashSettings.have_file_system()) {
       BleCom.tx_message().WriteFlashWriteStatus(kFlashWriteErrorNotFormatted);
       BleCom.SendTxMessage();
     } else {
-      if(FlashSettings.WriteSettingsFile(g_settings)) {
+      if (FlashSettings.WriteSettingsFile(g_settings)) {
         BleCom.tx_message().WriteFlashWriteStatus(kFlashWriteSuccess);
         BleCom.SendTxMessage();
       } else {
@@ -398,15 +397,14 @@ void loop() {
   }
 
   if (g_new_mic_data) {
-  // Convert ADC values to floats. The raw ADC values can swing from -2048 to
-  // 2048, (12 bits) for analog mic and 32,768 for PDM mic (16 bits)
-#if USING_ANALOG_MIC
-    const float scale = TuningGetInputGain(&g_settings.tuning) / 2048.0f;
-#endif
-
-#if USING_PDM_MIC
-    const float scale = TuningGetInputGain(&g_settings.tuning) / 32768.0f;
-#endif
+    // Convert ADC values to floats. The raw ADC values can swing from -2048 to
+    // 2048, (12 bits) for analog mic and 32,768 for PDM mic (16 bits)
+    float scale = TuningGetInputGain(&g_settings.tuning);
+    if (g_which_mic == kUsingAnalogMic) {
+      scale /= 2048.0f;
+    } else {
+      scale /= 32768.0f;
+    }
 
     for (int i = 0; i < kAdcDataSize; ++i) {
       g_audio_input[i] = scale * g_mic_data[i];
@@ -443,7 +441,7 @@ void loop() {
   }
 }
 
-void AdcNewData() {
+void OnAnalogNewData() {
   ExternalAnalogMic.GetData(g_mic_data);
   g_new_mic_data = true;
 }
@@ -532,6 +530,18 @@ void LowBatteryWarning() {
   if (PuckBatteryMonitor.GetEvent() == 1) {
     nrf_gpio_pin_write(kLedPinBlue, 0);
     g_low_battery = false;
+  }
+}
+
+void OnSwitchPress() {
+  if (g_which_mic == kUsingPdmMic) {
+    g_which_mic = kUsingAnalogMic;
+    OnBoardMic.Disable();
+    ExternalAnalogMic.Enable();
+  } else {
+    g_which_mic = kUsingPdmMic;
+    OnBoardMic.Enable();
+    ExternalAnalogMic.Disable();
   }
 }
 

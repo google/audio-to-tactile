@@ -19,6 +19,7 @@ import android.Manifest
 import android.app.Activity
 import android.bluetooth.le.ScanResult
 import android.companion.CompanionDeviceManager
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -174,8 +175,7 @@ import dagger.hilt.android.AndroidEntryPoint
       } else { // BLE is disconnected.
         // Clicking `connectButton` initiates a BLE scan.
         connectButton.setText(R.string.connect_button_text)
-        connectButton.setOnClickListener { askPermissionAndScan.launch(blePermissions)
-        }
+        connectButton.setOnClickListener { askPermissionAndScan.launch(blePermissions) }
       }
     }
 
@@ -188,6 +188,15 @@ import dagger.hilt.android.AndroidEntryPoint
 
     /** BLE-related permissions to request when connect button is pressed. */
     val blePermissions =
-      arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
+      when {
+        Build.VERSION.SDK_INT > 30 ->
+          arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
+        else ->
+          arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.BLUETOOTH,
+            Manifest.permission.BLUETOOTH_ADMIN
+          )
+      }
   }
 }

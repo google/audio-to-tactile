@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC
+// Copyright 2020-2022 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,14 +13,13 @@
 // limitations under the License.
 //
 //
-// Driver for UI elements on the puck: navigation switch and 2 buttons.
+// Driver for UI element on the slim v2 board: tactile button.
 //
 // The driver does not use HAL or DRV so its self-contained. I use callback
 // structure. The UI elements invoke callback function when they are pressed.
 // Under the hood, the GPIO tasks and events module (GPIOE) is used. It is
 // described here:
 // https://infocenter.nordicsemi.com/index.jsp?topic=%2Fcom.nordic.infocenter.nrf52832.ps.v1.1%2Ftimer.html
-// I use 5 out 8 GPIOE channels, each button has its own channel.
 //
 // To debounce the buttons, I use a timer, after a first click timer starts and
 // while running makes the callback not respond for a certain time. I use the
@@ -38,15 +37,6 @@
 
 namespace audio_tactile {
 
-// Pin definitions.
-enum {
-  TACTILE_SW_1_PIN = 20,
-  TACTILE_SW_2_PIN = 23,
-  NAV_SW_CW_PIN = 43,
-  NAV_SW_CCW_PIN = 45,
-  NAV_SW_PRESS_PIN = 44
-};
-
 // GPIO interrupt constants.
 enum {
   GPIOTE_IRQ_PRIORITY = 6,
@@ -62,9 +52,9 @@ class Ui {
  public:
   Ui();
 
-  // Configure all the button pins and initialize interrupts.
+  // Configure the button pin and initialize interrupts.
   // This function starts the lister (interrupt handler) as well.
-  bool Initialize();
+  bool Initialize(int switch_pin);
 
   // Stop the callbacks for buttons.
   bool End();
@@ -74,16 +64,6 @@ class Ui {
 
   // Allows the user to add a ui listener event in other parts of firmware.
   void OnUiEventListener(void (*function_)(void));
-
-  // Returns which button was pressed. Options are:
-  // 0 - Tactile button 1.
-  // 1 - Tactile button 2.
-  // 2 - Navigation switch clock-wise.
-  // 3 - Navigation switch counter clock-wise.
-  // 4 - Navigation switch press.
-  // If two buttons are pressed within a timeout period, second press is not
-  // passed to the event listener.
-  uint8_t GetEvent() const { return event_; }
 
  private:
   // Callback for the interrupt.
@@ -100,12 +80,9 @@ class Ui {
 
   // Return the current timer count.
   uint32_t TimerGetValueUsec();
-
-  // Storing button event.
-  uint8_t event_;
 };
 
-extern Ui PuckUi;
+extern Ui DeviceUi;
 
 }  // namespace audio_tactile
 

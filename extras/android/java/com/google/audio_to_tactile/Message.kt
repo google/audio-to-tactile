@@ -601,7 +601,10 @@ class OnConnectionBatchMessage(
       if (block != null) {
         val payloadSize = block.payloadSize
         buffer.put(payloadSize.toByte()) // Write the size of the block.
-        block.serializePayload(buffer.slice().apply { limit(payloadSize) }) // Write block itself.
+        block.serializePayload(buffer.slice().apply {
+          limit(payloadSize)
+          order(ByteOrder.LITTLE_ENDIAN)
+        }) // Write block itself.
         buffer.position(buffer.position() + payloadSize)
       } else {
         buffer.put(0) // Write an empty block.
@@ -630,7 +633,10 @@ class OnConnectionBatchMessage(
       if (buffer.remaining() >= 1) {
         val payloadSize = buffer.get().toInt() // Read the size of the block.
         if (buffer.remaining() >= payloadSize) {
-          val result = reader(buffer.slice().apply { limit(payloadSize) }) // Read block itself.
+          val result = reader(buffer.slice().apply {
+            limit(payloadSize)
+            order(ByteOrder.LITTLE_ENDIAN)
+          }) // Read block itself.
           buffer.position(buffer.position() + payloadSize)
           return result
         }

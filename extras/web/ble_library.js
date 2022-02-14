@@ -41,6 +41,7 @@ const MESSAGE_TYPE_BATTERY_VOLTAGE = 28;
 const MESSAGE_TYPE_DEVICE_NAME = 29;
 const MESSAGE_TYPE_GET_DEVICE_NAME = 30;
 const MESSAGE_TYPE_OTA_BOOTLOADMODE = 31;
+const MESSAGE_TYPE_CALIBRATE_CHANNEL = 35;
 
 const NUM_TACTORS = 10;
 const ENVELOPE_TRACKER_RECORD_POINTS = 33;
@@ -306,14 +307,46 @@ class BleManager {
     this.writeMessage(MESSAGE_TYPE_TACTILE_PATTERN, messagePayload);
   }
 
+  /**
+   * Constructs and writes a message to the device to trigger
+   * a tactile playback with a calibration pattern at the
+   * specified amplitude.
+   * @param {number} referenceChannel First channel index
+   * @param {number} testChannel Second channel index
+   * @param {number} amplitude Amplitude for playback, between [0.0, 1.0]
+   */
+  requestSetChannelCalibrate(referenceChannel, testChannel, amplitude) {
+    if (!this.connected) { return; }
+    let size = 4;
+    let messagePayload = new Uint8Array(size);
+    let messageType = MESSAGE_TYPE_CALIBRATE_CHANNEL;
+    let referenceChannelData = this.channelData[referenceChannel].source - 1;
+    let testChannelData = this.channelData[testChannel].source - 1;
+
+    // Write channels in the first byte.
+    messagePayload[0] = (referenceChannelData & 15) | (testChannelData << 4);
+
+    // Write gain for test channel
+    messagePayload[1] = this.channelData[testChannel].gain;
+
+    // Convert amplitude to an integer
+    amplitude = Math.max(0.0, Math.min(amplitude, 1.0));
+    amplitude = Math.floor(amplitude * 65535);
+    messagePayload[2] = amplitude;
+    messagePayload[3] = amplitude >> 8;
+
+    this.writeMessage(messageType, messagePayload);
+  }
+
   /** Send a request to device to update channel gains. */
   requestSetChannelGainUpdate(c1, c2) {
-    this.requestSetChannelMapOrGainUpdate([c1, c2]);
+    this.requestSetChannelMapOrGainUpdate([c1, c2],
+                                          MESSAGE_TYPE_CHANNEL_GAIN_UPDATE);
   }
 
   /** Send a request to device to update channel map. */
   requestSetChannelMap() {
-    this.requestSetChannelMapOrGainUpdate([]);
+    this.requestSetChannelMapOrGainUpdate([], MESSAGE_TYPE_CHANNEL_MAP);
   }
 
   /** Send a request to device to update tuning. */
@@ -580,9 +613,11 @@ class BleManager {
    * channel gain or channel map to the current values.
    * @param {!Array<number>} testChannels Array containing 0 or 2
    *    indices into the channel array.
+   * @param {number} messageType Message code integer for
+   *    MESSAGE_TYPE_CHANNEL_GAIN_UPDATE or MESSAGE_TYPE_CHANNEL_MAP.
    * @private
    */
-  requestSetChannelMapOrGainUpdate(testChannels) {
+  requestSetChannelMapOrGainUpdate(testChannels, messageType) {
     if (!this.connected) { return; }
     const numInput = NUM_TACTORS;
     const numOutput = NUM_TACTORS;
@@ -621,8 +656,6 @@ class BleManager {
       messagePayload[i + 1] = (pack24 >> 8) & 255;
       messagePayload[i + 2] = (pack24 >> 16) & 255;
     }
-    let messageType = testChannels.length ? MESSAGE_TYPE_CHANNEL_GAIN_UPDATE
-                                          : MESSAGE_TYPE_CHANNEL_MAP;
     this.writeMessage(messageType, messagePayload);
   }
 

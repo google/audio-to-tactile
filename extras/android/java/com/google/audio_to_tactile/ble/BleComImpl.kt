@@ -22,16 +22,16 @@ import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
+import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
-import android.bluetooth.le.ScanFilter
 import android.companion.AssociationRequest
 import android.companion.BluetoothLeDeviceFilter
 import android.companion.CompanionDeviceManager
 import android.content.Context
+import android.content.Context.BLUETOOTH_SERVICE
 import android.content.IntentSender
 import android.os.Handler
 import android.os.Looper
-import android.os.ParcelUuid
 import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
@@ -190,8 +190,15 @@ class BleComImpl @Inject internal constructor(@ApplicationContext private val co
     activity: Activity,
     launcher: ActivityResultLauncher<IntentSenderRequest>
   ) {
+    val bluetoothAdapter = (context.getSystemService(BLUETOOTH_SERVICE) as BluetoothManager).adapter
+    if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
+      disconnectImpl(DisconnectReason.BLUETOOTH_DISABLED)
+      return
+    }
+
     // If `connectedGatt` is nonnull, BLE is already connected or in the process of connecting.
     if (connectedGatt != null) {
+      disconnectImpl(DisconnectReason.ALREADY_CONNECTED)
       return
     }
 
@@ -204,9 +211,6 @@ class BleComImpl @Inject internal constructor(@ApplicationContext private val co
     val deviceFilter: BluetoothLeDeviceFilter =
       BluetoothLeDeviceFilter.Builder()
         .setNamePattern(Pattern.compile("Audio-to-Tactile.*"))
-        .setScanFilter(
-          ScanFilter.Builder().setServiceUuid(ParcelUuid.fromString(NUS_SERVICE_UUID)).build()
-        )
         .build()
 
     // Initiate device scan.
@@ -220,6 +224,7 @@ class BleComImpl @Inject internal constructor(@ApplicationContext private val co
         override fun onFailure(error: CharSequence?) {
           // `onFailure` is called if there was an error looking for devices. There is nothing more
           // we can do here, but the user may press the "Connect" button to try again.
+          disconnectImpl(DisconnectReason.SCAN_FOUND_NO_DEVICES)
         }
       },
       null
@@ -245,8 +250,8 @@ class BleComImpl @Inject internal constructor(@ApplicationContext private val co
       Log.i(TAG, "Disconnecting.")
       it.disconnect()
       it.close()
-      handler.post { callback.onDisconnect(reason) }
     }
+    handler.post { callback.onDisconnect(reason) }
     connectedGatt = null
   }
 

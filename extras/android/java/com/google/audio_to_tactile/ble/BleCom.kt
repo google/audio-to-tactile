@@ -40,6 +40,12 @@ enum class DisconnectReason(@StringRes val stringRes: Int) {
   NUS_SERVICE_NOT_FOUND(R.string.ble_nus_service_not_found),
   /** NUS was found, but one of its characteristics. Shouldn't happen unless device is buggy. */
   CHARACTERISTIC_NOT_FOUND(R.string.ble_characteristic_not_found),
+  /** Bluetooth is not turned on. */
+  BLUETOOTH_DISABLED(R.string.ble_disabled),
+  /** BLE is already connected or in the process of connecting. */
+  ALREADY_CONNECTED(R.string.ble_already_connected),
+  /** Scan timed out with no device matching the filters found. */
+  SCAN_FOUND_NO_DEVICES(R.string.ble_no_matching_device_found),
 }
 
 /** Callbacks for responding to BLE events. */

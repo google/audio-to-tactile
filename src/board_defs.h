@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Google LLC
+// Copyright 2020-2022 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@
 // Define which board is programmed.
 #define SLEEVE_BOARD 0
 #define PUCK_BOARD 0
-#define SLIM_BOARD 1
-#define SLIM_V2_BOARD 0
+#define SLIM_BOARD 0
+#define SLIM_V2_BOARD 1
 
 #if SLEEVE_BOARD
 #define kLedPinBlue 12
@@ -51,6 +51,9 @@
 #define kPdmClockPin 6
 #define kPdmDataPin 7
 #define kPdmSelectPin 26
+#define kTactileSwitchPin 34
+#define kUsingPdmMic 1
+#define kUsingAnalogMic 0
 #endif
 
 #endif  // AUDIO_TO_TACTILE_SRC_BOARD_DEFS_H_

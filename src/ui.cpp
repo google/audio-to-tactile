@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC
+// Copyright 2020-2022 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,18 +20,14 @@ bool static first_click = true;
 
 Ui::Ui() {}
 
-bool Ui::Initialize() {
+bool Ui::Initialize(int switch_pin) {
   // Found an example:
   // https://devzone.nordicsemi.com/f/nordic-q-a/5358/how-do-i-use-an-external-interrupt
   // low-lewel GPIOTE (GPIO tasks and events) description is here:
   // https://infocenter.nordicsemi.com/index.jsp?topic=%2Fcom.nordic.infocenter.nrf52832.ps.v1.1%2Fgpiote.html
 
-  // Set pins as inputs with an internal pullup.
-  nrf_gpio_cfg_input(TACTILE_SW_1_PIN, NRF_GPIO_PIN_PULLUP);
-  nrf_gpio_cfg_input(TACTILE_SW_2_PIN, NRF_GPIO_PIN_PULLUP);
-  nrf_gpio_cfg_input(NAV_SW_CW_PIN, NRF_GPIO_PIN_PULLUP);
-  nrf_gpio_cfg_input(NAV_SW_CCW_PIN, NRF_GPIO_PIN_PULLUP);
-  nrf_gpio_cfg_input(NAV_SW_PRESS_PIN, NRF_GPIO_PIN_PULLUP);
+  // Set pin as inputs with an internal pullup.
+  nrf_gpio_cfg_input(switch_pin, NRF_GPIO_PIN_PULLUP);
 
   // Clear previous and enable interrupts.
   NVIC_DisableIRQ(GPIOTE_IRQn);
@@ -49,29 +45,13 @@ bool Ui::Initialize() {
       | ((GPIOTE_CONFIG_POLARITY_HiToLo << GPIOTE_CONFIG_POLARITY_Pos) &
          GPIOTE_CONFIG_POLARITY_Msk);
 
-  // Apply same configuration to all channels.
+  // Apply the configuration to the channel.
   NRF_GPIOTE->CONFIG[0] =
-      kSharedConfig | ((TACTILE_SW_1_PIN << GPIOTE_CONFIG_PSEL_Pos) &
-                       GPIOTE_CONFIG_PORT_PIN_Msk);
-  NRF_GPIOTE->CONFIG[1] =
-      kSharedConfig | ((TACTILE_SW_2_PIN << GPIOTE_CONFIG_PSEL_Pos) &
-                       GPIOTE_CONFIG_PORT_PIN_Msk);
-  NRF_GPIOTE->CONFIG[2] =
       kSharedConfig |
-      ((NAV_SW_CW_PIN << GPIOTE_CONFIG_PSEL_Pos) & GPIOTE_CONFIG_PORT_PIN_Msk);
-  NRF_GPIOTE->CONFIG[3] =
-      kSharedConfig |
-      ((NAV_SW_CCW_PIN << GPIOTE_CONFIG_PSEL_Pos) & GPIOTE_CONFIG_PORT_PIN_Msk);
-  NRF_GPIOTE->CONFIG[4] =
-      kSharedConfig | ((NAV_SW_PRESS_PIN << GPIOTE_CONFIG_PSEL_Pos) &
-                       GPIOTE_CONFIG_PORT_PIN_Msk);
+      ((switch_pin << GPIOTE_CONFIG_PSEL_Pos) & GPIOTE_CONFIG_PORT_PIN_Msk);
 
-  // Enable the interrupts for each channel.
+  // Enable the interrupt for the channel.
   NRF_GPIOTE->INTENSET = GPIOTE_INTENSET_IN0_Set << GPIOTE_INTENSET_IN0_Pos;
-  NRF_GPIOTE->INTENSET = GPIOTE_INTENSET_IN1_Set << GPIOTE_INTENSET_IN1_Pos;
-  NRF_GPIOTE->INTENSET = GPIOTE_INTENSET_IN2_Set << GPIOTE_INTENSET_IN2_Pos;
-  NRF_GPIOTE->INTENSET = GPIOTE_INTENSET_IN3_Set << GPIOTE_INTENSET_IN3_Pos;
-  NRF_GPIOTE->INTENSET = GPIOTE_INTENSET_IN4_Set << GPIOTE_INTENSET_IN4_Pos;
 
   // Initialize timer for debouncing.
   TimerInit();
@@ -81,34 +61,13 @@ bool Ui::Initialize() {
 
 void Ui::OnUiEventListener(void (*function_)(void)) { callback_ = function_; }
 
-Ui PuckUi;
+Ui DeviceUi;
 
 void Ui::IrqHandler() {
   NVIC_DisableIRQ(GPIOTE_IRQn);
 
   if (NRF_GPIOTE->EVENTS_IN[0] == 1) {
     NRF_GPIOTE->EVENTS_IN[0] = 0;
-    event_ = 0;
-  }
-
-  if (NRF_GPIOTE->EVENTS_IN[1] == 1) {
-    NRF_GPIOTE->EVENTS_IN[1] = 0;
-    event_ = 1;
-  }
-
-  if (NRF_GPIOTE->EVENTS_IN[2] == 1) {
-    NRF_GPIOTE->EVENTS_IN[2] = 0;
-    event_ = 2;
-  }
-
-  if (NRF_GPIOTE->EVENTS_IN[3] == 1) {
-    NRF_GPIOTE->EVENTS_IN[3] = 0;
-    event_ = 3;
-  }
-
-  if (NRF_GPIOTE->EVENTS_IN[4] == 1) {
-    NRF_GPIOTE->EVENTS_IN[4] = 0;
-    event_ = 4;
   }
 
   // Make sure to debounce before triggering a callback.
@@ -125,7 +84,7 @@ void Ui::IrqHandler() {
 }
 
 extern "C" {
-void GPIOTE_IRQHandler() { PuckUi.IrqHandler(); }
+void GPIOTE_IRQHandler() { DeviceUi.IrqHandler(); }
 }
 
 // Timer interrupt handler called when timer reaches DEBOUNCE_TIMEOUT_US.

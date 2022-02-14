@@ -46,10 +46,10 @@ void PdmMic::Initialize(uint16_t clock_pin, uint16_t data_pin) {
   nrf_pdm_int_enable(
       NRF_PDM, NRF_PDM_INT_STARTED | NRF_PDM_INT_END | NRF_PDM_INT_STOPPED);
   NRFX_IRQ_PRIORITY_SET(PDM_IRQn, kPdmIrqPriority);
-  NRFX_IRQ_ENABLE(PDM_IRQn);
 }
 
 void PdmMic::Enable() {
+  NRFX_IRQ_ENABLE(PDM_IRQn);
   nrf_pdm_enable(NRF_PDM);
   nrf_pdm_event_clear(NRF_PDM, NRF_PDM_EVENT_STARTED);
   nrf_pdm_task_trigger(NRF_PDM, NRF_PDM_TASK_START);

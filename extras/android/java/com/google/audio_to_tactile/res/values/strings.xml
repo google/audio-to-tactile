@@ -77,6 +77,15 @@ limitations under the License.
   <string name="ble_operation_failed" tools:ignore="MissingTranslation"
       description="Toast when a BLE operation failed, but we don't have a more specific explanation.
       [CHAR LIMIT=50]">Disconnected: BLE operation failed</string>
+  <string name="ble_disabled" tools:ignore="MissingTranslation"
+      description="Toast when bluetooth is not enabled.
+      [CHAR LIMIT=50]">Bluetooth is not enabled.</string>
+  <string name="ble_already_connected" tools:ignore="MissingTranslation"
+      description="Toast when BLE is already connected.
+      [CHAR LIMIT=50]">BLE is already connected.</string>
+  <string name="ble_no_matching_device_found" tools:ignore="MissingTranslation"
+      description="Toast when a BLE scan times out without matching any device.
+      [CHAR LIMIT=50]">No matching audio to tactile device was found, ensure the device is on and try again.</string>
 
   <!-- Home fragment. -->
   <string name="battery_voltage_display" tools:ignore="MissingTranslation"

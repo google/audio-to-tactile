@@ -74,7 +74,6 @@ void AudioTactileSerialCom::InitInternal(uint32_t tx_pin, uint32_t rx_pin,
   nrf_uarte_config_t uarte_config;
   uarte_config.hwfc = NRF_UARTE_HWFC_DISABLED;
   uarte_config.parity = NRF_UARTE_PARITY_EXCLUDED;
-  uarte_config.stop = NRF_UARTE_STOP_ONE;
   nrf_uarte_configure(NRF_UARTE0, &uarte_config);
   SetRxBuffer(0);
 

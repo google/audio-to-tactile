@@ -36,14 +36,14 @@ const int kEmbedVowelNumTargets =
   sizeof(kEmbedVowelTargets) / sizeof(*kEmbedVowelTargets);
 const int kEmbedVowelNumChannels = kNumChannels;
 
-static float SquareDistance(const float* coord,
+static float SquareDistance(const float coord[2],
                             const EmbedVowelTarget* target) {
   const float diff_x = coord[0] - target->coord[0];
   const float diff_y = coord[1] - target->coord[1];
   return diff_x * diff_x + diff_y * diff_y;
 }
 
-int EmbedVowelClosestTarget(const float* coord) {
+int EmbedVowelClosestTarget(const float coord[2]) {
   int min_index = 0;
   float min_square_distance = SquareDistance(coord, &kEmbedVowelTargets[0]);
   int i;
@@ -67,7 +67,7 @@ int EmbedVowelTargetByName(const char* target_name) {
   return -1;  /* `target_name` was not found. */
 }
 
-void EmbedVowel(const float* frame, float* coord) {
+void EmbedVowel(const float* frame, float coord[2]) {
   float buffer1[kDense1Units];
   float buffer2[kDense2Units];
 
