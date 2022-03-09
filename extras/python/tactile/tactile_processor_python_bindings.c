@@ -1,4 +1,4 @@
-/* Copyright 2019, 2021 Google LLC
+/* Copyright 2019, 2021-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,9 +29,7 @@
  *                input_sample_rate_hz=16000.0,
  *                block_size=16,
  *                decimation_factor=1,
- *                cutoff_hz=500.0,
- *                cross_channel_tau_s=0.1,
- *                denoise_thresh_factor=(25.0, 4.0, 4.0, 4.0))
+ *                cutoff_hz=500.0)
  *    """Constructor. [Wraps `TactileProcessorMake()` in the C library.]
  *
  *    Args:
@@ -40,11 +38,6 @@
  *      decimation_factor: Integer, decimation factor after computing the energy
  *        envelope.
  *      cutoff_hz: Float, cutoff in Hz for energy smoothing filters.
- *      cross_channel_tau_s: Float, time constant in seconds for diffusing
- *        energy envelopes across channels. Smaller value implies faster
- *        diffusion and stronger cross-channel inhibition.
- *      denoise_thresh_factor: 4-tuple of floats, factor for noise gate for each
- *        Enveloper channel. Larger implies stronger denoising.
  *    Raises:
  *      ValueError: if parameters are invalid. (In this case, the C library may
  *        write additional details to stderr.)
@@ -119,21 +112,14 @@ static int TactileProcessorObjectInit(TactileProcessorObject* self,
                                    "block_size",
                                    "decimation_factor",
                                    "cutoff_hz",
-                                   "cross_channel_tau_s",
-                                   "denoise_thresh_factor",
                                    NULL};
 
   if (!PyArg_ParseTupleAndKeywords(
-          args, kw, "|fiiff(ffff):__init__", (char**)keywords,
+          args, kw, "|fiif:__init__", (char**)keywords,
           &params.frontend_params.input_sample_rate_hz,
           &params.frontend_params.block_size,
           &params.decimation_factor,
-          &params.enveloper_params.energy_cutoff_hz,
-          &params.enveloper_params.cross_channel_tau_s,
-          &params.enveloper_params.channel_params[0].denoise_thresh_factor,
-          &params.enveloper_params.channel_params[1].denoise_thresh_factor,
-          &params.enveloper_params.channel_params[2].denoise_thresh_factor,
-          &params.enveloper_params.channel_params[3].denoise_thresh_factor)) {
+          &params.enveloper_params.energy_cutoff_hz)) {
     return -1;  /* PyArg_ParseTupleAndKeywords failed. */
   }
 

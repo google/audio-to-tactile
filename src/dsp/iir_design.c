@@ -1,4 +1,4 @@
-/* Copyright 2020-2021 Google LLC
+/* Copyright 2020-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
 #include <stdlib.h>
 
 #include "dsp/elliptic_fun.h"
+#include "dsp/decibels.h"
 #include "dsp/math_constants.h"
 
 /* Evaluate the bilinear transformation, z = (K + s) / (K - s), discretizing a
@@ -622,7 +623,7 @@ static int /*bool*/ Chebyshev1AnalogPrototype(
    * Reference:
    * https://en.wikipedia.org/wiki/Chebyshev_filter#Type_I_Chebyshev_filters_(Chebyshev_filters)
    */
-  const double epsilon = sqrt(exp((M_LN10 / 10) * passband_ripple_db) - 1.0);
+  const double epsilon = sqrt(DecibelsToPowerRatio(passband_ripple_db) - 1.0);
   /* Compute arcsinh by the equality arcsinh(x) = log(x + sqrt(x^2 + 1)). */
   const double mu = log((1 + sqrt(1 + epsilon * epsilon)) / epsilon) / order;
   const int even_order = (order % 2 == 0);
@@ -725,7 +726,7 @@ static int /*bool*/ Chebyshev2AnalogPrototype(
    * Reference:
    * https://en.wikipedia.org/wiki/Chebyshev_filter#Type_II_Chebyshev_filters_(inverse_Chebyshev_filters)
    */
-  const double epsilon = sqrt(exp((M_LN10 / 10) * stopband_ripple_db) - 1.0);
+  const double epsilon = sqrt(DecibelsToPowerRatio(stopband_ripple_db) - 1.0);
   const double mu = log(epsilon + sqrt(1.0 + epsilon * epsilon)) / order;
   const int even_order = (order % 2 == 0);
   if (!even_order) {
@@ -873,8 +874,8 @@ static int EllipticAnalogPrototype(int order, double passband_ripple_db,
   zpk->num_poles = order;
   zpk->gain = 1.0;
 
-  const double epsilon_p = sqrt(exp((M_LN10 / 10) * passband_ripple_db) - 1.0);
-  const double epsilon_s = sqrt(exp((M_LN10 / 10) * stopband_ripple_db) - 1.0);
+  const double epsilon_p = sqrt(DecibelsToPowerRatio(passband_ripple_db) - 1.0);
+  const double epsilon_s = sqrt(DecibelsToPowerRatio(stopband_ripple_db) - 1.0);
   /* k1 and k control the balance between passband vs. stopband ripple size. */
   const double k1 = epsilon_p / epsilon_s;
   const double k = SolveEllipticDegreeEquation(order, k1);

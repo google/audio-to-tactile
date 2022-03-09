@@ -1,4 +1,4 @@
-/* Copyright 2019, 2021 Google LLC
+/* Copyright 2019, 2021-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@
 #include "src/dsp/logging.h"
 #include "src/dsp/math_constants.h"
 
-static void TestStringEqualIgnoreCase() {
+static void TestStringEqualIgnoreCase(void) {
   puts("TestStringEqualIgnoreCase");
   CHECK(StringEqualIgnoreCase("banana", "banana"));
   CHECK(StringEqualIgnoreCase("Banana", "baNANa"));
@@ -34,7 +34,7 @@ static void TestStringEqualIgnoreCase() {
   CHECK(!StringEqualIgnoreCase("", "Banana"));
 }
 
-static void TestFindSubstringIgnoreCase() {
+static void TestFindSubstringIgnoreCase(void) {
   puts("TestFindSubstringIgnoreCase");
   const char* s = "banana!";
   CHECK(FindSubstringIgnoreCase(s, "nan") == s + 2);
@@ -48,7 +48,7 @@ static void TestFindSubstringIgnoreCase() {
 }
 
 /* Check StartsWith() function. */
-static void TestStartsWith() {
+static void TestStartsWith(void) {
   puts("TestStartsWith");
   CHECK(StartsWith("needle", "needle"));
   CHECK(StartsWith("needleXYZ", "needle"));
@@ -59,7 +59,7 @@ static void TestStartsWith() {
   CHECK(!StartsWith("", "needle"));
 }
 
-static void TestStartsWithIgnoreCase() {
+static void TestStartsWithIgnoreCase(void) {
   puts("TestStartsWithIgnoreCase");
   CHECK(StartsWithIgnoreCase("needle", "NEEDLE"));
   CHECK(StartsWithIgnoreCase("NeedleXYZ", "nEEdle"));
@@ -70,7 +70,7 @@ static void TestStartsWithIgnoreCase() {
 }
 
 /* Check EndsWith() function. */
-static void TestEndsWith() {
+static void TestEndsWith(void) {
   puts("TestEndsWith");
   CHECK(EndsWith("needle", "needle"));
   CHECK(EndsWith("XYZneedle", "needle"));
@@ -81,7 +81,7 @@ static void TestEndsWith() {
 }
 
 /* Test ParseListOfInts() function. */
-static void TestParseListOfInts() {
+static void TestParseListOfInts(void) {
   puts("TestParseListOfInts");
   int num_ints;
   int* result = CHECK_NOTNULL(ParseListOfInts("756,0,-32,1", &num_ints));
@@ -103,7 +103,7 @@ static void TestParseListOfInts() {
 }
 
 /* Test ParseListOfDoubles() function. */
-static void TestParseListOfDoubles() {
+static void TestParseListOfDoubles(void) {
   puts("TestParseListOfDoubles");
   int num_doubles;
   double* result = CHECK_NOTNULL(
@@ -123,7 +123,7 @@ static void TestParseListOfDoubles() {
   free(result);
 }
 
-static void TestRoundUpToPowerOfTwo() {
+static void TestRoundUpToPowerOfTwo(void) {
   puts("TestRoundUpToPowerOfTwo");
   CHECK(RoundUpToPowerOfTwo(1) == 1);
   CHECK(RoundUpToPowerOfTwo(15) == 16);
@@ -135,7 +135,7 @@ static void TestRoundUpToPowerOfTwo() {
 }
 
 /* Check RandomInt() function with chi-squared goodness-of-fit test. */
-static void TestRandomInt() {
+static void TestRandomInt(void) {
   puts("TestRandomInt");
   const int kNumSamples = 500;
   int hist[101];
@@ -167,22 +167,6 @@ static void TestRandomInt() {
   }
 }
 
-/* Check AmplitudeRatioToDecibels and DecibelsToAmplitudeRatio. */
-static void TestDecibelConversions() {
-  puts("TestDecibelConversions");
-  CHECK(fabs(AmplitudeRatioToDecibels(10.0f) - 20.0f) < 1e-6f);
-  CHECK(fabs(DecibelsToAmplitudeRatio(20.0f) - 10.0f) < 1e-6f);
-  CHECK(fabs(AmplitudeRatioToDecibels(2.0f) - 6.0206f) < 1e-6f);
-  CHECK(fabs(DecibelsToAmplitudeRatio(6.0f) - 1.995262f) < 1e-6f);
-
-  int i;
-  for (i = 0; i < 20; ++i) {
-    float decibels = -40.0f + (80.0f * rand()) / RAND_MAX;
-    float amplitude_ratio = DecibelsToAmplitudeRatio(decibels);
-    CHECK(fabs(AmplitudeRatioToDecibels(amplitude_ratio) - decibels) < 1e-6f);
-  }
-}
-
 #define kMaxFilterOrder 5
 
 typedef struct {
@@ -203,7 +187,7 @@ static float ApplyGammaFilter(GammaFilter* filter, float input_sample) {
 }
 
 /* Check that GammaFilterSmootherCoeff() achieves the specified cutoff. */
-static void TestGammaFilterSmootherCoeff() {
+static void TestGammaFilterSmootherCoeff(void) {
   puts("TestGammaFilterSmootherCoeff");
   static const float kCutoffs[] = {350.0f, 500.0f, 3200.0f};
   const float kSampleRateHz = 8000.0f;
@@ -245,7 +229,7 @@ static void TestGammaFilterSmootherCoeff() {
 }
 
 /* Check TukeyWindow() with spot-checking a few samples. */
-static void TestTukeyWindow() {
+static void TestTukeyWindow(void) {
   puts("TestTukeyWindow");
   const float kDuration = 0.4f;
   static const float kTransitionsList[] = {0.05f, 0.1f, 0.2f};
@@ -280,7 +264,7 @@ static void TestTukeyWindow() {
 }
 
 /* Test permuting a 4-channel waveform to the order 3, 1, 0, 2. */
-static void TestPermuteWaveformChannels() {
+static void TestPermuteWaveformChannels(void) {
   puts("TestPermuteWaveformChannels");
   /* 3 frames, 4 channels. */
   float samples[3 * 4] = {
@@ -300,7 +284,7 @@ static void TestPermuteWaveformChannels() {
   CHECK(memcmp(samples, kExpected, 3 * 4 * sizeof(float)) == 0);
 }
 
-static void TestPrettyTextBar() {
+static void TestPrettyTextBar(void) {
   puts("TestPrettyTextBar");
   const int kWidth = 3;
   char* buffer = (char*)CHECK_NOTNULL(malloc(3 * kWidth + 1));
@@ -333,7 +317,6 @@ int main(int argc, char** argv) {
   TestParseListOfDoubles();
   TestRoundUpToPowerOfTwo();
   TestRandomInt();
-  TestDecibelConversions();
   TestGammaFilterSmootherCoeff();
   TestTukeyWindow();
   TestPermuteWaveformChannels();

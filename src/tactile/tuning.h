@@ -1,4 +1,4 @@
-/* Copyright 2020-2021 Google LLC
+/* Copyright 2020-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@ extern "C" {
 
 /* Constants for the meaning of each array entry in `TuningKnobs::values`. For
  * instance, the AGC strength control value is `values[kKnobAgcStrength]`.
+ * See `kTuningKnobInfo` in tuning.c for additional documentation.
  */
 enum {
   /* Input gain applied before any processing. The range is about -40 dB to
@@ -62,41 +63,24 @@ enum {
    */
   kKnobOutputGain,
 
-  /* The `denoise_thresh_factor` parameter, separately for each Enveloper
-   * channel. It logarithmically maps control values to the range [1.0, 200.0].
+  /* The `energy_tau_s` energy smoothing time constant for all Enveloper
+   * channels. It logarithmically maps control values to the range [0.005, 2.0].
    */
-  kKnobDenoisingBaseband,
-  kKnobDenoisingVowel,
-  kKnobDenoisingShFricative,
-  kKnobDenoisingFricative,
+  kKnobEnergyTau,
 
-  /* Time constant for diffusing energy envelopes across channels. It
-   * logarithmically maps control values to the range [0.04, 4.0], with value =
-   * 51 corresponding to tau = 0.1 s.
+  /* The `noise_db_s` noise estimate adaptation rate for all Enveloper
+   * channels. It logarithmically maps control values to the range [0.2, 20.0].
    */
-  kKnobCrossChannelTau,
+  kKnobNoiseAdaptation,
 
-  /* The `agc_strength` parameter of all Enveloper channels. It linearly maps
-   * control values to the range [0.1, 0.9], with value = 191 corresponding to
-   * strength = 0.7.
+  /* The `agc_strength` auto gain control strength for all Enveloper channels.
+   * It linearly maps control values to the range [0.1, 0.9].
    */
   kKnobAgcStrength,
 
-  /* The `noise_tau_s` parameter of all Enveloper channels. It logarithmically
-   * maps control values to the range [0.04, 4.0], with value = 127
-   * corresponding to tau = 0.4 s.
-   */
-  kKnobNoiseTau,
-
-  /* The `gain_tau_release_s` parameter of all Enveloper channels. It
-   * logarithmically maps control values to the range [0.04, 4.0], with value =
-   * 73 corresponding to tau = 0.15 s.
-   */
-  kKnobGainTauRelease,
-
-  /* The `compressor_exponent` parameter of all Enveloper channels. It linearly
-   * maps control values to exponents in the range [0.1, 0.5], with value = 96
-   * corresponding to exponent = 0.25.
+  /* The `compressor_exponent` parameter for all Enveloper channels. It linearly
+   * maps control values to exponents in the range [0.1, 0.5], with value = 127
+   * corresponding to exponent = 0.3.
    */
   kKnobCompressor,
 
@@ -146,14 +130,17 @@ extern const TuningKnobInfo kTuningKnobInfo[kNumTuningKnobs];
  *   `knob`                return value meaning
  *   kKnobInputGain        Gain with units of dB.
  *   kKnobOutputGain       Gain with units of dB.
- *   kKnobDenosing*        Scale factor.
- *   kKnobCrossChannelTau  Time constant with units of seconds.
+ *   kKnobEnergyTau        Time constant with units of seconds.
+ *   kKnobNoiseAdaptation  Rate in units of dB per second.
  *   kKnobAgcStrength      Exponent, 0 => bypass, 1 => full normalization.
- *   kKnobNoiseTau         Time constant with units of seconds.
- *   kKnobGainTauRelease   Time constant with units of seconds.
  *   kKnobCompressor       Exponent, smaller implies stronger compression.
  */
 float TuningMapControlValue(int knob, int value);
+
+/* Gets the mapped value for knob `knob`. */
+static float TuningGet(const TuningKnobs* tuning, int knob) {
+  return TuningMapControlValue(knob, tuning->values[knob]);
+}
 
 /* Gets the input gain as a linear amplitude ratio. */
 float TuningGetInputGain(const TuningKnobs* tuning);

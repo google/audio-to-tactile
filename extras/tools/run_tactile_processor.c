@@ -1,4 +1,4 @@
-/* Copyright 2019, 2021 Google LLC
+/* Copyright 2019, 2021-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -235,7 +235,7 @@ void ProcessChunk(Engine* engine, float* input, float* output) {
   const int block_size = CarlFrontendBlockSize(
       engine->tactile_processor->frontend);
   const int num_blocks = engine->chunk_size / block_size;
-  float volume_accum[kNumTactors] = {0.0f};
+  float energy_accum[kNumTactors] = {0.0f};
   int b;
 
   for (b = 0; b < num_blocks; ++b) {
@@ -249,7 +249,7 @@ void ProcessChunk(Engine* engine, float* input, float* output) {
     for (i = 0; i < block_size; ++i) {
       int c;
       for (c = 0; c < kNumTactors; ++c) {
-        volume_accum[c] += tactile_output[c] * tactile_output[c];
+        energy_accum[c] += tactile_output[c] * tactile_output[c];
       }
       tactile_output += kNumTactors;
     }
@@ -268,18 +268,26 @@ void ProcessChunk(Engine* engine, float* input, float* output) {
 
   int c;
   for (c = 0; c < kNumTactors; ++c) {
-    /* Compute RMS value. */
-    const float rms = sqrt(volume_accum[c]
-        / (num_blocks * block_size * kNumTactors));
+    /* Convert tactile energy to perceived strength with Steven's power law.
+     * Perceived strength is roughly proportional to acceleration^0.55, which is
+     * proportional to sqrt(energy)^0.55.
+     *
+     * Different experiments have measured the exponent to be between 0.32 and
+     * 0.81. The exponent depends especially on the stimulus frequency. Over
+     * our range of interest 80-250 Hz, Ryu2010 measured 0.55.
+     *
+     * Reference: Ryu, "Psychophysical model for vibrotactile rendering in
+     * mobile devices," Presence 19.4 (2010): 364-387.
+     */
+    const float perceived = FastPow(1e-12f + energy_accum[c]
+        / (num_blocks * block_size), 0.55f * 0.5f);
     /* Update engine->volume[c] according to
      *   volume = max(rms, volume * volume_decay_coeff).
      * This way the visualization follows the RMS with instantaneous attack but
      * smoothed release, so that onsets are well represented.
      */
     float updated_volume = engine->volume[c] * engine->volume_decay_coeff;
-    if (rms > updated_volume) {
-      updated_volume = rms;
-    }
+    if (perceived > updated_volume) { updated_volume = perceived; }
     engine->volume[c] = updated_volume;
   }
 }
@@ -567,27 +575,21 @@ void EngineTerminate(Engine* engine) {
   SDL_Quit();
 }
 
-/* Generates a colormap fading from a dark gray to orange to white. `colormap`
- * should have space for 256 * 3 elements.
+/* Generates an approximately perceptually linear colormap fading from a dark
+ * gray to orange to white. `colormap` should have space for 256 * 3 elements.
  */
 void GenerateColormap(uint8_t* colormap) {
-  const int kColorA[3] = {0x51, 0x43, 0x31};
-  const int kColorB[3] = {0xff, 0x6f, 0x00};
-  const float kKnot = 0.348f;
   int i;
-  int c;
   for (i = 0; i < 256; ++i, colormap += 3) {
     const float x = i / 255.0f;
-    if (x <= kKnot) {
-      const float w = x / kKnot;
-      for (c = 0; c < 3; ++c) {
-        colormap[c] = (int)(kColorA[c] + (kColorB[c] - kColorA[c]) * w);
-      }
+    if (x < 0.5f) {
+      colormap[0] = (uint8_t)((180 * x + 261) * x + 81);
+      colormap[1] = (uint8_t)((48 * x + 69) * x + 67);
+      colormap[2] = (uint8_t)((-106 * x - 21) * x + 49);
     } else {
-      const float w = (x - kKnot) / (1.0f - kKnot);
-      for (c = 0; c < 3; ++c) {
-        colormap[c] = (int)(kColorB[c] + (255 - kColorB[c]) * w);
-      }
+      colormap[0] = 255;
+      colormap[1] = (uint8_t)((-234 * x + 626) * x - 139);
+      colormap[2] = (uint8_t)((-433 * x + 1112) * x - 428);
     }
   }
 }
@@ -625,13 +627,8 @@ int main(int argc, char** argv) {
 
     int c;
     for (c = 0; c < kNumTactors; ++c) {
-      /* Get the RMS value of the cth tactor. */
-      const float rms = engine.volume[c];
-      /* Map the RMS in range [rms_min, rms_max] logarithmically to [0, 1]. */
-      const float rms_min = 0.003f;
-      const float rms_max = 0.05f;
-      float activation =
-          FastLog2(1e-12f + rms / rms_min) / FastLog2(rms_max / rms_min);
+      /* Get volume for the cth tactor. */
+      float activation = engine.volume[c] / 0.1f;
       if (activation < 0.0f) { activation = 0.0f; }
       if (activation > 1.0f) { activation = 1.0f; }
 

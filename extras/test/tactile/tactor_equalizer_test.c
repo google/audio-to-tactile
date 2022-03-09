@@ -1,4 +1,4 @@
-/* Copyright 2019, 2021 Google LLC
+/* Copyright 2019, 2021-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,9 @@
 
 #include <math.h>
 
-#include "extras/tools/util.h"
 #include "src/dsp/complex.h"
+#include "src/dsp/decibels.h"
 #include "src/dsp/logging.h"
-#include "src/dsp/math_constants.h"
 
 /* Computes equalizer gain at `frequency_hz` in dB. */
 static double Response(const BiquadFilterCoeffs* coeffs,
@@ -29,7 +28,7 @@ static double Response(const BiquadFilterCoeffs* coeffs,
   ComplexDouble z = ComplexDoubleMake(cos(theta), sin(theta));
   ComplexDouble z2 = ComplexDoubleSquare(z);
 
-  return (10 / M_LN10) * log(
+  return PowerRatioToDecibels(
       (ComplexDoubleAbs2(ComplexDoubleMake(
             coeffs[0].b0 * z2.real + coeffs[0].b1 * z.real + coeffs[0].b2,
             coeffs[0].b0 * z2.imag + coeffs[0].b1 * z.imag))

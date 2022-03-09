@@ -33,11 +33,14 @@ namespace audio_tactile {
 
 template <typename T>
 std::vector<T> RandomValues(int n, std::mt19937* rng) {
-  std::uniform_int_distribution<T> dist(std::numeric_limits<T>::min(),
-                                        std::numeric_limits<T>::max());
+  typedef typename std::conditional<sizeof(T) >= sizeof(int16_t), T,
+                                    std::int16_t>::type rand_type;
+
+  std::uniform_int_distribution<rand_type> dist(std::numeric_limits<T>::min(),
+                                                std::numeric_limits<T>::max());
   std::vector<T> values(n);
   for (T& v : values) {
-    v = dist(*rng);
+    v = static_cast<T>(dist(*rng));
   }
   return values;
 }
@@ -140,10 +143,10 @@ void TestBatteryVoltage() {
 void TestTuning() {
   puts("TestTuning");
   std::mt19937 rng(0);
-  std::uniform_int_distribution<uint8_t> dist(0, 255);
+  std::uniform_int_distribution<int32_t> dist(0, 255);
   TuningKnobs knobs;
   for (int i = 0; i < kNumTuningKnobs; ++i) {
-    knobs.values[i] = dist(rng);
+    knobs.values[i] = static_cast<uint8_t>(dist(rng));
   }
 
   Message message;
@@ -309,14 +312,14 @@ void TestOnConnectionBatch() {
     const int device_name_length =
         std::uniform_int_distribution<int>(0, kMaxDeviceNameLength)(rng);
     for (int i = 0; i < device_name_length; ++i) {
-      settings.device_name[i] =
-          std::uniform_int_distribution<char>('a', 'z')(rng);
+      settings.device_name[i] = static_cast<char>(
+          std::uniform_int_distribution<int32_t>('a', 'z')(rng));
     }
     settings.device_name[device_name_length] = '\0';
 
     for (int i = 0; i < kNumTuningKnobs; ++i) {
-      settings.tuning.values[i] =
-          std::uniform_int_distribution<uint8_t>(0, 255)(rng);
+      settings.tuning.values[i] = static_cast<uint8_t>(
+          std::uniform_int_distribution<int32_t>(0, 255)(rng));
     }
 
     const int num_in = std::uniform_int_distribution<int>(4, 16)(rng);

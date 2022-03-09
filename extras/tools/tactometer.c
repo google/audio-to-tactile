@@ -1,4 +1,4 @@
-/* Copyright 2019, 2021 Google LLC
+/* Copyright 2019, 2021-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,8 +30,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "src/dsp/decibels.h"
 #include "src/dsp/logging.h"
-#include "src/dsp/math_constants.h"
 #include "extras/tools/portaudio_device.h"
 #include "extras/tools/sdl/basic_sdl_app.h"
 #include "extras/tools/sdl/draw_text.h"
@@ -350,17 +350,12 @@ static void DrawFrequencyAndAmplitudeMeters() {
       / -kMinAmplitudeDb);
 }
 
-/* Computes decibels from linear amplitude. */
-static float DbFromAmplitude(float amplitude) {
-  return 20 * log(amplitude) / M_LN10;
-}
-
 /* Changes the current amplitude by `factor`. */
 static void ChangeAmplitude(float factor) {
   engine.amplitude *= factor;
   if (engine.amplitude > 1) { engine.amplitude = 1.0f; }
   if (engine.amplitude < kMinAmplitude) { engine.amplitude = kMinAmplitude; }
-  engine.amplitude_db = DbFromAmplitude(engine.amplitude);
+  engine.amplitude_db = AmplitudeRatioToDecibels(engine.amplitude);
 }
 
 static void BekesyFun(int first_call);
@@ -621,7 +616,7 @@ int main(int argc, char** argv) {
   engine.selected_frequency_index = 0;
   engine.frequency_hz = kFrequenciesHz[engine.selected_frequency_index];
   engine.amplitude = 0.2;
-  engine.amplitude_db = DbFromAmplitude(engine.amplitude);
+  engine.amplitude_db = AmplitudeRatioToDecibels(engine.amplitude);
 
   engine.keep_running = 1;
   engine.fun = KeytarFun;

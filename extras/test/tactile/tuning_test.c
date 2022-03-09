@@ -1,4 +1,4 @@
-/* Copyright 2020-2021 Google LLC
+/* Copyright 2020-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -102,21 +102,18 @@ static void TestTactileProcessorApplyTuning(void) {
     TactileProcessorApplyTuning(processor, &tuning_knobs);
 
     const Enveloper* enveloper = &processor->enveloper;
+    CHECK(EnveloperSmootherCoeff(enveloper, mapped[kKnobEnergyTau]) ==
+          enveloper->energy_smoother_coeff);
+    CHECK(1 / EnveloperGrowthCoeff(enveloper, mapped[kKnobNoiseAdaptation]) ==
+          enveloper->noise_coeffs[0]);
+    CHECK(EnveloperGrowthCoeff(enveloper, mapped[kKnobNoiseAdaptation]) ==
+          enveloper->noise_coeffs[1]);
+    CHECK(mapped[kKnobAgcStrength] == enveloper->agc_strength);
+    CHECK(mapped[kKnobCompressor] == enveloper->compressor_exponent);
     int c;
     for (c = 0; c < kEnveloperNumChannels; ++c) {
       CHECK(IsClose(pow(10.0f, mapped[kKnobOutputGain] / 20.0f),
                     enveloper->channels[c].output_gain));
-      CHECK(mapped[kKnobDenoisingBaseband + c] ==
-            enveloper->channels[c].denoise_thresh_factor);
-      CHECK(EnveloperCrossChannelDiffusionCoeff(
-          enveloper, mapped[kKnobCrossChannelTau]) ==
-            enveloper->cross_channel_diffusion_coeff);
-      CHECK(-mapped[kKnobAgcStrength] == enveloper->agc_exponent);
-      CHECK(EnveloperSmootherCoeff(enveloper, mapped[kKnobNoiseTau]) ==
-            enveloper->noise_smoother_coeff);
-      CHECK(EnveloperSmootherCoeff(enveloper, mapped[kKnobGainTauRelease]) ==
-            enveloper->gain_smoother_coeffs[1]);
-      CHECK(mapped[kKnobCompressor] == enveloper->compressor_exponent);
     }
 
     /* Subsequent trials test random knob values. */
@@ -149,21 +146,15 @@ int main(int argc, char** argv) {
   TestTuningMapControlValue(kKnobOutputGain, 0, -18.0f);
   TestTuningMapControlValue(kKnobOutputGain, 191, -0.0235f);
   TestTuningMapControlValue(kKnobOutputGain, 255, 6.0f);
-  TestTuningMapControlValue(kKnobDenoisingBaseband, 0, 1.0f);
-  TestTuningMapControlValue(kKnobDenoisingBaseband, 155, 25.0f);
-  TestTuningMapControlValue(kKnobDenoisingBaseband, 255, 200.0f);
-  TestTuningMapControlValue(kKnobCrossChannelTau, 0, 0.04f);
-  TestTuningMapControlValue(kKnobCrossChannelTau, 51, 0.1f);
-  TestTuningMapControlValue(kKnobCrossChannelTau, 255, 4.0f);
+  TestTuningMapControlValue(kKnobEnergyTau, 0, 0.001f);
+  TestTuningMapControlValue(kKnobEnergyTau, 85, 0.01f);
+  TestTuningMapControlValue(kKnobEnergyTau, 255, 1.0f);
+  TestTuningMapControlValue(kKnobNoiseAdaptation, 0, 0.2f);
+  TestTuningMapControlValue(kKnobNoiseAdaptation, 127, 1.98f);
+  TestTuningMapControlValue(kKnobNoiseAdaptation, 255, 20.0f);
   TestTuningMapControlValue(kKnobAgcStrength, 0, 0.1f);
-  TestTuningMapControlValue(kKnobAgcStrength, 191, 0.7f);
+  TestTuningMapControlValue(kKnobAgcStrength, 159, 0.6f);
   TestTuningMapControlValue(kKnobAgcStrength, 255, 0.9f);
-  TestTuningMapControlValue(kKnobNoiseTau, 0, 0.04f);
-  TestTuningMapControlValue(kKnobNoiseTau, 127, 0.3964f);
-  TestTuningMapControlValue(kKnobNoiseTau, 255, 4.0f);
-  TestTuningMapControlValue(kKnobGainTauRelease, 0, 0.04f);
-  TestTuningMapControlValue(kKnobGainTauRelease, 73, 0.1495f);
-  TestTuningMapControlValue(kKnobGainTauRelease, 255, 4.0f);
   TestTuningMapControlValue(kKnobCompressor, 0, 0.1f);
   TestTuningMapControlValue(kKnobCompressor, 96, 0.2506f);
   TestTuningMapControlValue(kKnobCompressor, 255, 0.5f);

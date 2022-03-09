@@ -28,6 +28,9 @@ constexpr int kMaxTactilePatternLength = 15;
 // Max length of a device name string, not including null terminator.
 constexpr int kMaxDeviceNameLength = 16;
 
+// Constants for mic input selection.
+enum { kUsingAnalogMic, kUsingPdmMic };
+
 }  // namespace audio_tactile
 
 #endif  // AUDIO_TO_TACTILE_SRC_CPP_CONSTANTS_H_

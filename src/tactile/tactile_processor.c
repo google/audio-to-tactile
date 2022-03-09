@@ -1,4 +1,4 @@
-/* Copyright 2019, 2021 Google LLC
+/* Copyright 2019, 2021-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "dsp/fast_fun.h"
+#include "dsp/decibels.h"
 #include "phonetics/hexagon_interpolation.h"
 
 const int kTactileProcessorNumTactors = 10;
@@ -177,39 +177,26 @@ void TactileProcessorProcessSamples(TactileProcessor* processor,
 
 void TactileProcessorApplyTuning(TactileProcessor* processor,
                                  const TuningKnobs* knobs) {
-  const float output_gain_db =
-      TuningMapControlValue(kKnobOutputGain, knobs->values[kKnobOutputGain]);
+  const float output_gain_db = TuningGet(knobs, kKnobOutputGain);
   /* Convert dB to linear amplitude ratio. */
-  const float output_gain = FastExp2((float)(M_LN10 / (20.0 * M_LN2)) *
-                                     output_gain_db);
-  const float cross_channel_tau_s = TuningMapControlValue(
-      kKnobCrossChannelTau, knobs->values[kKnobCrossChannelTau]);
-  const float agc_strength =
-      TuningMapControlValue(kKnobAgcStrength, knobs->values[kKnobAgcStrength]);
-  const float noise_tau =
-      TuningMapControlValue(kKnobNoiseTau, knobs->values[kKnobNoiseTau]);
-  const float gain_tau_release = TuningMapControlValue(
-      kKnobGainTauRelease, knobs->values[kKnobGainTauRelease]);
-  const float compressor_exponent =
-      TuningMapControlValue(kKnobCompressor, knobs->values[kKnobCompressor]);
+  const float output_gain = FastDecibelsToAmplitudeRatio(output_gain_db);
+  const float energy_tau_s = TuningGet(knobs, kKnobEnergyTau);
+  const float noise_db_s = TuningGet(knobs, kKnobNoiseAdaptation);
+  const float agc_strength = TuningGet(knobs, kKnobAgcStrength);
+  const float compressor_exponent = TuningGet(knobs, kKnobCompressor);
 
   Enveloper* enveloper = &processor->enveloper;
-  enveloper->cross_channel_diffusion_coeff =
-      EnveloperCrossChannelDiffusionCoeff(enveloper, cross_channel_tau_s);
-  enveloper->agc_exponent = -agc_strength;
-  enveloper->noise_smoother_coeff =
-      EnveloperSmootherCoeff(enveloper, noise_tau);
-  enveloper->gain_smoother_coeffs[1] =
-      EnveloperSmootherCoeff(enveloper, gain_tau_release);
+  enveloper->energy_smoother_coeff =
+      EnveloperSmootherCoeff(enveloper, energy_tau_s);
+  enveloper->noise_coeffs[1] =
+      EnveloperGrowthCoeff(enveloper, noise_db_s);
+  enveloper->agc_strength = agc_strength;
   enveloper->compressor_exponent = compressor_exponent;
 
   int c;
   for (c = 0; c < kEnveloperNumChannels; ++c) {
     EnveloperChannel* enveloper_c = &enveloper->channels[c];
-    const float denoise_thresh_factor = TuningMapControlValue(
-        kKnobDenoisingBaseband + c, knobs->values[kKnobDenoisingBaseband + c]);
     enveloper_c->output_gain = output_gain;
-    enveloper_c->denoise_thresh_factor = denoise_thresh_factor;
   }
 
   EnveloperUpdatePrecomputedParams(enveloper);

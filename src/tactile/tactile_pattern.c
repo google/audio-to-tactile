@@ -1,4 +1,4 @@
-/* Copyright 2021 Google LLC
+/* Copyright 2021-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,39 @@ const char* kTactilePatternConnect = "66-A-A";
 const char* kTactilePatternDisconnect = "8A-6";
 /* "Confirm" pattern: two quick tones. */
 const char* kTactilePatternConfirm = "5-5";
+
+/* "Start up" pattern: chirp followed by two tones, on channels 1 and 5. */
+const uint8_t kTactilePatternExStartUp[] = {
+  /* Play 60 Hz tone on channels 1 and channel 5, for 80 ms. */
+  kTactilePatternOpSetWaveform + 1,
+  kTactilePatternWaveformSin60Hz,
+  kTactilePatternOpSetWaveform + 5,
+  kTactilePatternWaveformSin60Hz,
+  TACTILE_PATTERN_OP_PLAY_MS(80),
+  /* Play 50 Hz tone on channels 1 and 5. */
+  kTactilePatternOpSetWaveform + 1,
+  kTactilePatternWaveformSin50Hz,
+  kTactilePatternOpSetWaveform + 5,
+  kTactilePatternWaveformSin50Hz,
+  TACTILE_PATTERN_OP_PLAY_MS(80),
+  /* Play 35 Hz tone on channel 5. */
+  kTactilePatternOpSetWaveform + 5,
+  kTactilePatternWaveformSin35Hz,
+  TACTILE_PATTERN_OP_PLAY_MS(160),
+  /* Pause for 80 ms. */
+  TACTILE_PATTERN_OP_PLAY_MS(80),
+  /* Play 90 Hz tone on channel 1. */
+  kTactilePatternOpSetWaveform + 1,
+  kTactilePatternWaveformSin90Hz,
+  TACTILE_PATTERN_OP_PLAY_MS(100),
+  /* Pause for 80 ms. */
+  TACTILE_PATTERN_OP_PLAY_MS(80),
+  /* Play 90 Hz tone on channel 5. */
+  kTactilePatternOpSetWaveform + 5,
+  kTactilePatternWaveformSin90Hz,
+  TACTILE_PATTERN_OP_PLAY_MS(100),
+  kTactilePatternOpEnd,
+};
 
 /* Converts seconds to frames according to p->sample_rate_hz. */
 static int SecondsToFrames(const TactilePattern* p, float seconds) {

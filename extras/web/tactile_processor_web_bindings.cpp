@@ -1,4 +1,4 @@
-// Copyright 2019, 2021 Google LLC
+// Copyright 2019, 2021-2022 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -129,14 +129,9 @@ static void MainTick() {
                  nullptr, &assets->image_rects[kNumTactors]);
 
   for (int c = 0; c < kNumTactors; ++c) {
-    // Get the RMS value of the cth tactor.
-    const float rms = engine.volume[c];
-    // Map the RMS in range [rms_min, rms_max] logarithmically to [0, 1].
-    constexpr float kRmsMin = 0.003f;
-    constexpr float kRmsMax = 0.05f;
-    float activation =
-        FastLog2(1e-12f + rms / kRmsMin) / FastLog2(kRmsMax / kRmsMin);
-    activation = std::min<float>(std::max<float>(activation, 0.0f), 1.0f);
+    // Get volume for the cth tactor.
+    const float activation =
+        std::min<float>(std::max<float>(engine.volume[c] / 0.1f, 0.0f), 1.0f);
 
     // Render the cth texture with color according to `activation`.
     const int index = static_cast<int>(std::round(255 * activation));
@@ -159,10 +154,6 @@ extern "C" void EMSCRIPTEN_KEEPALIVE TactileInitAudio(
   params.frontend_params.block_size = kBlockSize;
   params.frontend_params.input_sample_rate_hz = sample_rate_hz;
 
-  for (int c = 0; c < kEnveloperNumChannels; ++c) {
-    params.enveloper_params.channel_params[c].output_gain *= 0.5f;
-  }
-
   engine.tactile_processor = TactileProcessorMake(&params);
   if (!engine.tactile_processor) {
     fprintf(stderr, "Error: Failed to create TactileProcessor.\n");
@@ -179,7 +170,7 @@ extern "C" void EMSCRIPTEN_KEEPALIVE TactileProcessAudio(
     intptr_t input_ptr, int chunk_size) {
   float* input = reinterpret_cast<float*>(input_ptr);
   const int num_blocks = chunk_size / kBlockSize;
-  float volume_accum[kNumTactors] = {0.0f};
+  float energy_accum[kNumTactors] = {0.0f};
 
   for (int b = 0; b < num_blocks; ++b) {
     float* tactile = engine.tactile_output;
@@ -188,7 +179,7 @@ extern "C" void EMSCRIPTEN_KEEPALIVE TactileProcessAudio(
     for (int i = 0; i < kOutputBlockSize; ++i) {
       // For visualization, accumulate energy for each tactile signal.
       for (int c = 0; c < kNumTactors; ++c) {
-        volume_accum[c] += tactile[c] * tactile[c];
+        energy_accum[c] += tactile[c] * tactile[c];
       }
       tactile += kNumTactors;
     }
@@ -197,12 +188,13 @@ extern "C" void EMSCRIPTEN_KEEPALIVE TactileProcessAudio(
   }
 
   for (int c = 0; c < kNumTactors; ++c) {
-    // Compute RMS value and update volume meters.
-    const float rms = std::sqrt(volume_accum[c]
-        / (num_blocks * (kOutputBlockSize * kNumTactors)));
-    float updated_volume = engine.volume[c] * engine.volume_decay_coeff;
-    if (rms > updated_volume) { updated_volume = rms; }
-    engine.volume[c] = updated_volume;
+    // Convert tactile energy to perceived strength with Steven's power law.
+    // Perceived strength is roughly proportional to acceleration^0.55, which is
+    // proportional to sqrt(energy)^0.55.
+    const float perceived = std::pow(energy_accum[c]
+        / (num_blocks * kOutputBlockSize), 0.55f * 0.5f);
+    engine.volume[c] *= engine.volume_decay_coeff;
+    engine.volume[c] = std::max(engine.volume[c], perceived);
   }
 }
 
@@ -211,26 +203,19 @@ extern "C" void EMSCRIPTEN_KEEPALIVE SelectFormFactor(int index) {
   engine.selected_form_factor = index;
 }
 
-// Generates a colormap fading from a dark gray to orange to white. `colormap`
-// should have space for 256 * 3 elements.
+// Generates an approximately perceptually linear colormap fading from a dark
+// gray to orange to white. `colormap` should have space for 256 * 3 elements.
 static void GenerateColormap(uint8_t* colormap) {
-  const int kColorA[3] = {0x51, 0x43, 0x31};
-  const int kColorB[3] = {0xff, 0x6f, 0x00};
-  const float kKnot = 0.348f;
-
   for (int i = 0; i < 256; ++i, colormap += 3) {
     const float x = i / 255.0f;
-    if (x <= kKnot) {
-      const float w = x / kKnot;
-      for (int c = 0; c < 3; ++c) {
-        colormap[c] =
-            static_cast<int>(kColorA[c] + (kColorB[c] - kColorA[c]) * w);
-      }
+    if (x < 0.5f) {
+      colormap[0] = static_cast<uint8_t>((180 * x + 261) * x + 81);
+      colormap[1] = static_cast<uint8_t>((48 * x + 69) * x + 67);
+      colormap[2] = static_cast<uint8_t>((-106 * x - 21) * x + 49);
     } else {
-      const float w = (x - kKnot) / (1.0f - kKnot);
-      for (int c = 0; c < 3; ++c) {
-        colormap[c] = static_cast<int>(kColorB[c] + (255 - kColorB[c]) * w);
-      }
+      colormap[0] = 255;
+      colormap[1] = static_cast<uint8_t>((-234 * x + 626) * x - 139);
+      colormap[2] = static_cast<uint8_t>((-433 * x + 1112) * x - 428);
     }
   }
 }

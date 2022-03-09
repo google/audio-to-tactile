@@ -52,8 +52,6 @@
 #define kPdmDataPin 7
 #define kPdmSelectPin 26
 #define kTactileSwitchPin 34
-#define kUsingPdmMic 1
-#define kUsingAnalogMic 0
 #endif
 
 #endif  // AUDIO_TO_TACTILE_SRC_BOARD_DEFS_H_

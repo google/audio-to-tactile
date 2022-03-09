@@ -1,4 +1,4 @@
-/* Copyright 2020-2021 Google LLC
+/* Copyright 2020-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,12 +29,8 @@
  *                bpf_high_edge_hz=(500.0, 3500.0, 3500.0, 6000.0),
  *                energy_cutoff_hz=500.0,
  *                energy_tau_s=0.01,
- *                cross_channel_tau_s=0.1,
- *                noise_tau_s=1.0,
+ *                noise_db_s=2.0,
  *                agc_strength=0.7,
- *                denoise_thresh_factor=(25.0, 4.0, 4.0, 4.0),
- *                gain_tau_attack_s=0.002,
- *                gain_tau_release_s=0.15,
  *                compressor_exponent=0.25,
  *                compressor_delta=0.01,
  *                output_gain=(1.0, 1.0, 1.0, 1.0))
@@ -105,12 +101,8 @@ static int EnveloperObjectInit(EnveloperObject* self,
                                    "bpf_high_edge_hz",
                                    "energy_cutoff_hz",
                                    "energy_tau_s",
-                                   "cross_channel_tau_s",
-                                   "noise_tau_s",
+                                   "noise_db_s",
                                    "agc_strength",
-                                   "denoise_thresh_factor",
-                                   "gain_tau_attack_s",
-                                   "gain_tau_release_s",
                                    "compressor_exponent",
                                    "compressor_delta",
                                    "output_gain",
@@ -118,7 +110,7 @@ static int EnveloperObjectInit(EnveloperObject* self,
 
   if (!PyArg_ParseTupleAndKeywords(
           args, kw,
-          "f|i(ffff)(ffff)fffff(ffff)ffff(ffff):__init__", (char**)keywords,
+          "f|i(ffff)(ffff)ffffff(ffff):__init__", (char**)keywords,
           &input_sample_rate_hz,
           &decimation_factor,
           &params.channel_params[0].bpf_low_edge_hz,
@@ -131,15 +123,8 @@ static int EnveloperObjectInit(EnveloperObject* self,
           &params.channel_params[3].bpf_high_edge_hz,
           &params.energy_cutoff_hz,
           &params.energy_tau_s,
-          &params.cross_channel_tau_s,
-          &params.noise_tau_s,
+          &params.noise_db_s,
           &params.agc_strength,
-          &params.channel_params[0].denoise_thresh_factor,
-          &params.channel_params[1].denoise_thresh_factor,
-          &params.channel_params[2].denoise_thresh_factor,
-          &params.channel_params[3].denoise_thresh_factor,
-          &params.gain_tau_attack_s,
-          &params.gain_tau_release_s,
           &params.compressor_exponent,
           &params.compressor_delta,
           &params.channel_params[0].output_gain,
@@ -240,14 +225,11 @@ static PyObject* EnveloperObjectProcessSamples(
      */
     PyDict_Clear(debug_out);
     float* smoothed_energy = NULL;
-    float* log2_noise = NULL;
-    float* smoothed_gain = NULL;
+    float* noise = NULL;
     if (!(smoothed_energy = CreateArrayInDict(
-            debug_out, "smoothed_energy", output_frames)) ||
-        !(log2_noise = CreateArrayInDict(
-            debug_out, "log2_noise", output_frames)) ||
-        !(smoothed_gain = CreateArrayInDict(
-            debug_out, "smoothed_gain", output_frames))) {
+          debug_out, "smoothed_energy", output_frames)) ||
+        !(noise = CreateArrayInDict(
+          debug_out, "noise", output_frames))) {
       Py_DECREF(samples);
       Py_DECREF(output_array);
       PyDict_Clear(debug_out);
@@ -267,15 +249,13 @@ static PyObject* EnveloperObjectProcessSamples(
       int c;
       for (c = 0; c < kEnveloperNumChannels; ++c) {
         smoothed_energy[c] = self->enveloper.channels[c].smoothed_energy;
-        log2_noise[c] = self->enveloper.channels[c].log2_noise;
-        smoothed_gain[c] = self->enveloper.channels[c].smoothed_gain;
+        noise[c] = self->enveloper.channels[c].noise;
       }
 
       samples_data += self->decimation_factor;
       output += kEnveloperNumChannels;
       smoothed_energy += kEnveloperNumChannels;
-      log2_noise += kEnveloperNumChannels;
-      smoothed_gain += kEnveloperNumChannels;
+      noise += kEnveloperNumChannels;
     }
   }
 
@@ -309,38 +289,38 @@ static PyTypeObject kEnveloperType = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "Enveloper",                   /* tp_name */
     sizeof(EnveloperObject),       /* tp_basicsize */
-    0,                                  /* tp_itemsize */
+    0,                             /* tp_itemsize */
     (destructor)EnveloperDealloc,  /* tp_dealloc */
-    0,                                  /* tp_print */
-    0,                                  /* tp_getattr */
-    0,                                  /* tp_setattr */
-    0,                                  /* tp_compare */
-    0,                                  /* tp_repr */
-    0,                                  /* tp_as_number */
-    0,                                  /* tp_as_sequence */
-    0,                                  /* tp_as_mapping */
-    0,                                  /* tp_hash */
-    0,                                  /* tp_call */
-    0,                                  /* tp_str */
-    0,                                  /* tp_getattro */
-    0,                                  /* tp_setattro */
-    0,                                  /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT,                 /* tp_flags */
+    0,                             /* tp_print */
+    0,                             /* tp_getattr */
+    0,                             /* tp_setattr */
+    0,                             /* tp_compare */
+    0,                             /* tp_repr */
+    0,                             /* tp_as_number */
+    0,                             /* tp_as_sequence */
+    0,                             /* tp_as_mapping */
+    0,                             /* tp_hash */
+    0,                             /* tp_call */
+    0,                             /* tp_str */
+    0,                             /* tp_getattro */
+    0,                             /* tp_setattro */
+    0,                             /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT,            /* tp_flags */
     "Enveloper object",            /* tp_doc */
-    0,                                  /* tp_traverse */
-    0,                                  /* tp_clear */
-    0,                                  /* tp_richcompare */
-    0,                                  /* tp_weaklistoffset */
-    0,                                  /* tp_iter */
-    0,                                  /* tp_iternext */
+    0,                             /* tp_traverse */
+    0,                             /* tp_clear */
+    0,                             /* tp_richcompare */
+    0,                             /* tp_weaklistoffset */
+    0,                             /* tp_iter */
+    0,                             /* tp_iternext */
     kEnveloperMethods,             /* tp_methods */
     kEnveloperMembers,             /* tp_members */
-    0,                                  /* tp_getset */
-    0,                                  /* tp_base */
-    0,                                  /* tp_dict */
-    0,                                  /* tp_descr_get */
-    0,                                  /* tp_descr_set */
-    0,                                  /* tp_dictoffset */
+    0,                             /* tp_getset */
+    0,                             /* tp_base */
+    0,                             /* tp_dict */
+    0,                             /* tp_descr_get */
+    0,                             /* tp_descr_set */
+    0,                             /* tp_dictoffset */
     (initproc)EnveloperObjectInit, /* tp_init */
 };
 

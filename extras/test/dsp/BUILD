@@ -1,4 +1,4 @@
-# Copyright 2019-2021 Google LLC
+# Copyright 2019-2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -58,6 +58,12 @@ c_test(
 c_test(
     name = "datestamp_test",
     srcs = ["datestamp_test.c"],
+    deps = ["//:dsp"],
+)
+
+c_test(
+    name = "decibels_test",
+    srcs = ["decibels_test.c"],
     deps = ["//:dsp"],
 )
 

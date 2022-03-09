@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "extras/tools/util.h"
+#include "src/dsp/decibels.h"
 #include "src/dsp/logging.h"
 
 static void TestChannelMapParse() {

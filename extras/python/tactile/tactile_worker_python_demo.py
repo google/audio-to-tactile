@@ -127,7 +127,6 @@ def main(argv):
   print('\nPress Ctrl+C to stop program.\n')
   print(' '.join(f'{s:<7}' for s in ('base', 'aa', 'uw', 'ih', 'iy', 'eh',
                                      'ae', 'uh', 'sh', 's')))
-  rms_min, rms_max = 0.003, 0.05
 
   try:
     while True:
@@ -139,10 +138,8 @@ def main(argv):
         worker.play(wav_samples)
 
       # Get the volume meters for each tactor and make a simple visualization.
-      volume = worker.volume_meters
-      activation = np.log2(1e-9 + volume / rms_min) / np.log2(rms_max / rms_min)
-      activation = activation.clip(0.0, 1.0)
-      print('\r' + ' '.join(volume_meter(a) for a in activation), end='')
+      volume = (worker.volume_meters / 0.1).clip(0.0, 1.0)
+      print('\r' + ' '.join(volume_meter(v) for v in volume), end='')
 
       time.sleep(0.025)
   except KeyboardInterrupt:  # Stop gracefully on Ctrl+C.

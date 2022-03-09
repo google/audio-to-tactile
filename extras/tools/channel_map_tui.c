@@ -19,6 +19,7 @@
 #include <stdlib.h>
 
 #include "extras/tools/util.h"
+#include "src/dsp/decibels.h"
 
 int ChannelMapParse(int num_input_channels, const char* source_list,
                     const char* gains_db_list, ChannelMap* channel_map) {

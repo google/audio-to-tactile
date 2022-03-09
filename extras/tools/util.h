@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,12 +52,6 @@ int RoundUpToPowerOfTwo(int value);
 
 /* Generates pseudorandom integer uniformly in {0, 1, ..., max_value}. */
 int RandomInt(int max_value);
-
-/* Convert decibels to amplitude ratio. */
-float DecibelsToAmplitudeRatio(float decibels);
-
-/* Convert amplitude ratio to decibels. */
-float AmplitudeRatioToDecibels(float amplitude_ratio);
 
 /* Gets `smoother_coeff` such that the lowpass gamma filter implemented as
  * follows has its half-power frequency at `cutoff_frequency_hz`:

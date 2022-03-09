@@ -1,4 +1,4 @@
-/* Copyright 2019, 2021 Google LLC
+/* Copyright 2019, 2021-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,6 +89,7 @@
 #define AUDIO_TO_TACTILE_SRC_TACTILE_ENERGY_ENVELOPE_H_
 
 #include "dsp/biquad_filter.h"
+#include "dsp/decibels.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -105,8 +106,6 @@ typedef struct {
    */
   float bpf_low_edge_hz;
   float bpf_high_edge_hz;
-  /* Factor for noise gate threshold. Larger implies stronger denoising. */
-  float denoise_thresh_factor;
   /* The final output is multiplied by this gain. */
   float output_gain;
 } EnveloperChannelParams;
@@ -116,24 +115,18 @@ typedef struct {
 
   /* Cutoff in Hz for the energy lowpass filter. Usually 500 Hz. */
   float energy_cutoff_hz;
-  /* Time constant in seconds for smoothing energy envelopes over time. */
-  float energy_tau_s;
-  /* Time constant in seconds for diffusing energy envelopes across channels,
-   *
-   *   d/dt u[c] = D * (u[c+1] - 2 u[c] - u[c-1]),
-   *
-   * where D = (num channels)^2 / cross_channel_tau_s. This creates a
-   * cross-channel inhibition effect. Smaller value implies faster diffusion and
-   * stronger inhibition.
+
+  /* Time constant in seconds for computing a smoothed energy, used for noise
+   * estimation and PCEN's AGC.
    */
-  float cross_channel_tau_s;
-  /* Noise envelope time constant in seconds. */
-  float noise_tau_s;
-  /* Automatic gain control strength (0 => bypass, 1 => full normalization). */
+  float energy_tau_s;
+
+  /* Noise estimate adaptation rate in dB per second. */
+  float noise_db_s;
+
+  /* Parameters for per-channel energy normalization (PCEN). */
+  /* Normalization strength (0 => bypass, 1 => full normalization). */
   float agc_strength;
-  /* Gain smoothing attack and release time constants in seconds. */
-  float gain_tau_attack_s;
-  float gain_tau_release_s;
   /* Compression exponent in a memoryless nonlinearity, between 0.0 and 1.0. */
   float compressor_exponent;
   /* Delta added to stabilize the compression. */
@@ -144,16 +137,12 @@ extern const EnveloperParams kDefaultEnveloperParams;
 typedef struct {
   /* Bandpass filter coefficients, represented as two second-order sections. */
   BiquadFilterCoeffs bpf_biquad_coeffs[2];
-  float denoise_thresh_factor;
-  /* Precomputation of (1/output_gain + delta^exponent)^(1/exponent) - delta. */
-  float agc_max_output;
   float output_gain;
 
   BiquadFilterState bpf_biquad_state[2];
   BiquadFilterState energy_biquad_state;
   float smoothed_energy;
-  float log2_noise;
-  float smoothed_gain;
+  float noise;
 } EnveloperChannel;
 
 /* Enveloper data and state variables. */
@@ -166,16 +155,12 @@ typedef struct {
   float input_sample_rate_hz;
   /* Decimation factor after computing the energy envelope. */
   int decimation_factor;
-  /* AGC parameters. */
+
   float energy_smoother_coeff;
-  float cross_channel_diffusion_coeff;
-  float noise_smoother_coeff;
-  float agc_exponent;
-  float gain_smoother_coeffs[2]; /* [0] = attack coeff, [1] = release coeff. */
-  /* Compressor parameters. */
+  float noise_coeffs[2];
+  float agc_strength;
   float compressor_exponent;
   float compressor_delta;
-  /* Precomputation of pow(compressor_delta, compressor_exponent). */
   float compressor_offset;
 } Enveloper;
 
@@ -214,15 +199,15 @@ static float EnveloperSmootherCoeff(const Enveloper* state, float tau_s) {
                            (state->input_sample_rate_hz * tau_s));
 }
 
-/* Computes the cross-channel diffusion coefficient. */
-static float EnveloperCrossChannelDiffusionCoeff(const Enveloper* state,
-                                                 float tau_s) {
-  const float c = (kEnveloperNumChannels * kEnveloperNumChannels) *
-      state->decimation_factor / (state->input_sample_rate_hz * tau_s);
-  return c / (1.0f + 2.0f * c);
+/* Computes a coefficient for growing at a specified rate in dB per second. */
+static float EnveloperGrowthCoeff(const Enveloper* state, float growth_db_s) {
+  return DecibelsToPowerRatio(
+      growth_db_s * state->decimation_factor / state->input_sample_rate_hz);
 }
 
-/* Updates precomputed params, useful if compressor params have been changed. */
+/* Updates precomputed params, useful if noise_coeffs or compressor params have
+ * been changed.
+ */
 void EnveloperUpdatePrecomputedParams(Enveloper* state);
 
 #ifdef __cplusplus

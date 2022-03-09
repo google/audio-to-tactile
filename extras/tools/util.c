@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -161,14 +161,6 @@ int RoundUpToPowerOfTwo(int value) {
 int RandomInt(int max_value) {
   int result = (int) (((1.0f + max_value) / (1.0f + RAND_MAX)) * rand());
   return result <= max_value ? result : max_value;
-}
-
-float DecibelsToAmplitudeRatio(float decibels) {
-  return exp((M_LN10 / 20) * decibels);
-}
-
-float AmplitudeRatioToDecibels(float amplitude_ratio) {
-  return (20 / M_LN10) * log(amplitude_ratio);
 }
 
 float GammaFilterSmootherCoeff(int order,

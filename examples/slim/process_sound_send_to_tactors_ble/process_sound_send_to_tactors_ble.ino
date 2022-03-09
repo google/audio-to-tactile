@@ -87,8 +87,10 @@ PostProcessorWrapper g_post_processor;
 // Device name, tuning, and channel gain and assignment.
 Settings g_settings;
 
+bool g_initialize_pwm = false;
 bool g_low_battery = false;
 bool g_vibration_warning = false;
+bool g_notify_mic_switch = false;
 
 float g_latest_battery_v = 0.0f;
 bool g_measure_battery = false;
@@ -112,15 +114,28 @@ SoftwareTimer g_occasional_tasks_timer;
 int g_measure_sensors_counter = 0;
 int g_write_settings_countdown = -1;
 
-// Using analog or digital mic.
+#if defined(kPdmSelectPin) && defined(kTactileSwitchPin)
+#define SELECTABLE_MIC 1
+
+void OnSwitchPress();
+#else
+#define SELECTABLE_MIC 0
+#endif
+
+// `g_which_mic` selects which mic is used as input.
+#if SELECTABLE_MIC
+// Default to the PDM mic if available.
 int g_which_mic = kUsingPdmMic;
+#else
+// Otherwise hardcode to using the analog mic.
+constexpr int g_which_mic = kUsingAnalogMic;
+#endif  // SELECTABLE_MIC
 
 void OnAnalogNewData();
 void FlashLeds();
 void OnPwmSequenceEnd();
 void OnBleEvent();
 void OnPdmNewData();
-void OnSwitchPress();
 void OccasionalTasks(TimerHandle_t);
 
 void setup() {
@@ -128,24 +143,36 @@ void setup() {
   nrf_gpio_cfg_output(kLedPinBlue);
   nrf_gpio_cfg_output(kLedPinGreen);
 
+#ifdef kPdmSelectPin
   // Initialize mics, start the PDM mic by default.
   nrf_gpio_cfg_output(kPdmSelectPin);
   nrf_gpio_pin_write(kPdmSelectPin, 0);
   OnBoardMic.Initialize(kPdmClockPin, kPdmDataPin);
   OnBoardMic.OnPdmDataReady(OnPdmNewData);
-  OnBoardMic.Enable();
+#endif  // kPdmSelectPin
 
   ExternalAnalogMic.OnAdcDataReady(OnAnalogNewData);
   ExternalAnalogMic.Initialize();
   ExternalAnalogMic.Disable();
 
+  // Make sure to fire interrupt handler for only one mic.
+  if (g_which_mic == kUsingPdmMic) {
+    OnBoardMic.Enable();
+  }
+  else {
+    ExternalAnalogMic.Enable();
+    OnBoardMic.Disable();
+  }
+
   // Initialize battery monitor.
   PuckBatteryMonitor.InitializeLowVoltageInterrupt();
   PuckBatteryMonitor.OnLowBatteryEventListener(LowBatteryWarning);
 
+#if SELECTABLE_MIC
   // Initialize the button.
   DeviceUi.Initialize(kTactileSwitchPin);
   DeviceUi.OnUiEventListener(OnSwitchPress);
+#endif  // SELECTABLE_MIC
 
   FlashLeds();
 
@@ -191,10 +218,12 @@ void setup() {
   BleCom.Init(device_name, OnBleEvent);
 
   // Initialize PWM.
-  // TODO: When starting the device, the tactor buzz arbitrarily for
-  // a couple seconds. Figure out how to initialize them more nicely.
   SleeveTactors.OnSequenceEnd(OnPwmSequenceEnd);
   SleeveTactors.Initialize();
+  // Turn the tactor amplifiers off initially, otherwise they buzz arbitrarly
+  // while the system is still starting up.
+  SleeveTactors.DisableAmplifiers();
+  g_initialize_pwm = true;
   // Warning: issue only in Arduino. When using StartPlayback() it crashes.
   // Looks like NRF_PWM0 module is automatically triggered, and triggering it
   // again here crashes ISR. Temporary fix is to only use nrf_pwm_task_trigger
@@ -337,6 +366,7 @@ void HandleMessage(const Message& message) {
     case MessageType::kPrepareForBluetoothBootloading:
       // Turn off all interrupts, so they don't interfere with bootloading.
       Serial.println("Message: kPrepareForOtaBootloading.");
+      SleeveTactors.DisableAmplifiers();
       SleeveTactors.DisablePwm();
       g_occasional_tasks_timer.stop();
       // Disable onboard or/and external mic.
@@ -351,7 +381,9 @@ void HandleMessage(const Message& message) {
 
 void loop() {
   if (g_measure_battery) {
-    ExternalAnalogMic.Disable();
+    if (g_which_mic == kUsingAnalogMic) {
+      ExternalAnalogMic.Disable();
+    }
     uint16_t battery_read_raw = PuckBatteryMonitor.MeasureBatteryVoltage();
     g_latest_battery_v =
         PuckBatteryMonitor.ConvertBatteryVoltageToFloat(battery_read_raw);
@@ -360,12 +392,16 @@ void loop() {
     BleCom.tx_message().WriteBatteryVoltage(g_latest_battery_v);
     BleCom.SendTxMessage();
 
-    ExternalAnalogMic.Initialize();
+    if (g_which_mic == kUsingAnalogMic) {
+      ExternalAnalogMic.Initialize();
+    }
     g_measure_battery = false;
   }
 
   if (g_measure_temperature) {
-    ExternalAnalogMic.Disable();
+    if (g_which_mic == kUsingAnalogMic) {
+      ExternalAnalogMic.Disable();
+    }
     uint16_t temperature_read_raw = SleeveTemperatureMonitor.TakeAdcSample();
     g_latest_temperature_c =
         SleeveTemperatureMonitor.ConvertAdcSampleToTemperature(
@@ -375,7 +411,9 @@ void loop() {
     BleCom.tx_message().WriteTemperature(g_latest_temperature_c);
     BleCom.SendTxMessage();
 
-    ExternalAnalogMic.Initialize();
+    if (g_which_mic == kUsingAnalogMic) {
+      ExternalAnalogMic.Initialize();
+    }
     g_measure_temperature = false;
   }
 
@@ -438,6 +476,18 @@ void loop() {
     g_tactile_pattern_active = true;
     g_low_battery = false;
     g_vibration_warning = true;
+  }
+  // Notify the user about switching to a different mic.
+  if (g_notify_mic_switch) {
+    TactilePatternStart(&g_tactile_pattern, kTactilePatternConnect);
+    g_tactile_pattern_active = true;
+    for (int i = 0; i < 5; ++i) {
+      nrf_gpio_pin_write(kLedPinBlue, 1);
+      delay(50);
+      nrf_gpio_pin_write(kLedPinBlue, 0);
+      delay(50);
+    }
+    g_notify_mic_switch = false;
   }
 }
 
@@ -533,6 +583,7 @@ void LowBatteryWarning() {
   }
 }
 
+#if SELECTABLE_MIC
 void OnSwitchPress() {
   if (g_which_mic == kUsingPdmMic) {
     g_which_mic = kUsingAnalogMic;
@@ -543,11 +594,23 @@ void OnSwitchPress() {
     OnBoardMic.Enable();
     ExternalAnalogMic.Disable();
   }
+
+  g_notify_mic_switch = true;
 }
+#endif  // SELECTABLE_MIC
 
 // TODO: Simplify the handling of these "occasional tasks" with a
 // clock, multiple separate timers, or something.
 void OccasionalTasks(TimerHandle_t) {
+  if (g_initialize_pwm) {
+    // On first call, turn on tactor amplifiers and play a "start up" pattern.
+    SleeveTactors.EnableAmplifiers();
+    TactilePatternStartEx(&g_tactile_pattern, kTactilePatternExStartUp);
+    g_tactile_pattern_active = true;
+    g_initialize_pwm = false;
+    return;
+  }
+
   g_measure_sensors_counter++;
   if (g_measure_sensors_counter % 2 == 1) {
     // Measure battery every 5 seconds, on an odd count.

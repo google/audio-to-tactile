@@ -1,4 +1,4 @@
-/* Copyright 2021 Google LLC
+/* Copyright 2021-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 
 #include <math.h>
 
+#include "src/dsp/decibels.h"
 #include "src/dsp/logging.h"
 
 static void TestChannelMapInit(void) {
@@ -75,6 +76,24 @@ static void TestChannelMapApply(void) {
   free(input);
 }
 
+/* Test control value to gain mapping. */
+static void TestGainMapping(void) {
+  puts("TestGainMapping");
+  CHECK(ChannelGainFromControlValue(0) == 0.0f);
+  CHECK(ChannelGainFromControlValue(63) == 1.0f);
+
+  const float min_db = -18.0f;
+  const float max_db = 0.0f;
+  int control_value;
+  for (control_value = 1; control_value <= 63; ++control_value) {
+    float gain = ChannelGainFromControlValue(control_value);
+    float expected_db = min_db + ((max_db - min_db) / 62) * (control_value - 1);
+    /* `gain` has max error of 0.3%, which is an error of about 0.03 dB. */
+    float tol_db = 0.03f;
+    CHECK(fabs(AmplitudeRatioToDecibels(gain) - expected_db) <= tol_db);
+  }
+}
+
 /* Test that control value -> gain -> control value is a round trip. */
 static void TestGainControlValueRoundTrip(void) {
   puts("TestGainControlValueRoundTrip");
@@ -91,6 +110,7 @@ int main(int argc, char** argv) {
   srand(0);
   TestChannelMapInit();
   TestChannelMapApply();
+  TestGainMapping();
   TestGainControlValueRoundTrip();
 
   puts("PASS");

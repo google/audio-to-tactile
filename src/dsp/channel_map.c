@@ -1,4 +1,4 @@
-/* Copyright 2019, 2021 Google LLC
+/* Copyright 2019, 2021-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,7 @@
 
 #include "dsp/channel_map.h"
 
-#include "dsp/fast_fun.h"
-#include "dsp/math_constants.h"
+#include "dsp/decibels.h"
 
 void ChannelMapInit(ChannelMap* channel_map, int num_channels) {
   channel_map->num_input_channels = num_channels;
@@ -49,7 +48,7 @@ void ChannelMapApply(const ChannelMap* channel_map, const float* input,
 int ChannelGainToControlValue(float gain) {
   if (gain >= 1.0f) { return 63; }
   if (!(gain >= 0.128f)) { return (gain >= 0.05f) ? 1 : 0; }
-  const float gain_db = (float)(20.0 * M_LN2 / M_LN10) * FastLog2(gain);
+  const float gain_db = FastAmplitudeRatioToDecibels(gain);
   return (int)((62.0f / 18.0f) * gain_db + 63.5f);
 }
 
@@ -57,5 +56,5 @@ float ChannelGainFromControlValue(int control_value) {
   if (control_value <= 0) { return 0.0f; }
   if (control_value >= 63) { return 1.0f; }
   const float gain_db = (18.0f / 62.0f) * (control_value - 63);
-  return FastExp2((float)(M_LN10 / (20.0 * M_LN2)) * gain_db);
+  return FastDecibelsToAmplitudeRatio(gain_db);
 }

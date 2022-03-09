@@ -1,4 +1,4 @@
-# Copyright 2020-2021 Google LLC
+# Copyright 2020-2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -33,6 +33,7 @@ COMMON_OBJ= \
 		carl_frontend_design.o \
 		carl_frontend.o \
 		complex.o \
+		decibels.o \
 		fast_fun.o \
 		nn_ops.o \
 
@@ -82,6 +83,9 @@ butterworth.o: ../../src/dsp/butterworth.c
 	emcc $(EMCC_FLAGS) -c $< -o $@
 
 complex.o: ../../src/dsp/complex.c
+	emcc $(EMCC_FLAGS) -c $< -o $@
+
+decibels.o: ../../src/dsp/decibels.c
 	emcc $(EMCC_FLAGS) -c $< -o $@
 
 fast_fun.o: ../../src/dsp/fast_fun.c

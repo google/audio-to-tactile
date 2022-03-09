@@ -94,7 +94,7 @@ static int PortAudioCallback(const void* input_buffer, void* output_buffer,
   const int block_size =
       CarlFrontendBlockSize(worker->tactile_processor->frontend);
   const int num_blocks = worker->chunk_size / block_size;
-  float volume_accum[kNumTactors] = {0.0f};
+  float energy_accum[kNumTactors] = {0.0f};
 
   /* Reset tactile processing if requested. */
   if (worker->should_reset_tactile_processor) {
@@ -116,7 +116,7 @@ static int PortAudioCallback(const void* input_buffer, void* output_buffer,
     for (i = 0; i < block_size; ++i) {
       int c;
       for (c = 0; c < kNumTactors; ++c) {
-        volume_accum[c] += tactile_output[c] * tactile_output[c];
+        energy_accum[c] += tactile_output[c] * tactile_output[c];
       }
       tactile_output += kNumTactors;
     }
@@ -136,12 +136,13 @@ static int PortAudioCallback(const void* input_buffer, void* output_buffer,
   const float volume_decay_coeff = worker->volume_decay_coeff;
   int c;
   for (c = 0; c < kNumTactors; ++c) {
-    const float rms =
-        sqrt(volume_accum[c] / (num_blocks * block_size * kNumTactors));
+    // Convert tactile energy to perceived strength with Steven's power law.
+    // Perceived strength is roughly proportional to acceleration^0.55, which is
+    // proportional to sqrt(energy)^0.55.
+    const float perceived = FastPow(1e-12f + energy_accum[c]
+        / (num_blocks * block_size), 0.55f * 0.5f);
     float updated_volume = worker->volume_meters[c] * volume_decay_coeff;
-    if (rms > updated_volume) {
-      updated_volume = rms;
-    }
+    if (perceived > updated_volume) { updated_volume = perceived; }
     worker->volume_meters[c] = updated_volume;
   }
 

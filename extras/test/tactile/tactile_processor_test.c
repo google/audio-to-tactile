@@ -131,7 +131,7 @@ static void TestTones(float sample_rate_hz, int decimation_factor) {
   fricative_energy = ComputeEnergy(fricative, 0.37f, 0.43f, output_rate);
   CHECK(fricative_energy > 1e-4f);
   CHECK(fricative_energy > 10 * baseband_energy);
-  CHECK(fricative_energy > 5 * vowel_energy);
+  CHECK(fricative_energy > 2 * vowel_energy);
 
   free(output);
   free(input);

@@ -1,4 +1,4 @@
-/* Copyright 2021 Google LLC
+/* Copyright 2021-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,17 +18,12 @@
 #include "dsp/fast_fun.h"
 
 const TuningKnobs kDefaultTuningKnobs = {{
-  /* kKnobInputGain            */ 127,
-  /* kKnobOutputGain           */ 191,
-  /* kKnobDenoisingBaseband    */ 155,
-  /* kKnobDenoisingVowel       */  67,
-  /* kKnobDenoisingShFricative */  67,
-  /* kKnobDenoisingFricative   */  67,
-  /* kKnobCrossChannelTau      */  51,
-  /* kKnobAgcStrength          */ 191,
-  /* kKnobNoiseTau             */ 178,
-  /* kKnobGainTauRelease       */  73,
-  /* kKnobCompressor           */  96,
+  /* kKnobInputGain        */ 127,
+  /* kKnobOutputGain       */ 191,
+  /* kKnobEnergyTau        */  85,
+  /* kKnobNoiseAdaptation  */ 127,
+  /* kKnobAgcStrength      */ 191,
+  /* kKnobCompressor       */  96,
 }};
 
 const TuningKnobInfo kTuningKnobInfo[kNumTuningKnobs] = {
@@ -48,82 +43,38 @@ const TuningKnobInfo kTuningKnobInfo[kNumTuningKnobs] = {
         -18.0f, /* In units of dB. */
         6.0f,
     },
-    { /* kKnobDenoisingBaseband */
-        "Denoising baseband",
-        "%.1f",
-        "The `denoise_thresh_factor` parameter for the baseband (0) "
-        "Enveloper channel. Larger value implies stronger denoising.",
+    { /* kKnobEnergyTau */
+        "Energy smoothing",
+        "%.3f s",
+        "The `energy_tau_s` energy smoothing time constant for all Enveloper "
+        "channels. Larger value means more smoothing.",
         kTuningMapLogarithmically,
+        0.001f, /* In units of seconds. */
         1.0f,
-        200.0f,
     },
-    { /* kKnobDenoisingVowel */
-        "Denoising vowel",
-        "%.1f",
-        "The `denoise_thresh_factor` parameter for the vowel (1) "
-        "Enveloper channel. Larger value implies stronger denoising.",
+    { /* kKnobNoiseAdaptation */
+        "Noise adaptation",
+        "%.1f dB/s",
+        "The `noise_db_s` noise estimate adaptation rate for all Enveloper "
+        "channels. Larger value implies faster adaptation.",
         kTuningMapLogarithmically,
-        1.0f,
-        200.0f,
-    },
-    { /* kKnobDenoisingShFricative */
-        "Denoising sh fricative",
-        "%.1f",
-        "The `denoise_thresh_factor` parameter for the sh fricative (2) "
-        "Enveloper channel. Larger value implies stronger denoising.",
-        kTuningMapLogarithmically,
-        1.0f,
-        200.0f,
-    },
-    { /* kKnobDenoisingFricative */
-        "Denoising fricative",
-        "%.1f",
-        "The `denoise_thresh_factor` parameter for the fricative (3) "
-        "Enveloper channel. Larger value implies stronger denoising.",
-        kTuningMapLogarithmically,
-        1.0f,
-        200.0f,
-    },
-    { /* kKnobCrossChannelTau */
-        "Cross-channel time constant",
-        "%.2f s",
-        "The `cross_channel_tau_s` parameter. Smaller value implies faster "
-        "diffusion and stronger cross-channel inhibition.",
-        kTuningMapLogarithmically,
-        0.04f, /* In units of seconds. */
-        4.0f,
+        0.2f, /* In units of seconds. */
+        20.0f,
     },
     { /* kKnobAgcStrength */
         "AGC strength",
         "%.2f",
-        "Auto gain control (AGC) strength for all Enveloper channels. "
-        "Larger value implies stronger normalization.",
+        "PCEN auto gain control strength. Larger value implies stronger "
+        "normalization and greater sensitivity but more noise.",
         kTuningMapLinearly,
         0.1f,
         0.9f,
     },
-    { /* kKnobNoiseTau */
-        "Noise time constant",
-        "%.2f s",
-        "The `noise_tau_s` parameter for all Enveloper channels. Specifies "
-        "how quickly the estimate of the noise level adapts.",
-        kTuningMapLogarithmically,
-        0.04f, /* In units of seconds. */
-        4.0f,
-    },
-    { /* kKnobGainTauRelease */
-        "Gain release time constant",
-        "%.2f s",
-        "The `gain_tau_release_s` parameter for all Enveloper channels.",
-        kTuningMapLogarithmically,
-        0.04f, /* In units of seconds. */
-        4.0f,
-    },
     { /* kKnobCompressor */
         "Compressor",
         "%.2f",
-        "The `compressor_exponent` parameter for all Enveloper channels. "
-        "Smaller value implies stronger compression.",
+        "The `compressor_exponent` parameter. Smaller value implies stronger "
+        "compression and greater sensitivity but more noise.",
         kTuningMapLinearly,
         0.1f,
         0.5f,

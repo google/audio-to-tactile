@@ -220,6 +220,7 @@ typedef struct {
 extern const char* kTactilePatternConnect;
 extern const char* kTactilePatternDisconnect;
 extern const char* kTactilePatternConfirm;
+extern const uint8_t kTactilePatternExStartUp[];
 
 /* Initializes the synthesizer. */
 void TactilePatternInit(TactilePattern* p, float sample_rate_hz,
