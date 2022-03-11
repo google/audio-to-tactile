@@ -9,6 +9,10 @@ representation is intuitive enough to require only minimal training while
 effective in delivering tangible read-world value, especially in
 understanding speech and complementing lip reading.
 
+If you are interested and have ideas about using our hardware or want to receive
+updates, please fill out this
+[form](https://sites.google.com/corp/view/vhp-collaborations/home).
+
 **Slim v0.4 bracelet**
 
 ![Slim v0.4 bracelet](extras/doc/slim_v0.4.jpg)
