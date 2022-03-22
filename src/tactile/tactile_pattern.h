@@ -42,13 +42,13 @@
  *
  * Example, playing an extended format pattern:
  *   const uint8_t ex_pattern[] = {
- *     kTactilePatternOpSetWaveform + 0, kTactilePatternWaveformTone0,
+ *     kTactilePatternOpSetWaveform + 0, kTactilePatternWaveformSin25Hz,
  *     kTactilePatternOpSetGain + 1, 0xff, // Gain 1.0.
- *     TACTILE_PATTERN_OP_PLAY(100),       // Play for 100 ms.
+ *     TACTILE_PATTERN_OP_PLAY_MS(100),       // Play for 100 ms.
  *     kTactilePatternOpMove, 0x01,        // Move from channel 0 to 1.
- *     TACTILE_PATTERN_OP_PLAY(100),       // Play for 100 ms.
+ *     TACTILE_PATTERN_OP_PLAY_MS(100),       // Play for 100 ms.
  *     kTactilePatternOpMove, 0x12,        // Move from channel 1 to 2.
- *     TACTILE_PATTERN_OP_PLAY(100),       // Play for 100 ms.
+ *     TACTILE_PATTERN_OP_PLAY_MS(100),       // Play for 100 ms.
  *     kTactilePatternOpEnd,
  *   };
  *   TactilePattern p;

@@ -1,4 +1,4 @@
-// Copyright 2021 Google LLC
+// Copyright 2021-2022 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,27 +14,12 @@
 //
 // This Arduino example sketch shows how to use PWM on the slim board
 // Plays a sin wave from a lookup on each channel.
-//
-// Pwm to output mapping, when using UpdatePwmModuleChannel():
-// (pwm module, pwm channel) - output channel on the flex connector
-// (0,0) - 1
-// (0,1) - 2
-// (0,2) - 3
-// (0,3) - 4
-// (1,0) - 5
-// (1,1) - 6
-// (1,2) - 7
-// (1,3) - 8
-// (2,0) - 9
-// (2,1) - 10
-// (2,2) - 11
-// (2,3) - 12
 
 #include "pwm_sleeve.h"
 
 using namespace audio_tactile;
 static uint16_t sin_wave[8];
-static uint16_t silence[8];  // all zeros for no vibration output.
+static uint16_t silence[8] = {0};  // all zeros for no vibration output.
 
 void OnPwmSequenceEnd();
 

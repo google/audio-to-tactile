@@ -2,16 +2,14 @@
 
 (This is not an official Google product.)
 
-**Audio-to-Tactile** is a project about audio-to-tactile representations for
-users with hearing loss. Our vision is a wearable tactile device that enables
-users to *feel* sound in a natural and useful way. The goal is that this
-representation is intuitive enough to require only minimal training while
-effective in delivering tangible read-world value, especially in
-understanding speech and complementing lip reading.
+**Audio-to-Tactile** is a project about audio-to-tactile representations. We
+developed a wearable tactile device that aims to enables users to *feel*
+sound in a natural and useful way, especially in understanding speech and
+complementing lip reading.
 
 If you are interested and have ideas about using our hardware or want to receive
-updates, please fill out this
-[form](https://sites.google.com/corp/view/vhp-collaborations/home).
+updates, please fill out [this
+form](https://sites.google.com/corp/view/vhp-collaborations/home).
 
 **Slim v0.4 bracelet**
 
