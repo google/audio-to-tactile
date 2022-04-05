@@ -651,10 +651,19 @@ class OnConnectionBatchMessage(
 
     /** Deserializes a date as written by `serializeDate`. */
     private fun deserializeDate(buffer: ByteBuffer): LocalDate? {
-      val code = buffer.getInt()
+      var code = buffer.getInt()
+      var dayOfMonth = code % 100
+
+      // Bug workaround: Before 2022-04-01, a bug in datestamp could offset the
+      // code by -160 when dayOfMonth is a single digit. This always results in
+      // an invalid dayOfMonth >= 41, so we can detect and fix these datestamps.
+      if (dayOfMonth >= 41) {
+        code += 160
+        dayOfMonth = code % 100
+      }
+
       val year = code / 10000
       val month = (code / 100) % 100
-      val dayOfMonth = code % 100
       return try { LocalDate.of(year, month, dayOfMonth) } catch (e: DateTimeException) { null }
     }
   }

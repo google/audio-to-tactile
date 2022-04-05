@@ -18,12 +18,14 @@
 #include "dsp/fast_fun.h"
 
 const TuningKnobs kDefaultTuningKnobs = {{
-  /* kKnobInputGain        */ 127,
-  /* kKnobOutputGain       */ 191,
-  /* kKnobEnergyTau        */  85,
-  /* kKnobNoiseAdaptation  */ 127,
-  /* kKnobAgcStrength      */ 191,
-  /* kKnobCompressor       */  96,
+  /* kKnobInputGain           */ 127,
+  /* kKnobOutputGain          */ 191,
+  /* kKnobEnergyTau           */  85,
+  /* kKnobNoiseAdaptation     */ 127,
+  /* kKnobDenoisingStrength   */  33,
+  /* kKnobDenoisingTransition */  51,
+  /* kKnobAgcStrength         */ 191,
+  /* kKnobCompressor          */  96,
 }};
 
 const TuningKnobInfo kTuningKnobInfo[kNumTuningKnobs] = {
@@ -60,6 +62,24 @@ const TuningKnobInfo kTuningKnobInfo[kNumTuningKnobs] = {
         kTuningMapLogarithmically,
         0.2f, /* In units of seconds. */
         20.0f,
+    },
+    { /* kKnobDenoisingStrength */
+        "Denoising strength",
+        "%.1f",
+        "Enveloper denoising strength. This parameter scales the soft noise "
+        "gate threshold. Larger value implies stronger denoising. ",
+        kTuningMapLogarithmically,
+        0.5f,
+        100.0f,
+    },
+    { /* kKnobDenoisingTransition */
+        "Denoising transition",
+        "%.1f dB",
+        "Soft noise gate transition width. A large value makes the gate more "
+        "gradual, which helps avoid \"breathing\" artifacts.",
+        kTuningMapLinearly,
+        5.0f,
+        30.0f,
     },
     { /* kKnobAgcStrength */
         "AGC strength",

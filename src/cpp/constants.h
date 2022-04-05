@@ -1,4 +1,4 @@
-// Copyright 2021 Google LLC
+// Copyright 2021-2022 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ constexpr int kMaxTactilePatternLength = 15;
 constexpr int kMaxDeviceNameLength = 16;
 
 // Constants for mic input selection.
-enum { kUsingAnalogMic, kUsingPdmMic };
+enum class InputSelection { kAnalogMic, kPdmMic };
 
 }  // namespace audio_tactile
 

@@ -152,6 +152,14 @@ c_test(
 )
 
 c_test(
+    name = "tap_out_test",
+    srcs = ["tap_out_test.c"],
+    deps = [
+        "//:dsp",
+    ],
+)
+
+c_test(
     name = "write_wav_file_test",
     srcs = ["write_wav_file_test.c"],
     deps = ["//:dsp"],

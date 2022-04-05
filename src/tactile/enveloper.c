@@ -81,6 +81,8 @@ const EnveloperParams kDefaultEnveloperParams = {
     /*energy_cutoff_hz=*/500.0f,
     /*energy_tau_s=*/0.01f,
     /*noise_db_s=*/2.0f,
+    /*denoising_strength=*/1.0f,
+    /*denoising_transition_db=*/10.0f,
     /*agc_strength=*/0.7f,
     /*compressor_exponent=*/0.25f,
     /*compressor_delta=*/0.01f,
@@ -95,6 +97,8 @@ int EnveloperInit(Enveloper* state,
     return 0;
   } else if (!(input_sample_rate_hz > 0.0f) ||
              !(params->energy_tau_s >= 0.0f) ||
+             !(params->denoising_strength > 0.0f) ||
+             !(params->denoising_transition_db > 0.0f) ||
              !(0.0f <= params->agc_strength && params->agc_strength <= 1.0f) ||
              !(params->compressor_exponent > 0.0f) ||
              !(params->compressor_delta > 0.0f) ||
@@ -125,7 +129,7 @@ int EnveloperInit(Enveloper* state,
 
   state->input_sample_rate_hz = input_sample_rate_hz;
   state->decimation_factor = decimation_factor;
-  state->agc_strength = params->agc_strength;
+  state->agc_exponent = -params->agc_strength;
   state->compressor_exponent = params->compressor_exponent;
   state->compressor_delta = params->compressor_delta;
 
@@ -133,6 +137,9 @@ int EnveloperInit(Enveloper* state,
       EnveloperSmootherCoeff(state, params->energy_tau_s);
   state->noise_coeffs[1] =
       EnveloperGrowthCoeff(state, params->noise_db_s);
+  state->gate_thresh_factor = params->denoising_strength;
+  state->gate_transition_factor =
+      DecibelsToPowerRatio(params->denoising_transition_db);
 
   EnveloperUpdatePrecomputedParams(state);
   EnveloperReset(state);
@@ -159,22 +166,35 @@ void EnveloperUpdatePrecomputedParams(Enveloper* state) {
       FastPow(state->compressor_delta, state->compressor_exponent);
 }
 
+/* Smooth gate function `x^2 / (x^2 + halfway_point^2)`. The function behaves
+ * like `x^2 / halfway_point^2` for x near zero, is equal to 1/2 at
+ * x = halfway_point, and is asymptotically 1 as x -> infinity.
+ */
+static float SoftGate(float x, float halfway_point) {
+  const float x_sqr = x * x;
+  return x_sqr / (x_sqr + halfway_point * halfway_point);
+}
+
 void EnveloperProcessSamples(Enveloper* state,
                              const float* input,
                              int num_samples,
                              float* output) {
   const float energy_smoother_coeff = state->energy_smoother_coeff;
-  const float agc_strength = state->agc_strength;
+  const float gate_thresh_factor = state->gate_thresh_factor;
+  const float gate_transition_factor = state->gate_transition_factor;
+  const float agc_exponent = state->agc_exponent;
   const float compressor_exponent = state->compressor_exponent;
   const float compressor_delta = state->compressor_delta;
   const float compressor_offset = state->compressor_offset;
   const int decimation_factor = state->decimation_factor;
-  float energy = 0.0f;
   int i;
 
   for (i = decimation_factor - 1; i < num_samples; i += decimation_factor) {
+    float energy = 0.0f;
+    float prev_smoothed_energy = 0.0f;
     int c;
-    for (c = 0; c < kEnveloperNumChannels; ++c) {
+
+    for (c = kEnveloperNumChannels - 1; c >= 0; --c) {
       EnveloperChannel* state_c = &state->channels[c];
 
       int j;
@@ -203,6 +223,10 @@ void EnveloperProcessSamples(Enveloper* state,
 
       /* Update PCEN denominator. */
       smoothed_energy += energy_smoother_coeff * (energy - smoothed_energy);
+      if (prev_smoothed_energy > smoothed_energy) {
+        smoothed_energy = prev_smoothed_energy;
+      }
+      prev_smoothed_energy = smoothed_energy;
 
       /* Update noise level estimate. */
       noise *= state->noise_coeffs[smoothed_energy > noise];
@@ -211,13 +235,21 @@ void EnveloperProcessSamples(Enveloper* state,
       state_c->smoothed_energy = smoothed_energy;
       state_c->noise = noise;
 
-      /* Apply auto gain control. */
-      const float ratio = smoothed_energy /
-          (smoothed_energy * smoothed_energy + noise);
-      const float agc_gain = FastPow(1e-12f + ratio, agc_strength);
+      const float thresh = gate_thresh_factor * noise;
+      const float diff = smoothed_energy - thresh;
+      float agc_output;
+      if (diff <= 1e-9f) {
+        agc_output = 0.0f;  /* Gain of zero if smoothed_energy <= thresh. */
+      } else {
+        /* Apply soft noise gate and AGC gain. */
+        agc_output = SoftGate(diff, gate_transition_factor * thresh) *
+            FastPow(smoothed_energy, agc_exponent) * energy;
+      }
+
+      /* Apply power law compression and output gain. */
       output[c] = state_c->output_gain *
-                  (FastPow(agc_gain * energy + compressor_delta,
-                           compressor_exponent) - compressor_offset);
+                  (FastPow(agc_output + compressor_delta, compressor_exponent)
+                   - compressor_offset);
     }
 
     output += kEnveloperNumChannels;

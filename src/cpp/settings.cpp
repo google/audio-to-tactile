@@ -1,4 +1,4 @@
-// Copyright 2021 Google LLC
+// Copyright 2021-2022 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ namespace audio_tactile {
 
 Settings::Settings() {
   device_name[0] = '\0';
+  input = InputSelection::kAnalogMic;
   tuning = kDefaultTuningKnobs;
   ChannelMapInit(&channel_map, kTactileProcessorNumTactors);
 }
@@ -34,6 +35,8 @@ Settings::Settings() {
 bool Settings::operator==(const Settings& rhs) const {
   // Compare device_name strings.
   if (strcmp(device_name, rhs.device_name) ||
+      // Compare input selection.
+      input != rhs.input ||
       // Compare tuning knobs.
       memcmp(tuning.values, rhs.tuning.values, kNumTuningKnobs)) {
     return false;
@@ -96,6 +99,16 @@ ErrorCode SettingsFileReader::ReadLine() {
       TruncateToLength(kv.value, kMaxDeviceNameLength);
       strcpy(settings_->device_name, kv.value);  // NOLINT(runtime/printf)
       return kSuccess;
+    } else if (strcmp(kv.key, "input") == 0) {
+      if (strcmp(kv.value, "analog mic") == 0) {
+        settings_->input = InputSelection::kAnalogMic;
+        return kSuccess;
+      } else if (strcmp(kv.value, "PDM mic") == 0) {
+        settings_->input = InputSelection::kPdmMic;
+        return kSuccess;
+      } else {
+        return Error(kNonfatalError, "Unknown input", kv.value);
+      }
     } else  if (strcmp(kv.key, "tuning") == 0) {
       section_ = kSectionTuning;
       return kSuccess;
@@ -179,7 +192,9 @@ char* NextListItem(char** list) {
 
 ErrorCode SettingsFileReader::ReadTuningKnob(char* key, char* value) {
   const int knob = FindTuningKnob(key);
-  if (!(0 <= knob && knob < kNumTuningKnobs)) { return ErrorUnknownKey(key); }
+  if (!(0 <= knob && knob < kNumTuningKnobs)) {
+    return ErrorUnknownKey(key);
+  }
   int knob_value;
   ErrorCode error = ParseInt(value, 0, 255, &knob_value);
   if (error) { return error; }
@@ -234,34 +249,32 @@ ErrorCode SettingsFileReader::ParseInt(
 }
 
 ErrorCode SettingsFileReader::ErrorInvalidSyntax(char* syntax) {
-  TruncateToLength(syntax, 40);
-  constexpr const char* kInvalidSyntax = "Invalid syntax: ";
-  memmove(buffer_ + strlen(kInvalidSyntax), syntax, strlen(syntax) + 1);
-  memcpy(buffer_, kInvalidSyntax, strlen(kInvalidSyntax));
   // Abort reading. Settings are corrupt or incorrect in some basic way.
-  return kFatalError;
+  return Error(kFatalError, "Invalid syntax", syntax);
 }
 
 ErrorCode SettingsFileReader::ErrorUnknownKey(char* key) {
-  TruncateToLength(key, 40);
-  const int key_length = strlen(key);
-  constexpr const char* kUnknownKey = "Unknown key: \"";
-  memmove(buffer_ + strlen(kUnknownKey), key, key_length);
-  memcpy(buffer_, kUnknownKey, strlen(kUnknownKey));
-  memcpy(buffer_ + strlen(kUnknownKey) + key_length, "\"", 2);
   // Consider an unknown key as a nonfatal error; reading should continue. An
   // unknown key might be misspelled or refer to a removed or renamed parameter.
-  return kNonfatalError;
+  return Error(kNonfatalError, "Unknown key", key);
 }
 
 ErrorCode SettingsFileReader::ErrorOutOfRangeValue(char* value) {
-  TruncateToLength(value, 40);
-  constexpr const char* kOutOfRange = "Out of range: ";
-  memmove(buffer_ + strlen(kOutOfRange), value, strlen(value) + 1);
-  memcpy(buffer_, kOutOfRange, strlen(kOutOfRange));
   // The current key-value is invalid and should be discarded, but reading can
   // safely continue.
-  return kNonfatalError;
+  return Error(kNonfatalError, "Out of range", value);
+}
+
+ErrorCode SettingsFileReader::Error(
+    ErrorCode code, const char* message, char* syntax) {
+  const int message_length = strlen(message);
+  TruncateToLength(syntax, 50 - message_length);
+  const int syntax_length = strlen(syntax);
+  memmove(buffer_ + message_length + 3, syntax, syntax_length);
+  memcpy(buffer_, message, message_length);
+  memcpy(buffer_ + message_length, ": \"", 3);
+  memcpy(buffer_ + message_length + 3 + syntax_length, "\"", 2);
+  return code;
 }
 
 namespace {

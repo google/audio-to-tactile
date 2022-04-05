@@ -1,4 +1,4 @@
-/* Copyright 2021 Google LLC
+/* Copyright 2021-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,10 @@ import kotlin.math.roundToInt
     view.findViewById<TextView>(R.id.channel_map_dialog_title).apply {
       text = "Tactor " + (channelIndex + 1).toString() // Convert to base-1 index for UI.
     }
+    view.findViewById<TextView>(R.id.channel_map_dialog_description).apply {
+      val (pwmModule, pwmChannel) = ChannelMap.pwmMapping(channelIndex)
+      text = resources.getString(R.string.channel_map_dialog_description, pwmModule, pwmChannel)
+    }
 
     // Reset button.
     view.findViewById<Button>(R.id.channel_map_reset).apply {
@@ -61,7 +65,7 @@ import kotlin.math.roundToInt
       view.findViewById(R.id.channel_map_source_dropdown)
     bleViewModel.channelMap.value?.let { channelMap ->
       channelMapSourceDropdown.apply {
-        val items = (1..channelMap.numInputChannels).map { it.toString() }
+        val items = (0 until channelMap.numInputChannels).map { ChannelMap.sourceName(it) }
         setAdapter(
           ArrayAdapter(
             this@ChannelMapDialogFragment.requireContext(),

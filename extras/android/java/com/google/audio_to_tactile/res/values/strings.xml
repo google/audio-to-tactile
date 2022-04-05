@@ -119,8 +119,10 @@ limitations under the License.
   <string name="channel_map_test_button_label" tools:ignore="MissingTranslation"
       description="Test button label to test a tactor. [CHAR LIMIT=12]">Test</string>
   <string name="channel_map_dialog_description" tools:ignore="MissingTranslation"
-      description="Text describing the channel map dialog. [CHAR LIMIT=80]">
-    Configure which source plays on this tactor and the gain.
+      description="Text describing the channel map dialog. [CHAR LIMIT=100]">
+    Configure the source and gain for this tactor
+    <xliff:g id="pwm_mapping" example="(PWM module 0, channel 2)">
+    (PWM module %1$d, channel, %2$d)</xliff:g>.
   </string>
 
   <!-- DFU fragment. -->

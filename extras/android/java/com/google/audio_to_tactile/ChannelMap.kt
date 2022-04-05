@@ -1,4 +1,4 @@
-/* Copyright 2021 Google LLC
+/* Copyright 2021-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ class ChannelMap
   /** Interface for one tuning knob, accessed through the [ChannelMap.get] operator. */
   class Entry(val numInputChannels: Int, val index: Int) {
     /** Input source channel as a 0-base index. */
-    var source = index.coerceIn(0 until numInputChannels)
+    var source = defaultSource(index).coerceIn(0 until numInputChannels)
     /** Whether this channel is enabled. */
     var enabled = true
 
@@ -86,14 +86,14 @@ class ChannelMap
 
     /** String representation of the source as a 1-based index, useful for UI. */
     val sourceString
-      get() = (source + 1).toString()
+      get() = sourceName(source)
     /** String representation of the gain in decibels, useful for UI. */
     val gainString
       get() = gainMapping(gain)
 
     /** Resets `Entry` to initial settings. */
     fun reset() {
-      source = index.coerceIn(0 until numInputChannels)
+      source = defaultSource(index).coerceIn(0 until numInputChannels)
       enabled = true
       _enabledGain = UNIT_GAIN
     }
@@ -166,5 +166,29 @@ class ChannelMap
       val gainDecibels = (18.0f / 62.0f) * (gain - 63).toFloat()
       return "%.1f dB".format(gainDecibels).replace('-', '\u2212' /* unicode minus */)
     }
+
+    /**
+     * Gets the default source for channel i, ordered as
+     * fric--aa----uw----bb-----iy-----eh----sh f---ih
+     * (9)---(1)---(2)---(0)----(4)---( 5)---(8)---(3)
+     */
+    fun defaultSource(i: Int) = listOf(9, 1, 2, 0, 4, 5, 8, 3).elementAtOrElse(i, { it })
+
+    /** Gets name abbreviation for a source, corresponding to TactileProcessor channels. */
+    fun sourceName(sourceIndex: Int) =
+      listOf("bb", "aa", "uw", "ih", "iy", "eh", "ae", "uh", "sh f", "fric")
+      .elementAtOrElse(sourceIndex, { (it + 1).toString() })
+
+    /** Gets the hardware channel as a base-0 index for a tactor. */
+    fun hardwareChannel(logicalIndex: Int) =
+      listOf(5, 4, 7, 11, 8, 9, 6, 10).elementAtOrElse(logicalIndex, { 0 })
+
+    const val CHANNELS_PER_PWM_MODULE = 4
+
+    /** Gets the PWM (module, channel index) mapping for a tactor. */
+    fun pwmMapping(logicalIndex: Int) =
+      hardwareChannel(logicalIndex).let {
+        Pair(it / CHANNELS_PER_PWM_MODULE, it % CHANNELS_PER_PWM_MODULE)
+      }
   }
 }

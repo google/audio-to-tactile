@@ -29,8 +29,8 @@
  *   TactileProcessorApplyTuning(tactile_processor, &tuning_knobs);
  */
 
-#ifndef THIRD_PARTY_AUDIO_TO_TACTILE_SRC_TACTILE_TUNING_H_
-#define THIRD_PARTY_AUDIO_TO_TACTILE_SRC_TACTILE_TUNING_H_
+#ifndef AUDIO_TO_TACTILE_SRC_TACTILE_TUNING_H_
+#define AUDIO_TO_TACTILE_SRC_TACTILE_TUNING_H_
 
 #include <stdint.h>
 
@@ -72,6 +72,16 @@ enum {
    * channels. It logarithmically maps control values to the range [0.2, 20.0].
    */
   kKnobNoiseAdaptation,
+
+  /* Denoising strength, a positive value where larger means stronger denoising.
+   * This parameter scales the soft noise gate threshold.
+   */
+  kKnobDenoisingStrength,
+
+  /* Soft noise gate transition width in dB. A large value makes the gate
+   * more gradual, which helps avoid "breathing" artifacts.
+   */
+  kKnobDenoisingTransition,
 
   /* The `agc_strength` auto gain control strength for all Enveloper channels.
    * It linearly maps control values to the range [0.1, 0.9].
@@ -148,4 +158,4 @@ float TuningGetInputGain(const TuningKnobs* tuning);
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
-#endif  /* THIRD_PARTY_AUDIO_TO_TACTILE_SRC_TACTILE_TUNING_H_ */
+#endif  /* AUDIO_TO_TACTILE_SRC_TACTILE_TUNING_H_ */

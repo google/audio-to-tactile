@@ -47,6 +47,8 @@ const NUM_TACTORS = 10;
 const ENVELOPE_TRACKER_RECORD_POINTS = 33;
 const ENVELOPE_TRACKER_MEASUREMENT_PERIOD_MS = 30;
 
+/** Default ChannelMap sources. */
+const DEFAULT_SOURCES = [9, 1, 2, 0, 4, 5, 8, 3, 8, 9];
 
 /**
  * Linearly maps `value_in` from [0, 255] to [min_in, min_out].
@@ -238,6 +240,17 @@ class BleManager {
         mapping: (x) => { return log_mapping(x, 0.2, 20.0).toFixed(1); },
         units: 'dB/s',
       },
+      {label: 'Denoising strength',
+        default: 33,
+        currentValue: 33,
+        mapping: (x) => { return log_mapping(x, 0.5, 100.0).toFixed(1); },
+      },
+      {label: 'Denoising transition',
+        default: 51,
+        currentValue: 51,
+        mapping: (x) => { return lin_mapping(x, 5.0, 30.0).toFixed(1); },
+        units: 'dB',
+      },
       {label: 'AGC strength',
         default: 191,
         currentValue: 191,
@@ -339,7 +352,7 @@ class BleManager {
    */
   resetChannelMap() {
     for (let c = 0; c < NUM_TACTORS; c++) {
-      this.channelData[c].source = c + 1;
+      this.channelData[c].source = DEFAULT_SOURCES[c] + 1;
       this.channelData[c].gain = 63;
       this.channelData[c].enabled = true;
     }

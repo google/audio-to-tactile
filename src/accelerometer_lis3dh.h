@@ -43,8 +43,8 @@
 //
 // +Y is not shown as it points away from the screen.
 
-#ifndef THIRD_PARTY_AUDIO_TO_TACTILE_SRC_ACCELEROMETER_LIS3DH_H_
-#define THIRD_PARTY_AUDIO_TO_TACTILE_SRC_ACCELEROMETER_LIS3DH_H_
+#ifndef AUDIO_TO_TACTILE_SRC_ACCELEROMETER_LIS3DH_H_
+#define AUDIO_TO_TACTILE_SRC_ACCELEROMETER_LIS3DH_H_
 
 namespace audio_tactile {
 
@@ -129,4 +129,4 @@ extern Lis3dh Accelerometer;
 
 }  // namespace audio_tactile
 
-#endif  // THIRD_PARTY_AUDIO_TO_TACTILE_SRC_ACCELEROMETER_LIS3DH_H_
+#endif  // AUDIO_TO_TACTILE_SRC_ACCELEROMETER_LIS3DH_H_

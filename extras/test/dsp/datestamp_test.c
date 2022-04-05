@@ -1,4 +1,4 @@
-/* Copyright 2021 Google LLC
+/* Copyright 2021-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,6 +45,8 @@ int main(int argc, char** argv) {
   TestDatestrToUint32("Oct 01 1982", UINT32_C(19821001));
   TestDatestrToUint32("Nov 01 1982", UINT32_C(19821101));
   TestDatestrToUint32("Dec 01 1982", UINT32_C(19821201));
+
+  TestDatestrToUint32("Jun  9 2021", UINT32_C(20210609));
 
   puts("PASS");
   return EXIT_SUCCESS;

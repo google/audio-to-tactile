@@ -114,24 +114,24 @@ static void TestTones(float sample_rate_hz, int decimation_factor) {
   vowel_energy = ComputeVowelEnergy(output, 0.07f, 0.13f, output_rate);
   fricative_energy = ComputeEnergy(fricative, 0.07f, 0.13f, output_rate);
   CHECK(baseband_energy > 1e-4f);
-  CHECK(baseband_energy > 10 * vowel_energy);
-  CHECK(baseband_energy > 10 * fricative_energy);
+  CHECK(baseband_energy > 5 * vowel_energy);
+  CHECK(baseband_energy > 5 * fricative_energy);
 
   /* During the 1500 Hz tone, vowel RMS is highest. */
   baseband_energy = ComputeEnergy(baseband, 0.22f, 0.28f, output_rate);
   vowel_energy = ComputeVowelEnergy(output, 0.22f, 0.28f, output_rate);
   fricative_energy = ComputeEnergy(fricative, 0.22f, 0.28f, output_rate);
   CHECK(vowel_energy > 1e-4f);
-  CHECK(vowel_energy > 10 * baseband_energy);
-  CHECK(vowel_energy > 10 * fricative_energy);
+  CHECK(vowel_energy > 5 * baseband_energy);
+  CHECK(vowel_energy > 2 * fricative_energy);
 
   /* During the 5000 Hz tone, fricative RMS is highest. */
   baseband_energy = ComputeEnergy(baseband, 0.37f, 0.43f, output_rate);
   vowel_energy = ComputeVowelEnergy(output, 0.37f, 0.43f, output_rate);
   fricative_energy = ComputeEnergy(fricative, 0.37f, 0.43f, output_rate);
   CHECK(fricative_energy > 1e-4f);
-  CHECK(fricative_energy > 10 * baseband_energy);
-  CHECK(fricative_energy > 2 * vowel_energy);
+  CHECK(fricative_energy > 5 * baseband_energy);
+  CHECK(fricative_energy > 5 * vowel_energy);
 
   free(output);
   free(input);
@@ -229,8 +229,6 @@ static void TestPhone(const char* phone, int intended_tactor) {
   TactileProcessor* tactile_processor = CHECK_NOTNULL(
       TactileProcessorMake(&params));
 
-  int num_frames = 0;
-
   int start;
   int i;
   for (start = 0; start + kBlockSize < (int)num_samples; start += kBlockSize) {
@@ -248,7 +246,6 @@ static void TestPhone(const char* phone, int intended_tactor) {
       }
       tactile_signals += kTactileProcessorNumTactors;
     }
-    ++num_frames;
   }
 
   /* The intended tactor has the largest energy in the vowel cluster. */

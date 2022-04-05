@@ -145,7 +145,7 @@ void TactileProcessorProcessSamples(TactileProcessor* processor,
    * fine-time signal is modulated by the hex weights.
    */
   GetHexagonInterpolationWeights(vowel_coord[0], vowel_coord[1],
-                                 next_vowel_hex_weights);
+      next_vowel_hex_weights);
   /* We will blend linearly from `vowel_hex_weights` to `next_vowel_hex_weights`
    * over the block.
    */
@@ -182,6 +182,9 @@ void TactileProcessorApplyTuning(TactileProcessor* processor,
   const float output_gain = FastDecibelsToAmplitudeRatio(output_gain_db);
   const float energy_tau_s = TuningGet(knobs, kKnobEnergyTau);
   const float noise_db_s = TuningGet(knobs, kKnobNoiseAdaptation);
+  const float denoising_strength = TuningGet(knobs, kKnobDenoisingStrength);
+  const float denoising_transition_db =
+      TuningGet(knobs, kKnobDenoisingTransition);
   const float agc_strength = TuningGet(knobs, kKnobAgcStrength);
   const float compressor_exponent = TuningGet(knobs, kKnobCompressor);
 
@@ -190,7 +193,10 @@ void TactileProcessorApplyTuning(TactileProcessor* processor,
       EnveloperSmootherCoeff(enveloper, energy_tau_s);
   enveloper->noise_coeffs[1] =
       EnveloperGrowthCoeff(enveloper, noise_db_s);
-  enveloper->agc_strength = agc_strength;
+  enveloper->gate_thresh_factor = denoising_strength;
+  enveloper->gate_transition_factor =
+      DecibelsToPowerRatio(denoising_transition_db);
+  enveloper->agc_exponent = -agc_strength;
   enveloper->compressor_exponent = compressor_exponent;
 
   int c;

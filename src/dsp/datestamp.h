@@ -1,4 +1,4 @@
-/* Copyright 2021 Google LLC
+/* Copyright 2021-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
  * WARNING: DATESTAMP_UINT32 is incorrect when building with Bazel, since in
  * order to make builds hermetic, Bazel sets __DATE__ to "redacted".
  */
+
 #ifndef AUDIO_TO_TACTILE_SRC_DSP_DATESTAMP_H_
 #define AUDIO_TO_TACTILE_SRC_DSP_DATESTAMP_H_
 
@@ -56,8 +57,9 @@ extern "C" {
   /* Nov */ ((datestr)[0] == 'N'                       ) ? 11 : \
   /* Dec */                                                12   \
   ) * UINT32_C(100) +                                           \
-  (uint32_t)((datestr)[ 4] - '0') * UINT32_C(10) +              \
-  (uint32_t)((datestr)[ 5] - '0')                               \
+  (((datestr)[4] <= '0') ? 0 :                                  \
+      (uint32_t)((datestr)[4] - '0') * UINT32_C(10)) +          \
+  (uint32_t)((datestr)[5] - '0')                                \
 )
 
 #ifdef __cplusplus

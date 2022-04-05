@@ -45,36 +45,29 @@ For each channel, audio is processed this way:
 
    c. A lowpass filter is applied to get an energy envelope.
 
-   d. The eneryg envelope is decimated.
+   d. The energy envelope is decimated.
 
-2. Automatic gain control with noise gating. We want to normalize speech and
-   salient sounds toward 0 dB, yet we don't want to amplify noise. Our
-   assumption is that the noise envelope changes slowly and that salient
-   sounds are bursty and louder than the noise.
+2. Soft noise gating. We want to normalize speech and salient sounds toward
+   0 dB, yet we don't want to amplify noise. Our assumption is that the noise
+   envelope changes slowly and that salient sounds are bursty and louder than
+   the noise.
 
-   a. A smoothed energy is computed using a one-pole smoother.
+  a. A smoothed energy is computed using a one-pole smoother.
 
-   b. To estimate the noise envelope, `FastLog2` of the smoothed energy is
-      computed, then smoothed with a one-pole smoother in log space. By
-      filtering in log space, the noise envelope focuses on small values and
-      is less influenced by short bursts of energy in the signal.
+  b. The noise energy is estimated by smoothing the smoothed energy in log
+     space. Filtering in log space puts more weight on small values and is
+     less influenced by short bursts of energy in the signal.
 
-   c. The noise gate threshold is computed by taking `FastExp2` of the noise
-      envelope and multiplying by `thresh_factor`. The AGC gain is then
-      computed based on x = smoothed energy, the threshold, and
-      `agc_exponent`. For x &le; threshold, the gain is zero. For
-      x much greater than the threshold, gain is approximately x^-agc_exponent.
+  c. The noise gate soft threshold is set at `denoising_strength * noise`
+     and with a transition width of `denoising_transition_db` dB.
 
-   d. The gain is smoothed with an asymmetric smoother with fast attack.
+3. A (partially) normalized energy `agc_output` is computed as
+   `soft_gate_weight * smoothed_energy^-agc_strength * energy`.
 
-   e. A normalized energy is computed by multiplying the energy by the
-      smoothed gain. If needed, the smoothed gain is reduced so that the
-      normalized energy does not exceed 1.0.
+4. As in PCEN, the normalized energy is compressed with a power law as
+   `(agc_output + delta)^exponent - delta^exponent`.
 
-3. As in PCEN, the normalized energy is compressed with a power law as
-   `(normalized_energy + delta)^exponent - delta^exponent`.
-
-4. Final output is multiplied by a constant output gain factor.
+5. Final output is multiplied by a constant output gain factor.
 
 A useful reference is [Praat Beginners'
 Manual](http://ec-concord.ied.edu.hk/phonetics_and_phonology/wordpress/learning_website/praathome.htm),

@@ -1,4 +1,4 @@
-// Copyright 2021 Google LLC
+// Copyright 2021-2022 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -96,6 +96,11 @@ void TestCopyAndCompare() {
   b = a;
   CHECK(a == b);
 
+  a.input = InputSelection::kPdmMic;
+  CHECK(a != b);  // Comparison considers input selection.
+  b = a;
+  CHECK(a == b);
+
   a.tuning.values[kKnobInputGain] = 123;
   CHECK(a != b);  // Comparison considers tuning knobs.
   b = a;
@@ -120,6 +125,7 @@ void TestReadBasic() {
   InMemoryFile settings_file(R"(
 # Test settings.
 device_name: Pineapple
+input: PDM mic
 tuning:
   input_gain: 123
   output_gain: 72
@@ -138,6 +144,7 @@ channel_map:
       );
 
   CHECK(strcmp(settings.device_name, "Pineapple") == 0);
+  CHECK(settings.input == InputSelection::kPdmMic);
   CHECK(settings.tuning.values[kKnobInputGain] == 123);
   CHECK(settings.tuning.values[kKnobOutputGain] == 72);
   CHECK(settings.channel_map.gains[0] == ChannelGainFromControlValue(10));
@@ -166,7 +173,7 @@ device_name: Reading shouldn't reach here
         CHECK(line_number == 2);
         CHECK(strcmp(
             message,
-            "Invalid syntax: This line is invalid because it has n...") == 0);
+            "Invalid syntax: \"This line is invalid because it h...\"") == 0);
         error_fun_called = true;
       });
 
@@ -180,12 +187,14 @@ void TestReadUnknownKey() {
 abracadabra: this key should be ignored
 tuning:
   magic: 123
+input: mystery
 device_name: Should read this
 )");
   InMemoryFile::Reader file_reader = settings_file.OpenForRead();
   Settings settings;
   bool error_on_abracadabra = false;
   bool error_on_magic = false;
+  bool error_on_mystery = false;
 
   settings.ReadFile(
       [&file_reader](char* buffer, int buffer_size) {
@@ -201,6 +210,11 @@ device_name: Should read this
             CHECK(strcmp(message, "Unknown key: \"magic\"") == 0);
             error_on_magic = true;
             break;
+          case 5:
+            CHECK(strcmp(message, "Unknown input: \"mystery\"") == 0);
+            error_on_mystery = true;
+            break;
+
           default:
             // Unexpected error.
             FailTestOnError(line_number, message);
@@ -209,6 +223,7 @@ device_name: Should read this
 
   CHECK(error_on_abracadabra);
   CHECK(error_on_magic);
+  CHECK(error_on_mystery);
   CHECK(strcmp(settings.device_name, "Should read this") == 0);
 }
 
@@ -229,7 +244,7 @@ device_name: Should read this
       },
       [&](int line_number, const char* message) {
         CHECK(line_number == 3);
-        CHECK(strcmp(message, "Out of range: 65") == 0);
+        CHECK(strcmp(message, "Out of range: \"65\"") == 0);
         error_fun_called = true;
       });
 
@@ -241,6 +256,7 @@ void TestWriteBasic() {
   puts("TestWriteBasic");
   Settings settings;  // Make up some test settings.
   strcpy(settings.device_name, "Pineapple");  // NOLINT
+  settings.input = InputSelection::kPdmMic;
   settings.tuning.values[kKnobInputGain] = 123;
   settings.tuning.values[kKnobOutputGain] = 72;
   settings.channel_map.gains[0] = ChannelGainFromControlValue(10);
@@ -259,6 +275,7 @@ void TestWriteBasic() {
 
   // Check that file contains these expected substrings.
   CHECK(strstr(settings_file.content(), "device_name: Pineapple"));
+  CHECK(strstr(settings_file.content(), "input: PDM mic"));
   CHECK(strstr(settings_file.content(), "  input_gain: 123"));
   CHECK(strstr(settings_file.content(), "  output_gain: 72"));
   CHECK(strstr(settings_file.content(), "  gains: 10, 0, 63, 63, 63"));
@@ -275,6 +292,7 @@ void TestWriteBasic() {
       );
 
   CHECK(strcmp(recovered.device_name, "Pineapple") == 0);
+  CHECK(recovered.input == InputSelection::kPdmMic);
   CHECK(recovered.tuning.values[kKnobInputGain] == 123);
   CHECK(recovered.tuning.values[kKnobOutputGain] == 72);
   CHECK(recovered.channel_map.gains[0] == ChannelGainFromControlValue(10));

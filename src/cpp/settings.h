@@ -1,4 +1,4 @@
-// Copyright 2021 Google LLC
+// Copyright 2021-2022 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@
 //
 // # An example settings file.
 // device_name: My device
+// input: analog mic
 //
 // tuning:
 //   input_gain: 123
@@ -40,6 +41,8 @@
 //
 // * device_name: sets a user-customizable name for the device. For BLE
 //   limitations, the name is currently limited to 16 characters.
+//
+// * input: selects where to read input audio. May be either "analog" or "pdm".
 //
 // * tuning: each subkey names a tuning knob. The name lookup searches over
 //   `name` fields in `kTuningKnobInfo` (src/tactile/tuning.c). Case and
@@ -83,6 +86,7 @@ namespace audio_tactile {
 
 struct Settings {
   char device_name[kMaxDeviceNameLength + 1];
+  InputSelection input;
   TuningKnobs tuning;
   ChannelMap channel_map;
 
@@ -177,6 +181,8 @@ class SettingsFileReader {  // Helper class for reading.
   ErrorCode ErrorUnknownKey(char* key);
   // Sets an "Out of range" error message.
   ErrorCode ErrorOutOfRangeValue(char* value);
+  // Make an error message by concatenating `message` and `syntax`.
+  ErrorCode Error(ErrorCode code, const char* message, char* syntax);
 
   char buffer_[kBufferSize];
   Settings* settings_;
@@ -224,6 +230,17 @@ bool Settings::WriteFile(WriteLineFun write_line_fun) const {
   memcpy(line, kDeviceName, strlen(kDeviceName));
   strcpy(line + strlen(kDeviceName), device_name);  // NOLINT
   if (!write_line_fun(line)) { return false; }
+
+  // Input.
+  switch (input) {
+    case InputSelection::kAnalogMic:
+      if (!write_line_fun("input: analog mic")) { return false; }
+      break;
+
+    case InputSelection::kPdmMic:
+      if (!write_line_fun("input: PDM mic")) { return false; }
+      break;
+  }
 
   // Tuning knobs.
   if (!write_line_fun("\ntuning:")) { return false; }

@@ -108,11 +108,14 @@ static void TestTactileProcessorApplyTuning(void) {
           enveloper->noise_coeffs[0]);
     CHECK(EnveloperGrowthCoeff(enveloper, mapped[kKnobNoiseAdaptation]) ==
           enveloper->noise_coeffs[1]);
-    CHECK(mapped[kKnobAgcStrength] == enveloper->agc_strength);
+    CHECK(mapped[kKnobDenoisingStrength] == enveloper->gate_thresh_factor);
+    CHECK(IsClose(DecibelsToPowerRatio(mapped[kKnobDenoisingTransition]),
+                  enveloper->gate_transition_factor));
+    CHECK(-mapped[kKnobAgcStrength] == enveloper->agc_exponent);
     CHECK(mapped[kKnobCompressor] == enveloper->compressor_exponent);
     int c;
     for (c = 0; c < kEnveloperNumChannels; ++c) {
-      CHECK(IsClose(pow(10.0f, mapped[kKnobOutputGain] / 20.0f),
+      CHECK(IsClose(DecibelsToAmplitudeRatio(mapped[kKnobOutputGain]),
                     enveloper->channels[c].output_gain));
     }
 
@@ -152,6 +155,12 @@ int main(int argc, char** argv) {
   TestTuningMapControlValue(kKnobNoiseAdaptation, 0, 0.2f);
   TestTuningMapControlValue(kKnobNoiseAdaptation, 127, 1.98f);
   TestTuningMapControlValue(kKnobNoiseAdaptation, 255, 20.0f);
+  TestTuningMapControlValue(kKnobDenoisingStrength, 0, 0.5f);
+  TestTuningMapControlValue(kKnobDenoisingStrength, 33, 1.0f);
+  TestTuningMapControlValue(kKnobDenoisingStrength, 255, 100.0f);
+  TestTuningMapControlValue(kKnobDenoisingTransition, 0, 5.0f);
+  TestTuningMapControlValue(kKnobDenoisingTransition, 51, 10.0f);
+  TestTuningMapControlValue(kKnobDenoisingTransition, 255, 30.0f);
   TestTuningMapControlValue(kKnobAgcStrength, 0, 0.1f);
   TestTuningMapControlValue(kKnobAgcStrength, 159, 0.6f);
   TestTuningMapControlValue(kKnobAgcStrength, 255, 0.9f);

@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="ble_web_client.css">
 
 <!--
-Copyright 2021 Google LLC
+Copyright 2021-2022 Google LLC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -337,8 +337,8 @@ limitations under the License.
       source.type = 'number';
       source.id = 'channelSource' + c;
       source.min = 1;
-      source.max = NUM_TACTORS;
-      source.value = c + 1;
+      source.max = NUM_TACTORS + 1;
+      source.value = DEFAULT_SOURCES[c];
 
       var slider = document.createElement('input');  // Make gain slider element.
       slider.className = 'knobSlider';

@@ -33,16 +33,20 @@
 // (2, 2) - 11
 // (2, 3) - 12
 //
-// Physically on the bracelet the hardware channel order is as follows:
+// Physically on the bracelet, the hardware channel order is as follows:
 // (6)---(5)---(8)---(12)---(9)---(10)---(7)---(11) << Physical mapping 1-index
 // (5)---(4)---(7)---(11)---(8)---( 9)---(6)---(10) << Physical mapping 0-index
 //
-// With the default ChannelMap, tactors correspond to logical channels as:
-// bb----aa----uw----fric---iy-----eh----sh f---ih  << Tactile processor naming
-// (0)---(1)---(2)---( 9)---(4)---( 5)---(8)---(3)  << Tactile processor number
+// The rightmost tactor is in the electronics box. Tactors correspond to
+// logical channels as:
+// (0)---(1)---(2)---(3)----(4)---( 5)---(6)---(7)  << Logical channel 0-index
 //
-// bb is baseband.
-// The rightmost tactor is in the electronics box.
+// With the default ChannelMap, tactors are mapped as:
+// fric--aa----uw----bb-----iy-----eh----sh f---ih  << Tactile processor naming
+// (9)---(1)---(2)---(0)----(4)---( 5)---(8)---(3)  << Tactile processor number
+//
+// where bb is baseband.
+
 
 #include <algorithm>
 
@@ -87,6 +91,13 @@ PostProcessorWrapper g_post_processor;
 // Device name, tuning, and channel gain and assignment.
 Settings g_settings;
 
+// Delay in seconds to wait between the last update to settings and writing them
+// to flash. This prevents spamming and wearing out the flash.
+constexpr int kSettingsWriteDelaySeconds = 15;
+// Convert to number of 2.5 second cycles by multiplying by 2/5 (= 1/2.5).
+constexpr int kSettingsWriteDelayCycles =
+  (kSettingsWriteDelaySeconds * 2 + 4) / 5;
+
 bool g_initialize_pwm = false;
 bool g_low_battery = false;
 bool g_vibration_warning = false;
@@ -122,15 +133,6 @@ void OnSwitchPress();
 #define SELECTABLE_MIC 0
 #endif
 
-// `g_which_mic` selects which mic is used as input.
-#if SELECTABLE_MIC
-// Default to the PDM mic if available.
-int g_which_mic = kUsingPdmMic;
-#else
-// Otherwise hardcode to using the analog mic.
-constexpr int g_which_mic = kUsingAnalogMic;
-#endif  // SELECTABLE_MIC
-
 void OnAnalogNewData();
 void FlashLeds();
 void OnPwmSequenceEnd();
@@ -155,15 +157,6 @@ void setup() {
   ExternalAnalogMic.Initialize();
   ExternalAnalogMic.Disable();
 
-  // Make sure to fire interrupt handler for only one mic.
-  if (g_which_mic == kUsingPdmMic) {
-    OnBoardMic.Enable();
-  }
-  else {
-    ExternalAnalogMic.Enable();
-    OnBoardMic.Disable();
-  }
-
   // Initialize battery monitor.
   PuckBatteryMonitor.InitializeLowVoltageInterrupt();
   PuckBatteryMonitor.OnLowBatteryEventListener(LowBatteryWarning);
@@ -175,6 +168,17 @@ void setup() {
 #endif  // SELECTABLE_MIC
 
   FlashLeds();
+
+  // Set the default channel map.
+  g_settings.channel_map = ChannelMap{
+    /*num_input_channels=*/kTactileProcessorNumTactors,
+    /*num_output_channels=*/kTactileProcessorNumTactors,
+    /*gains=*/{1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f},
+    // Ordered as
+    // fric--aa----uw----bb-----iy-----eh----sh f---ih
+    // (9)---(1)---(2)---(0)----(4)---( 5)---(8)---(3)
+    /*source=*/{9, 1, 2, 0, 4, 5, 8, 3, 8, 9},
+  };
 
   // Initialize tactile processor.
   g_tactile_processor.Init(kSaadcSampleRateHz, kCarlBlockSize,
@@ -211,6 +215,18 @@ void setup() {
         "; using default settings.");
   }
 
+  // Force analog mic if input is not selectable on this device.
+#if !SELECTABLE_MIC
+  g_settings.input = InputSelection::kAnalogMic;
+#endif  // SELECTABLE_MIC
+  // Make sure to fire interrupt handler for only one mic.
+  if (g_settings.input == InputSelection::kAnalogMic) {
+    ExternalAnalogMic.Enable();
+    OnBoardMic.Disable();
+  } else {
+    OnBoardMic.Enable();
+  }
+
   // Use a default name if device_name hasn't been set or is empty.
   constexpr const char* kDefaultDeviceName = "Slim";
   const char* device_name =
@@ -239,17 +255,6 @@ void setup() {
 }
 
 void HandleMessage(const Message& message) {
-  // Delay in seconds to wait between the last update to settings and writing
-  // them to flash. This prevents spamming and wearing out the flash.
-  //
-  // TODO: This delayed writing behavior is potentially confusing, so
-  // consider mitigations. E.g. an adaptive delay that increases when there are
-  // frequent changes, or UI changes in the BLE app.
-  constexpr int kSettingsWriteDelaySeconds = 15;
-  // Convert to number of 2.5 second cycles by multiplying by 2/5 (= 1/2.5).
-  constexpr int kSettingsWriteDelayCycles =
-      (kSettingsWriteDelaySeconds * 2 + 4) / 5;
-
   switch (message.type()) {
     case MessageType::kGetOnConnectionBatch:
       // Request to get on-connection batch message.
@@ -381,37 +386,35 @@ void HandleMessage(const Message& message) {
 
 void loop() {
   if (g_measure_battery) {
-    if (g_which_mic == kUsingAnalogMic) {
+    if (g_settings.input == InputSelection::kAnalogMic) {
       ExternalAnalogMic.Disable();
     }
     uint16_t battery_read_raw = PuckBatteryMonitor.MeasureBatteryVoltage();
     g_latest_battery_v =
         PuckBatteryMonitor.ConvertBatteryVoltageToFloat(battery_read_raw);
-    Serial.println(g_latest_battery_v);
 
     BleCom.tx_message().WriteBatteryVoltage(g_latest_battery_v);
     BleCom.SendTxMessage();
 
-    if (g_which_mic == kUsingAnalogMic) {
+    if (g_settings.input == InputSelection::kAnalogMic) {
       ExternalAnalogMic.Initialize();
     }
     g_measure_battery = false;
   }
 
   if (g_measure_temperature) {
-    if (g_which_mic == kUsingAnalogMic) {
+    if (g_settings.input == InputSelection::kAnalogMic) {
       ExternalAnalogMic.Disable();
     }
     uint16_t temperature_read_raw = SleeveTemperatureMonitor.TakeAdcSample();
     g_latest_temperature_c =
         SleeveTemperatureMonitor.ConvertAdcSampleToTemperature(
             temperature_read_raw);
-    Serial.println(g_latest_temperature_c);
 
     BleCom.tx_message().WriteTemperature(g_latest_temperature_c);
     BleCom.SendTxMessage();
 
-    if (g_which_mic == kUsingAnalogMic) {
+    if (g_settings.input == InputSelection::kAnalogMic) {
       ExternalAnalogMic.Initialize();
     }
     g_measure_temperature = false;
@@ -438,7 +441,7 @@ void loop() {
     // Convert ADC values to floats. The raw ADC values can swing from -2048 to
     // 2048, (12 bits) for analog mic and 32,768 for PDM mic (16 bits)
     float scale = TuningGetInputGain(&g_settings.tuning);
-    if (g_which_mic == kUsingAnalogMic) {
+    if (g_settings.input == InputSelection::kAnalogMic) {
       scale /= 2048.0f;
     } else {
       scale /= 32768.0f;
@@ -481,10 +484,14 @@ void loop() {
   if (g_notify_mic_switch) {
     TactilePatternStart(&g_tactile_pattern, kTactilePatternConnect);
     g_tactile_pattern_active = true;
+
+    // Flash blue LED for analog mic, green LED for PDM mic.
+    const uint32_t pin = (g_settings.input == InputSelection::kAnalogMic)
+        ? kLedPinBlue : kLedPinGreen;
     for (int i = 0; i < 5; ++i) {
-      nrf_gpio_pin_write(kLedPinBlue, 1);
+      nrf_gpio_pin_write(pin, 1);
       delay(50);
-      nrf_gpio_pin_write(kLedPinBlue, 0);
+      nrf_gpio_pin_write(pin, 0);
       delay(50);
     }
     g_notify_mic_switch = false;
@@ -508,8 +515,8 @@ void OnPwmSequenceEnd() {
     constexpr int kNumChannels = 12;
     // Hardware channel `c` plays logical channel kHwToLogical[c]. Value -1
     // means that nothing is played on that channel.
-    constexpr static int kHwToLogical[kNumChannels] = {6, 7, -1, -1, 1, 0,
-                                                       8, 2, 4,  5,  3, 9};
+    constexpr static int kHwToLogical[kNumChannels] = {-1, -1, -1, -1, 1, 0,
+                                                       6, 2, 4,  5,  7, 3};
 
     // There are two levels of mapping:
     // 1. Hardware channel `c` plays logical channel kHwToLogical[c],
@@ -584,17 +591,22 @@ void LowBatteryWarning() {
 }
 
 #if SELECTABLE_MIC
+// TODO: Make input mic selectable in the Android and web apps.
 void OnSwitchPress() {
-  if (g_which_mic == kUsingPdmMic) {
-    g_which_mic = kUsingAnalogMic;
+  if (g_settings.input == InputSelection::kPdmMic) {
+    g_settings.input = InputSelection::kAnalogMic;
+    Serial.println("Input: Analog mic selected");
     OnBoardMic.Disable();
     ExternalAnalogMic.Enable();
   } else {
-    g_which_mic = kUsingPdmMic;
+    g_settings.input = InputSelection::kPdmMic;
+    Serial.println("Input: PDM mic selected");
     OnBoardMic.Enable();
     ExternalAnalogMic.Disable();
   }
 
+  // Write updated input selection to flash.
+  g_write_settings_countdown = kSettingsWriteDelayCycles;
   g_notify_mic_switch = true;
 }
 #endif  // SELECTABLE_MIC
@@ -612,8 +624,8 @@ void OccasionalTasks(TimerHandle_t) {
   }
 
   g_measure_sensors_counter++;
-  if (g_measure_sensors_counter % 2 == 1) {
-    // Measure battery every 5 seconds, on an odd count.
+  if (g_measure_sensors_counter % 4 == 1) {
+    // Measure battery every 10 seconds, on an odd count.
     g_measure_battery = true;
   } else if (g_measure_sensors_counter % 8 == 0) {
     // Measure temperature every 20 seconds, on an even count.

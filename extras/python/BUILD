@@ -79,3 +79,21 @@ py_extension(
         "//:frontend",
     ],
 )
+
+py_library(
+    name = "tap_out",
+    srcs = ["tap_out.py"],
+    srcs_version = "PY3",
+    deps = [
+    ],
+)
+
+py_test(
+    name = "tap_out_test",
+    srcs = ["tap_out_test.py"],
+    python_version = "PY3",
+    srcs_version = "PY3",
+    deps = [
+        ":tap_out",
+    ],
+)
