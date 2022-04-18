@@ -20,7 +20,7 @@
 #include "src/dsp/logging.h"
 
 /* Test reading a short lessons file. */
-static void TestBasic() {
+static void TestBasic(void) {
   puts("TestBasic");
   char filename[L_tmpnam];
   CHECK_NOTNULL(tmpnam(filename));

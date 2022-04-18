@@ -139,6 +139,8 @@ extern const EnveloperParams kDefaultEnveloperParams;
 typedef struct {
   /* Bandpass filter coefficients, represented as two second-order sections. */
   BiquadFilterCoeffs bpf_biquad_coeffs[2];
+  float peak;
+  float equalization;
   float output_gain;
 
   BiquadFilterState bpf_biquad_state[2];

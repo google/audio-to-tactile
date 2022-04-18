@@ -125,7 +125,7 @@ static void MuxerDesignWeaverLpf(float* polyphase_coeffs) {
   free(buffer);
 }
 
-Muxer* MuxerMake() {
+Muxer* MuxerMake(void) {
   Muxer* muxer = (Muxer*)malloc(sizeof(Muxer));
   if (muxer == NULL) { return NULL; }
 

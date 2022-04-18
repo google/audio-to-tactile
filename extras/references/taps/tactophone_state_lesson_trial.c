@@ -78,7 +78,7 @@ static void LessonTrialOnEnterState(TactophoneEngine* engine) {
   TactophoneRefresh();
 }
 
-static void PrintWinMessage() {
+static void PrintWinMessage(void) {
   attron(A_BOLD | COLOR_PAIR(kColorGreen));
   switch (RandomInt(2)) {
     case 0:

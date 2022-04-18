@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <!--
+  Copyright 2021 Google LLC
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      https://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+  -->
+  <link rel="stylesheet" href="lipreading_video_interface.css">
+  <title>Lipreading Set Up</title>
+</head>
+
+<body>
+  <div class="ble-wrapper landing-section">
+    <h1 class="title">Bracelet Set Up</h1>
+    <div> Turn on bracelet then click "Connect". </div>
+    <button id="clientConnectButton" class="ui-button"
+        onclick="bleInstance.connectionToggle()">
+      Connect
+    </button>
+    <br>
+    <button id="customChannelMap" class="ui-button"
+        onclick="customChannelMap([1, -1,-1,-1,-1,-1,-1,-1,9,-1])"
+        disabled>
+      Configure for Experiment
+    </button>
+  </div>
+  <div class="experiments-wrapper landing-section">
+    <h1 class="title">Sessions</h1>
+  </div>
+
+
+  <script type="text/javascript" src="../ble_library.js"></script>
+  <script type="text/javascript" src="configurations/tasks_config.js"></script>
+  <script>
+    // Reads next task indices from URL.
+    const params = new URLSearchParams(window.location.search);
+    let curConfigIndex = -1;
+    let curTaskIndex = -1;
+    if (params.has('config') && params.has('task')) {
+      curConfigIndex = parseInt(params.get('config'));
+      curTaskIndex = parseInt(params.get('task'));
+      curPairIndex = parseInt(params.get('pair'));
+
+      if (curConfigIndex >= tasks.length) {
+        curConfigIndex = -1;
+      }
+
+      if (curConfigIndex != -1 && curTaskIndex != -1) {
+        if (curTaskIndex < tasks[curConfigIndex]['tasks'].length - 1) {
+          curTaskIndex += 1;
+        } else {
+          curTaskIndex = 0;
+          curConfigIndex += 1;
+        }
+      }
+    }
+
+    // Renders experiment tasks from configuration file.
+    let experiments = document.querySelector('.experiments-wrapper');
+    for (let sessionIndex = 0; sessionIndex < tasks.length; sessionIndex++) {
+      session = tasks[sessionIndex];
+      let sessionDiv = document.createElement('div');
+      let sessionHeader = document.createElement('h2');
+      let sessionButtons = document.createElement('div');
+      sessionHeader.innerText = session['sessionName'];
+      sessionHeader.setAttribute('class', 'dropdown');
+      sessionHeader.onclick = () => {
+        let visible = sessionButtons.style.display == 'none';
+        if (visible) {
+          sessionButtons.style.display = 'block';
+        } else {
+          sessionButtons.style.display ='none';
+        }
+      }
+      if (curConfigIndex != sessionIndex) {
+        sessionButtons.style.display = 'none';
+      }
+      sessionDiv.appendChild(sessionHeader);
+      sessionDiv.appendChild(sessionButtons);
+      let numTasks = session['tasks'].length;
+      let numPairs = session['pairs'].length;
+      for (let pairIndex = 0; pairIndex < numPairs; pairIndex++) {
+        let pairHeader = document.createElement('h3');
+        pairHeader.innerText = session['pairs'][pairIndex].title;
+        sessionButtons.appendChild(pairHeader);
+        for (let taskIndex = 0; taskIndex < numTasks; taskIndex++) {
+          let task = session['tasks'][taskIndex];
+          let taskButton = document.createElement('button');
+          let taskLink = document.createElement('a');
+          taskLink.href = 'lipreading_video_interface.html?' +
+              `config=${sessionIndex}&task=${taskIndex}&pair=${pairIndex}`;
+          taskButton.innerText = task['title'];
+          if (curTaskIndex == taskIndex && curPairIndex == pairIndex
+              && curConfigIndex == sessionIndex) {
+            taskButton.setAttribute('class',
+                'ui-button session-link button-highlight');
+          } else {
+            taskButton.setAttribute('class', 'ui-button session-link');
+          }
+          taskLink.appendChild(taskButton);
+          sessionButtons.appendChild(taskLink);
+          sessionButtons.appendChild(document.createElement('br'));
+        }
+      }
+      experiments.appendChild(sessionDiv);
+    }
+  </script>
+  <script>
+    /**
+     * Updates UI elements after connecting or disconnecting BLE.
+     * @param {boolean} connected A flag to indicate whether a BLE device
+     *    is currently connected.
+     */
+    function updateButtonState(connected) {
+      if (connected) {
+        document.getElementById('clientConnectButton').innerHTML = 'Disconnect';
+        document.querySelectorAll("session-link").disabled = false;
+      } else {
+        document.getElementById('clientConnectButton').innerHTML = 'Connect';
+        document.getElementById('customChannelMap').disabled = true;
+      }
+    }
+
+    // Generate a BLE Manager with the UI update functions.
+    var bleInstance = new BleManager(console.log, updateButtonState);
+
+    /**
+     * Applies a custom mapping to the channel sources. A value of -1 indicates
+     * the channel should be disabled.
+     * @param {Array<number>} mapping An array of source indices ordered by
+     *    channel indices.
+     */
+    function customChannelMap(mapping) {
+      for (var c = 0; c < NUM_TACTORS; c++) {
+        if (mapping[c] > -1 ) {
+          bleInstance.setChannelData(c, 'source', mapping[c]);
+        }
+        bleInstance.setChannelData(c, 'gain', 63);
+        bleInstance.setChannelData(c, 'enabled', mapping[c] > -1);
+      }
+      bleInstance.requestSetChannelMap();
+      document.getElementById("experiment-link").disabled = false;
+    }
+  </script>

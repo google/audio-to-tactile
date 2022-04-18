@@ -27,6 +27,10 @@ enum {
   kMaxNameLength = 15,
   /* Number of bytes per descriptor in `TapOutWriteDescriptors()`. */
   kBytesPerDescriptor = 1 + kMaxNameLength + 1 + kTapOutMaxDims,
+  /* Max number of buffers to send without receiving another heartbeat. Set such
+   * that the receiver can send once every 100 buffers plus a little slack.
+   */
+  kMaxBuffersPerHeartbeat = 100 + 5,
 };
 
 typedef enum {
@@ -55,7 +59,9 @@ static int g_num_descriptors = 0;
 static TapOutToken g_outputs[kTapOutMaxOutputs];
 static TapOutSlice g_slices[kTapOutMaxOutputs];
 static int g_num_outputs = 0;
+static int g_heartbeat_countdown = 0;
 
+static void (*g_tx_fun)(const char*, int) = NULL;
 static void (*g_error_fun)(const char*) = NULL;
 
 /* Prints a formatted error message with g_error_fun, if set. */
@@ -135,6 +141,14 @@ static int ComputeNumBytes(const TapOutDescriptor* descriptor) {
   return num_bytes;
 }
 
+void TapOutSetTxFun(void (*fun)(const char*, int)) {
+  g_tx_fun = fun;
+}
+
+void TapOutSetErrorFun(void (*fun)(const char*)) {
+  g_error_fun = fun;
+}
+
 TapOutToken TapOutAddDescriptor(const TapOutDescriptor* descriptor) {
   /* Validate descriptor fields. */
   if (descriptor == NULL) {
@@ -158,7 +172,7 @@ TapOutToken TapOutAddDescriptor(const TapOutDescriptor* descriptor) {
 
 int TapOutWriteDescriptors(void) {
 
-  const int total = 2 + g_num_descriptors * kBytesPerDescriptor;
+  const int total = 4 + g_num_descriptors * kBytesPerDescriptor;
   if (total > kTapOutBufferCapacity) {
     Error("Descriptors exceed kTapOutBufferCapacity.");
     return 0;
@@ -169,6 +183,8 @@ int TapOutWriteDescriptors(void) {
   uint8_t* dest = g_tap_out_buffer;
 
   *dest++ = kTapOutMarker;
+  *dest++ = kTapOutMessageDescriptors;
+  *dest++ = g_num_descriptors * kBytesPerDescriptor;
   *dest++ = (uint8_t)g_num_descriptors;
 
   int i;
@@ -209,8 +225,9 @@ int TapOutEnable(const TapOutToken* outputs, int num_outputs) {
     return 0;
   }
 
-  int offset = 1;
+  int offset = 3;
   g_tap_out_buffer[0] = kTapOutMarker;
+  g_tap_out_buffer[1] = kTapOutMessageCapture;
 
   int i;
   for (i = 0; i < num_outputs; ++i) {
@@ -230,12 +247,13 @@ int TapOutEnable(const TapOutToken* outputs, int num_outputs) {
   }
 
   g_tap_out_buffer_size = offset;
+  g_tap_out_buffer[2] = offset - 3;  /* Set payload size. */
   g_num_outputs = num_outputs;
   return 1;
 }
 
-int TapOutIsEnabled(void) {
-  return g_num_outputs > 0;
+int TapOutIsActive(void) {
+  return g_heartbeat_countdown > 0;
 }
 
 const TapOutSlice* TapOutGetSlice(TapOutToken output) {
@@ -257,6 +275,63 @@ void TapOutTextPrint(TapOutToken output, const char* format, ...) {
   }
 }
 
-void TapOutSetErrorFun(void (*fun)(const char*)) {
-  g_error_fun = fun;
+/* Calls `g_tx_fun` on the tap_out buffer if it is set. */
+static void SendBuffer(void) {
+  if (g_tx_fun) {
+    g_tx_fun((const char*)g_tap_out_buffer, g_tap_out_buffer_size);
+  }
+}
+
+/* Handles a received message. */
+static void HandleMessage(int op, const uint8_t* payload, int payload_size) {
+  g_heartbeat_countdown = kMaxBuffersPerHeartbeat; /* Reset the countdown. */
+
+  switch (op) {
+    case kTapOutMessageHeartbeat:
+      break;
+
+    case kTapOutMessageGetDescriptors:
+      if (payload_size == 0 && TapOutWriteDescriptors()) {
+        SendBuffer();
+      }
+      break;
+
+    case kTapOutMessageStartCapture:
+      if (1 <= payload_size && payload_size <= kTapOutMaxOutputs) {
+        TapOutEnable(payload, payload_size);
+      }
+      break;
+
+    default:
+      Error("Unknown op: 0x%02x", op);
+  }
+}
+
+void TapOutReceiveMessage(const char* data, int size) {
+  /* The message structure is "marker, op, payload_size" followed by payload. */
+  const char* marker = memchr(data, kTapOutMarker, size); /* Find the marker. */
+  if (marker == NULL) { return; }
+  ++marker;
+  size -= (int)(marker - data);
+  if (size < 2) { return; }
+  data = marker;
+
+  /* Read the op and payload size. */
+  const int op = data[0];
+  const int payload_size = data[1];
+  if (size < payload_size) { return; }
+  const uint8_t* payload = (const uint8_t*)(data + 2);
+
+  HandleMessage(op, payload, payload_size);
+}
+
+void TapOutFinishedCaptureBuffer(void) {
+  if (!g_heartbeat_countdown) { return; }
+
+  --g_heartbeat_countdown;
+  if (g_heartbeat_countdown == 0) {
+    TapOutEnable(NULL, 0); /* Deactivate tap_out. */
+  } else if (g_num_outputs > 0) {
+    SendBuffer();
+  }
 }

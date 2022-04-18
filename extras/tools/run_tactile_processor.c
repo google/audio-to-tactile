@@ -628,7 +628,7 @@ int main(int argc, char** argv) {
     int c;
     for (c = 0; c < kNumTactors; ++c) {
       /* Get volume for the cth tactor. */
-      float activation = engine.volume[c] / 0.1f;
+      float activation = engine.volume[c] / 0.4f;
       if (activation < 0.0f) { activation = 0.0f; }
       if (activation > 1.0f) { activation = 1.0f; }
 

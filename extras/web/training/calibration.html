@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <!--
+  Copyright 2022 Google LLC
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      https://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+  -->
+  <link rel="stylesheet" href="lipreading_video_interface.css">
+  <link rel="stylesheet" href="calibration.css">
+  <title>Calibration</title>
+</head>
+
+<body>
+  <div class="ble-wrapper landing-section">
+    <h1 class="title">Connect</h1>
+    <div class="button-group">
+      <div> Turn on bracelet, then click "Connect". </div>
+      <button id="clientConnectButton" class="ui-button"
+        onclick="bleInstance.connectionToggle()">Connect
+      </button>
+    </div>
+  </div>
+
+  <div class="thresholds-wrapper landing-section">
+    <h1 class="title">Threshold Calibration</h1>
+    <div>
+      Before proceeding, click the tactor demo. This will play the reference
+      tactor at a range of intensities to familiarize you with the sensations.
+      When the demo is complete, continue to the experiment.
+    </div>
+    <div class="button-group">
+      <button class="ui-button begin-demo enable-connect"
+          onclick="beginTactorDemo()" disabled>Begin Demo
+      </button>
+    </div>
+
+    <div>
+      In this experiment, a single tactor on the device will vibrate during 1
+      out of 3 possible intervals.  Your task is to identify when the tactor
+      vibrates.  Below are three buttons numbered 1, 2, and 3.  Each button
+      represents an interval; during a trial, the intervals will occur in order,
+      and the corresponding button will be highlighted in yellow.  Wait for all
+      three intervals, then click the button corresponding to the interval in
+      which you felt the tactor vibrate.  If you did not feel the tactor, or
+      are not sure, make your best guess.  The experiment will continue for
+      multiple trials.  When they are complete, click the "Download Results"
+      button.
+    </div>
+    <div class="button-group">
+      <button class="ui-button begin-calibration enable-connect"
+          onclick="beginThresholdExperiment()" disabled>Begin Calibration
+      </button>
+    </div>
+    <div class="button-group threshold-buttons">
+      <button class="threshold-button interval-1"
+          onclick="recordSelection(1)" disabled>1</button>
+      <button class="threshold-button interval-2"
+          onclick="recordSelection(2)" disabled>2</button>
+      <button class="threshold-button interval-3"
+          onclick="recordSelection(3)" disabled>3</button>
+    </div>
+    <a class="download-threshold plain-link">
+      <button class="download-button ui-button" disabled>
+        Download Results
+      </button>
+    </a>
+  </div>
+
+  <div class="adjustments-wrapper landing-section">
+    <h1 class="title">Tactor Calibration</h1>
+    <div>
+      In this experiment, you will adjust the remaining tactors to be
+      perceptually equal to the reference tactor.  When you click "Begin
+      Adjustments", the bracelet will vibrate in the following pattern:
+      Reference - Test - Reference.  By clicking "Increase" or "Decrease" you
+      can adjust the intensity of the test tactor.  Continue making adjustments
+      until both tactors feel equivalently strong, then click "Tactors are
+      Equal."  The bracelet will immediately begin actuating the next test
+      tactor using the Reference - Test - Reference pattern.  Continue until
+      all tactors have been adjusted, then click the "Download Results" button.
+    </div>
+    <div class="button-group">
+      <button class="ui-button begin-adjustments enable-connect"
+          onclick="beginAdjustment()" disabled>Begin Adjustments</button>
+    </div>
+    <div>Active Tactor #<span class="adjusting-tactor-number"></span></div>
+    <div class="button-group">
+      <label>Adjust Tactor Strength:</label>
+      <button class="ui-button adjustment-increase"
+          onclick="adjustGain(true)" disabled>Increase</button>
+      <button class="ui-button adjustment-decrease"
+          onclick="adjustGain(false)" disabled>Decrease</button>
+    </div>
+
+    <div class="button-group">
+      <label>Accept Adjustments:</label>
+      <button class="ui-button adjustment-equal"
+          onclick="indicateEqual()" disabled>Tactors are Equal</button>
+    </div>
+
+    <a class="download-adjustments plain-link">
+      <button class="download-button ui-button" disabled>
+        Download Results
+      </button>
+    </a>
+  </div>
+
+  <script type='text/javascript' src='../ble_library.js'></script>
+  <script type='text/javascript' src='levitt_experiment.js'></script>
+  <script type='text/javascript'>
+    /**
+     * Updates UI elements after connecting or disconnecting BLE.
+     * @param {boolean} connected A flag to indicate whether a BLE device
+     *    is currently connected.
+     */
+    function updateButtonState(connected) {
+      if (connected) {
+        document.getElementById('clientConnectButton').innerHTML = 'Disconnect';
+        document.querySelectorAll('.enable-connect').forEach((e) =>
+            e.disabled = false);
+      } else {
+        document.getElementById('clientConnectButton').innerHTML = 'Connect';
+        document.querySelectorAll('.enable-connect').forEach((e) =>
+            e.disabled = true);
+        endAdjustments();
+        endTactorDemo();
+        cancelExperiment();
+      }
+    }
+
+    // Generate a BLE Manager with the UI update functions.
+    let bleInstance = new BleManager(console.log, updateButtonState);
+  </script>
+
+  <script type='text/javascript'>
+    // Defines fixed parameters for a Levitt thresholding experiment.
+    const thresholdParameters = {
+      initialLevel: 30,  /* steps */
+      changeDelta: 1,  /* steps */
+      numRuns: 12, /* must be even */
+      responseRule: 2,
+      interstimulusDelay: 300,  /* ms */
+      intervalDuration: 400,  /* ms */
+      interTrialDelay: 2000,  /* ms */
+      testTactor: 9,
+      calibrationAmplitude: 0.02
+    };
+
+    let thresholdExperiment = new LevittExperiment(
+        thresholdParameters.initialLevel,
+        thresholdParameters.changeDelta,
+        false, false,
+        thresholdParameters.numRuns,
+        true,
+        thresholdParameters.responseRule);
+
+    let thresholdTimeout = null;
+    let targetInterval = 1;
+
+    /**
+     * Sends a single buzz command to the device at a specified gain.
+     * @param {number} channel Tactor to actuate.
+     * @param {number} gain Value to set the channel gain.
+     */
+    function playTactor(channel, gain) {
+      console.log('Tactor ', channel, 'played at gain of ', gain);
+      bleInstance.setChannelData(channel, 'enabled', true);
+      bleInstance.setChannelData(channel, 'gain', gain);
+      bleInstance.requestSetChannelCalibrate(channel, channel,
+                                      thresholdParameters.calibrationAmplitude);
+    }
+
+    /**
+     * Updates the classes for interval elements as a group.  If a classname
+     * and an interval is provided, add the class to the specified interval
+     * and remove from all others.  If no interval is provided, remove the class
+     * from all intervals.
+     * @param {string} classname Name of class to be added or removed.
+     * @param {number} onInterval Interval to which to apply the class.
+     */
+    function updateIntervalClass(classname, onInterval=null) {
+      const interval1 = document.querySelector('.interval-1');
+      const interval2 = document.querySelector('.interval-2');
+      const interval3 = document.querySelector('.interval-3');
+
+      interval1.classList.remove(classname);
+      interval2.classList.remove(classname);
+      interval3.classList.remove(classname);
+
+      switch(onInterval) {
+        case 1:
+          interval1.classList.add(classname);
+          break;
+        case 2:
+          interval2.classList.add(classname);
+          break;
+        case 3:
+          interval3.classList.add(classname);
+          break;
+        default:
+          break;
+      }
+    }
+
+    /**
+     * Toggles all interval elements to enabled or disabled.
+     * @param {boolean} state Indicates whether the buttons are disabled.
+     */
+    function toggleDisabledIntervalButtons(state) {
+      let buttons = document.querySelectorAll('.threshold-button');
+      for (button of buttons) {
+        button.disabled = state;
+      }
+    }
+
+    /**
+     * Initiates the threshold experiment.  Runs once when button is pressed.
+     */
+    function beginThresholdExperiment() {
+      const beginButton = document.querySelector('.begin-calibration');
+      beginButton.disabled = true;
+      document.querySelector('.threshold-buttons').focus();
+      runTrial();
+    }
+
+    /**
+     * Selects a random interval during which to play the tactor, then begins
+     * the trial. Runs at the beginning of each trial until experiment is
+     * complete.
+     */
+    function runTrial() {
+      targetInterval = Math.floor(Math.random() * 3) + 1;
+      thresholdTimeout = setTimeout(beginInterval,
+                                    thresholdParameters.interstimulusDelay,
+                                    1);
+    }
+
+    /**
+     * Updates the visual indicator for the current interval.  If the current
+     * interval is the target, plays the tactor. After the interval duration,
+     * proceeds to the interstimulus delay.
+     */
+    function beginInterval(currentInterval) {
+      updateIntervalClass('interval-on', currentInterval);
+      if (currentInterval == targetInterval) {
+        playTactor(thresholdParameters.testTactor, thresholdExperiment.level);
+      }
+      thresholdTimeout = setTimeout(endInterval,
+                                    thresholdParameters.intervalDuration,
+                                    currentInterval);
+    }
+
+    /**
+     * Removes the visual indicator for an active interval, waits for the
+     * interstimulus delay, then initializes the next interval. If all intervals
+     * are completed, waits for user input.
+     */
+    function endInterval(currentInterval) {
+      currentInterval += 1;
+      updateIntervalClass('interval-on');
+      if (currentInterval <= 3) {
+        thresholdTimeout = setTimeout(beginInterval,
+                                      thresholdParameters.interstimulusDelay,
+                                      currentInterval);
+      } else {
+        toggleDisabledIntervalButtons(false);
+      }
+    }
+
+    /**
+     * On user input of an interval, shows correctness feedback and records
+     * the answer in the experiment object.  If experiment is ongoing, begins
+     * another trial, otherwise triggers the end of the experiment.
+     */
+    function recordSelection(interval) {
+      toggleDisabledIntervalButtons(true);
+      updateIntervalClass('interval-correct', targetInterval);
+      if (interval != targetInterval) {
+        updateIntervalClass('interval-incorrect', interval);
+      }
+
+      thresholdExperiment.noteResponse(interval==targetInterval);
+
+      if (thresholdExperiment.incomplete) {
+        thresholdTimeout = setTimeout(resetTrial,
+                                      thresholdParameters.interTrialDelay/2);
+      } else {
+        endExperiment();
+      }
+    }
+
+    /**
+     * Removes visual feedback and begins the next trial.
+     */
+    function resetTrial() {
+      updateIntervalClass('interval-correct');
+      updateIntervalClass('interval-incorrect');
+      thresholdTimeout = setTimeout(runTrial,
+                                    thresholdParameters.interTrialDelay/2);
+    }
+
+
+    /**
+     * Formats a slider value as a human readable gain value.
+     * @param {number} x Slider value to convert to gain.
+     */
+    function channelGainMapping(x) {
+      gain_db = (18 / 62) * (x - 63);
+      return gain_db.toFixed(1);
+    }
+
+    /**
+     * Removes visual feedback and resets button states.
+     */
+    function endExperiment() {
+      console.log('Threshold Complete');
+      updateIntervalClass('interval-correct');
+      updateIntervalClass('interval-incorrect');
+      const beginButton = document.querySelector('.begin-calibration');
+      beginButton.disabled = false;
+
+      let thresholdResult = thresholdExperiment.calculateThreshold();
+      console.log('Threshold result: ', thresholdResult);
+
+      bleInstance.setChannelData(thresholdParameters.testTactor, 'gain',
+          Math.round(thresholdResult));
+      bleInstance.requestSetChannelGainUpdate(0,
+          thresholdParameters.testTactor);
+
+      let contents = `tactor: ${thresholdParameters.testTactor + 1},\n` +
+                    `result: ${thresholdResult},\n` +
+                    `dB: ${channelGainMapping(thresholdResult)} \n`;
+      contents += thresholdExperiment.getHistory();
+      generateDownload(contents, '.download-threshold',
+          'threshold_calibration');
+    }
+
+    /**
+     * Stops all experiment actions and resets visual feedback and button
+     * states.
+     */
+    function cancelExperiment() {
+      clearTimeout(thresholdTimeout);
+      const beginButton = document.querySelector('.begin-calibration');
+      const interval1 = document.querySelector('.interval-1');
+      const interval2 = document.querySelector('.interval-2');
+      const interval3 = document.querySelector('.interval-3');
+      updateIntervalClass('interval-correct');
+      updateIntervalClass('interval-incorrect');
+
+      beginButton.disabled = true;
+      interval1.disabled = true;
+      interval2.disabled = true;
+      interval3.disabled = true;
+    }
+
+    /**
+     * Creates a download button for a file containing calibration results.
+     * @param {string} contents String containing formatted data.
+     * @param {string} downloadClass Class to select download link.
+     * @param {string} filename Prefix for the file to download.
+     */
+    function generateDownload(contents, downloadClass, filename) {
+      const date = new Date().toISOString();
+      const resultsBlob = new Blob([contents], { type: 'text/plain' });
+      const downloadLink = document.querySelector(downloadClass);
+      downloadLink.setAttribute('download', `${filename}_${date}.txt`);
+      downloadLink.setAttribute('href',
+          window.URL.createObjectURL(resultsBlob));
+      const downloadButton = document.querySelector(downloadClass +
+          ' .download-button');
+      downloadButton.disabled = false;
+    }
+
+    /** Clears the tactor demo interval and resets the demo button state. */
+    function endTactorDemo() {
+      clearInterval(demoInterval);
+      let beginDemo = document.querySelector('.begin-adjustments');
+      beginDemo.innerText = 'Begin Demo';
+      beginDemo.onclick = beginTactorDemo;
+    }
+
+    /**
+     * Begins a demo sequence of tactor intensities.
+     */
+    function beginTactorDemo() {
+      let beginDemo = document.querySelector('.begin-adjustments');
+      beginDemo.innerText = 'End Demo';
+      beginDemo.onclick = endTactorDemo;
+
+      let channel = thresholdParameters.testTactor;
+      let increment = 5;
+      let delay = 1000;
+      bleInstance.setChannelData(channel, 'enabled', true);
+      bleInstance.setChannelData(channel, 'gain', 60);
+      demoInterval = window.setInterval(playTactorDemo,
+          delay, channel, increment);
+    }
+
+    /**
+     * Plays the reference tactor at sequentially decreasing intensities
+     * until 0 is reached.
+     */
+    function playTactorDemo(channel, increment) {
+      let gain = bleInstance.channelData[channel].gain - increment;
+      if (gain <= 0) {
+        endTactorDemo();
+      } else {
+        playTactor(channel, gain);
+      }
+    }
+
+    /**
+     * Selects the associated interval when the key 1, 2, or 3 is pressed.
+     */
+    document.addEventListener('keyup', function(event) {
+      if (!document.querySelector('.interval-1').disabled &&
+          (event.key == '1' || event.key == '2' || event.key == '3')) {
+        recordSelection(parseInt(event.key));
+        console.log('keyup', event.key);
+      }
+    });
+
+  </script>
+  <script type='text/javascript'>
+    // Defines fixed parameters for inter-tactor adjustments.
+    const adjustmentParameters = {
+      initialLevel: 30,  /* steps */
+      numTactors: 8,
+      referenceTactor: 9,
+      changeDelta: 1,  /* steps */
+      intervalDuration: 4000,  /* ms */
+      maxGain: 63,  /* steps */
+      minGain: 1,  /* steps */
+      calibrationAmplitude: 1,
+    };
+
+    const tactorOrder = [0,1,2,4,5,8,3]; // Excludes reference tactor.
+    let tactorGains = Array(adjustmentParameters.numTactors - 1)
+                        .fill(adjustmentParameters.initialLevel);
+    let adjustmentTactorIndex = 0;
+    let playInterval;
+
+    /**
+     * Limits the acceptable gains to within minimum and maximum bounds;
+     * displays a warning message if bounds are violated.
+     */
+    function boundsCheckGain() {
+      if (tactorGains[adjustmentTactorIndex] > adjustmentParameters.maxGain) {
+        console.error('MAXIMUM GAIN ERROR');
+        tactorGains[adjustmentTactorIndex] = adjustmentParameters.maxGain;
+      }
+      if (tactorGains[adjustmentTactorIndex] < adjustmentParameters.minGain) {
+        console.error('MINIMUM GAIN ERROR');
+        tactorGains[adjustmentTactorIndex] = adjustmentParameters.minGain;
+      }
+    }
+
+    /**
+     * Triggers an ABA pattern on the reference tactor (A) and current tactor
+     * (B) using the most updated gain value for tactor B.
+     */
+    function playRefPattern() {
+      let currentTactor = tactorOrder[adjustmentTactorIndex];
+      let gain = tactorGains[adjustmentTactorIndex];
+      playABA(adjustmentParameters.referenceTactor, currentTactor, gain);
+    }
+
+    /**
+     * Sends a patterned buzz command to the device, playing
+     * channel1-channel2-channel1, and setting channel2 to the
+     * specified gain.
+     * @param {number} channel1 First tactor to actuate.
+     * @param {number} channel2 Second tactor to actuate.
+     * @param {number} gain2 Value to set the gain of channel2.
+     */
+    function playABA(channel1, channel2, gain2) {
+      console.log('Tactors ', channel1, channel2, channel1);
+      console.log('    test: ', channel2, 'played at gain of ', gain2);
+      console.log('    ref: ', channel1, 'played at gain of ',
+          bleInstance.channelData[channel1].gain);
+
+      bleInstance.setChannelData(channel2, 'enabled', true);
+      bleInstance.setChannelData(channel2, 'gain', gain2);
+      bleInstance.requestSetChannelCalibrate(channel1, channel2,
+                                    adjustmentParameters.calibrationAmplitude);
+    }
+
+    /**
+     * Begins playing the reference pattern on the first tactor and updates
+     * the UI to display the current tactor, allow the user to adjust the
+     * tactor's gain, and provide a cancel button.
+     */
+    function beginAdjustment() {
+      adjustmentTactorIndex = 0;
+      document.querySelector('.adjusting-tactor-number').innerText =
+          tactorOrder[adjustmentTactorIndex] + 1;
+      document.querySelector('.adjustment-decrease').disabled = false;
+      document.querySelector('.adjustment-increase').disabled = false;
+      document.querySelector('.adjustment-equal').disabled = false;
+      beginAdjustments = document.querySelector('.begin-adjustments');
+      beginAdjustments.innerText = 'End Adjustments';
+      beginAdjustments.onclick = endAdjustments;
+
+      playRefPattern();
+      playInterval = window.setInterval(playRefPattern,
+          adjustmentParameters.intervalDuration);
+    }
+
+    /**
+     * On user input, increases or decreases the tactor gain value.
+     * @param {boolean} up Indicates whether the increase gain button was
+     *    pressed or the decrease gain button.
+     */
+    function adjustGain(up) {
+      tactorGains[adjustmentTactorIndex] +=
+          (up ? 1 : -1) * adjustmentParameters.changeDelta;
+      boundsCheckGain();
+    }
+
+    /**
+     * After input, increments the active tactor and completes the session
+     * if all tactors have been processed.  Otherwise, continues with the
+     * next tactor.
+     */
+    function indicateEqual() {
+      adjustmentTactorIndex += 1;
+      if (adjustmentTactorIndex >= tactorOrder.length) {
+        endAdjustments();
+      } else {
+        document.querySelector('.adjusting-tactor-number').innerText =
+            tactorOrder[adjustmentTactorIndex] + 1;
+      }
+    }
+
+    /**
+     * Stops playing tactors, disables user control of gain, and changes
+     * button back to the "begin adjustments" option. Sets up downloading of
+     * results.
+     */
+    function endAdjustments() {
+      console.log('Adjustments Completed');
+      clearInterval(playInterval);
+      document.querySelector('.adjustment-decrease').disabled = true;
+      document.querySelector('.adjustment-increase').disabled = true;
+      document.querySelector('.adjustment-equal').disabled = true;
+      beginAdjustments = document.querySelector('.begin-adjustments');
+      beginAdjustments.innerText = 'Begin Adjustments';
+      beginAdjustments.onclick = beginAdjustment;
+
+      gainsDB = tactorGains.map((g) => channelGainMapping(g));
+
+      let refGain =
+        bleInstance.channelData[adjustmentParameters.referenceTactor].gain;
+      const contents = 'Tactors: ' + tactorOrder.map((t) => t+1).toString() + '\n' +
+          'Gains: ' + tactorGains.toString() + '\n' +
+          'Gains in dB: ' + gainsDB.toString() + '\n' +
+          'Reference Tactor: ' + adjustmentParameters.referenceTactor +
+          ', Gain: ' + refGain + '\n';
+      generateDownload(contents, '.download-adjustments',
+                      'intertactor_calibration');
+    }
+
+  </script>

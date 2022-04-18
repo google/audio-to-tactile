@@ -69,7 +69,7 @@ int FindPortAudioDevice(
   return -1;
 }
 
-void PrintPortAudioDevices() {
+void PrintPortAudioDevices(void) {
   const int num_devices = Pa_GetDeviceCount();
   if (num_devices < 0) {
     fprintf(stderr, "Error: %s\n", Pa_GetErrorText(num_devices));

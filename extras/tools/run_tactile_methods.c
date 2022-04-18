@@ -119,7 +119,7 @@ void UpdateVolumeMeters(const float* output, int frames_per_buffer) {
 
 #define kVolumeMeterWidth 4
 
-static void PrintVolumeMeters() {
+static void PrintVolumeMeters(void) {
   const int num_tactors = engine.channel_map.num_input_channels;
   char bar[3 * kVolumeMeterWidth + 1];
   int c;

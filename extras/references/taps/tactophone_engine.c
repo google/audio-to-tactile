@@ -316,12 +316,12 @@ void TactophoneVisualizeTactors(TactophoneEngine* engine, int y, int x) {
   attroff(A_BOLD | COLOR_PAIR(kColorHighlight));
 }
 
-void TactophoneFormatTitle() {
+void TactophoneFormatTitle(void) {
   wmove(stdscr, 0, 0);
   chgat(-1, 0, kColorTitle, NULL);
 }
 
-void TactophoneRefresh() {
+void TactophoneRefresh(void) {
   /* ALSA may print error messages if e.g. underrun or occurs, which interacts
    * poorly with ncurses. To avoid these messages from obscuring game UI or
    * scrolling the screen, place the cursor a few rows above the bottom.

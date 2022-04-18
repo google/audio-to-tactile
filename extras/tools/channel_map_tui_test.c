@@ -22,7 +22,7 @@
 #include "src/dsp/decibels.h"
 #include "src/dsp/logging.h"
 
-static void TestChannelMapParse() {
+static void TestChannelMapParse(void) {
   puts("TestChannelMapParse");
   ChannelMap channel_map;
   int c;
@@ -56,7 +56,7 @@ static void TestChannelMapParse() {
   }
 }
 
-static void TestChannelMapInit() {
+static void TestChannelMapInit(void) {
   puts("TestChannelMapInit");
   const int kNumChannels = 4;
   const int kNumFrames = 6;
@@ -86,7 +86,7 @@ static void TestChannelMapInit() {
   free(input);
 }
 
-static void TestChannelMapApply() {
+static void TestChannelMapApply(void) {
   puts("TestChannelMapApply");
   const int kNumInputChannels = 5;
   const int kNumOutputChannels = 4;

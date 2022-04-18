@@ -23,7 +23,7 @@
 #define kNumChannels 24
 
 /* Test phoneme name lookup. */
-static void TestPhonemeCodeByName() {
+static void TestPhonemeCodeByName(void) {
   puts("TestPhonemeCodeByName");
   const PhonemeCode* code = PhonemeCodeByName("B");
   CHECK(code != NULL && !strcmp(code->phoneme, "B"));
@@ -51,7 +51,7 @@ static void TestPhonemeCodeByName() {
 }
 
 /* Check code signal max amplitude. */
-static void TestMaxAmplitude() {
+static void TestMaxAmplitude(void) {
   puts("TestMaxAmplitude");
   const float kMaxDuration = 0.4f; /* Codes are at most 0.4s duration. */
   const float kSampleRateHz = 44100.0f;
@@ -85,7 +85,7 @@ static void TestMaxAmplitude() {
 }
 
 /* Check that codes are some min L2 distance apart from one another. */
-static void TestCodeSignalsAreDifferent() {
+static void TestCodeSignalsAreDifferent(void) {
   puts("TestCodeSignalsAreDifferent");
   /* Table for accumulating distances between each pair of codes.
    * Only the lower triangle is used.
@@ -143,7 +143,7 @@ static void TestCodeSignalsAreDifferent() {
 }
 
 /* Test a few cases with PhonemeStringIsValid(). */
-static void TestPhonemeStringIsValid() {
+static void TestPhonemeStringIsValid(void) {
   puts("TestPhonemeStringIsValid");
   CHECK(PhonemeStringIsValid("OE"));
   CHECK(PhonemeStringIsValid("b,er,d"));

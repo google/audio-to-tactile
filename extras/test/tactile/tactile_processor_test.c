@@ -1,4 +1,4 @@
-/* Copyright 2019, 2021 Google LLC
+/* Copyright 2019, 2021-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -114,24 +114,24 @@ static void TestTones(float sample_rate_hz, int decimation_factor) {
   vowel_energy = ComputeVowelEnergy(output, 0.07f, 0.13f, output_rate);
   fricative_energy = ComputeEnergy(fricative, 0.07f, 0.13f, output_rate);
   CHECK(baseband_energy > 1e-4f);
-  CHECK(baseband_energy > 5 * vowel_energy);
-  CHECK(baseband_energy > 5 * fricative_energy);
+  CHECK(baseband_energy > 2.5f * vowel_energy);
+  CHECK(baseband_energy > 2.5f * fricative_energy);
 
   /* During the 1500 Hz tone, vowel RMS is highest. */
   baseband_energy = ComputeEnergy(baseband, 0.22f, 0.28f, output_rate);
   vowel_energy = ComputeVowelEnergy(output, 0.22f, 0.28f, output_rate);
   fricative_energy = ComputeEnergy(fricative, 0.22f, 0.28f, output_rate);
   CHECK(vowel_energy > 1e-4f);
-  CHECK(vowel_energy > 5 * baseband_energy);
-  CHECK(vowel_energy > 2 * fricative_energy);
+  CHECK(vowel_energy > 2.5f * baseband_energy);
+  CHECK(vowel_energy > 2.5f * fricative_energy);
 
   /* During the 5000 Hz tone, fricative RMS is highest. */
   baseband_energy = ComputeEnergy(baseband, 0.37f, 0.43f, output_rate);
   vowel_energy = ComputeVowelEnergy(output, 0.37f, 0.43f, output_rate);
   fricative_energy = ComputeEnergy(fricative, 0.37f, 0.43f, output_rate);
   CHECK(fricative_energy > 1e-4f);
-  CHECK(fricative_energy > 5 * baseband_energy);
-  CHECK(fricative_energy > 5 * vowel_energy);
+  CHECK(fricative_energy > 2.5f * baseband_energy);
+  CHECK(fricative_energy > 2.5f * vowel_energy);
 
   free(output);
   free(input);

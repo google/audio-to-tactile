@@ -35,7 +35,7 @@ static void AddEvent(const char* event, ...) {
   ++g_num_events;
 }
 
-static void FreeEvents() {
+static void FreeEvents(void) {
   int i;
   for (i = 0; i < g_num_events; ++i) {
     free(g_events[i]);
@@ -90,7 +90,7 @@ static const TactophoneState kBar = {
 };
 
 /* Test event handling in running with a couple states. */
-static void TestEventHandling() {
+static void TestEventHandling(void) {
   puts("TestEventHandling");
   TactophoneEngine engine;
   TactophoneEngineInit(&engine);
@@ -129,7 +129,7 @@ static void TestEventHandling() {
 }
 
 /* Test lesson trial logic. */
-static void TestLessonTrial() {
+static void TestLessonTrial(void) {
   puts("TestLessonTrial");
   char lessons_file[L_tmpnam];
   CHECK_NOTNULL(tmpnam(lessons_file));

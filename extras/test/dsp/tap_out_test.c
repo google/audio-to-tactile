@@ -45,8 +45,8 @@ static void TestDescriptors(void) {
   CHECK(TapOutAddDescriptor(&kCherry) == 3);
 
   CHECK(TapOutWriteDescriptors());
-  static const uint8_t kExpected[2 + 20 * 3] = {
-    0xfe, 3,
+  static const uint8_t kExpected[4 + 3 * 20] = {
+    0xfe, kTapOutMessageDescriptors, 3 * 20, 3,
     1, /* kDescriptorA. */
     'A', 'p', 'p', 'l', 'e', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     9, 3, 8, 0,
@@ -72,26 +72,24 @@ static void TestSlices(void) {
   TapOutToken tokens[2];
   tokens[0] = token_c;
   tokens[1] = token_b;
-  CHECK(!TapOutIsEnabled());
   CHECK(TapOutEnable(tokens, 2));
-  CHECK(TapOutIsEnabled());
-  CHECK(g_tap_out_buffer_size == 1 + 9 * 4 + 30);
+  CHECK(g_tap_out_buffer_size == 3 + 9 * 4 + 30);
 
   const TapOutSlice* slice;
   slice = TapOutGetSlice(token_c);
   CHECK(slice != NULL);
-  CHECK(slice->data == g_tap_out_buffer + 1);
+  CHECK(slice->data == g_tap_out_buffer + 3);
   CHECK(slice->size == 9 * 4);
 
   slice = TapOutGetSlice(token_b);
   CHECK(slice != NULL);
-  CHECK(slice->data == g_tap_out_buffer + 1 + 9 * 4);
+  CHECK(slice->data == g_tap_out_buffer + 3 + 9 * 4);
   CHECK(slice->size == 30);
 
   int x = 123;
   float y = 0.45f;
   TapOutTextPrint(token_b, "Test: %d, %g", x, y);
-  CHECK(!strcmp(slice->data, "Test: 123, 0.45"));
+  CHECK(!strcmp((const char*)slice->data, "Test: 123, 0.45"));
 
   slice = TapOutGetSlice(token_a);
   CHECK(slice == NULL);
@@ -128,9 +126,85 @@ static void TestBadToken(void) {
 
   TapOutToken tokens[1] = {kInvalidTapOutToken};
   CHECK(!TapOutEnable(tokens, 1));
-  CHECK(!TapOutIsEnabled());
   CHECK(g_tap_out_buffer_size == 0);
   CHECK(TapOutGetSlice(kInvalidTapOutToken) == NULL);
+}
+
+static int /*bool*/ g_tx_callback_called = 0;
+
+static void TestCaptureTxExpectDescriptors(const char* data, int size) {
+  static const uint8_t kExpected[4 + 2 * 20] = {
+    kTapOutMarker, kTapOutMessageDescriptors, 2 * 20, 2,
+    1, /* kDescriptorB. */
+    'B', 'a', 'n', 'a', 'n', 'a', 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    11, 30, 0, 0,
+    2, /* kDescriptorC. */
+    'C', 'h', 'o', 'c', 'o', 'l', 'a', 't', 'e', ' ', 'c', 'h', 'e', 'r', 'r',
+    5, 9, 0, 0,
+  };
+  CHECK(size == sizeof(kExpected));
+  CHECK(CheckBytes((const uint8_t*)data, kExpected, sizeof(kExpected)));
+  g_tx_callback_called = 1;
+}
+
+static void TestCaptureTxExpectCapture(const char* data, int size) {
+  static const uint8_t kExpected[3 + 30 + 9 * 4] = {
+    kTapOutMarker, kTapOutMessageCapture, 30 + 9 * 4,
+    /* Banana data. */
+    'a', ' ', 't', 'e', 's', 't', ' ', 'm', 'e', 's', 's', 'a', 'g', 'e', 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    /* Cherry data. */
+    10, 0, 0, 0, 20, 0, 0, 0, 30, 0, 0, 0, 40, 0, 0, 0, 50, 0, 0, 0,
+    60, 0, 0, 0, 70, 0, 0, 0, 80, 0, 0, 0, 0x78, 0x56, 0x34, 0x12,
+  };
+  CHECK(size == sizeof(kExpected));
+  CHECK(CheckBytes((const uint8_t*)data, kExpected, sizeof(kExpected)));
+  g_tx_callback_called = 1;
+}
+
+static void TestCapture(void) {
+  puts("TestCapture()");
+
+  TapOutClearDescriptors();
+  TapOutToken token_b = TapOutAddDescriptor(&kBanana);
+  TapOutToken token_c = TapOutAddDescriptor(&kCherry);
+  CHECK(token_b == 1);
+  CHECK(token_c == 2);
+
+  /* Simulate a GetDescriptors message. Descriptors should be sent back. */
+  g_tx_callback_called = 0;
+  TapOutSetTxFun(TestCaptureTxExpectDescriptors);
+
+  static const uint8_t kMessageGetDescriptors[3] =
+      {kTapOutMarker, kTapOutMessageGetDescriptors, 0};
+  TapOutReceiveMessage((const char*)kMessageGetDescriptors,
+                       sizeof(kMessageGetDescriptors));
+  CHECK(g_tx_callback_called);
+  CHECK(TapOutIsActive());
+
+  /* Simulate a StartCapture message. */
+  g_tx_callback_called = 0;
+  static const uint8_t kMessageStartCapture[5] =
+      {kTapOutMarker, kTapOutMessageStartCapture, 2, 1, 2};
+  TapOutReceiveMessage((const char*)kMessageStartCapture,
+                       sizeof(kMessageStartCapture));
+  CHECK(!g_tx_callback_called);
+  CHECK(TapOutIsActive());
+
+  /* Fill the slices with test data. */
+  const TapOutSlice* slice = TapOutGetSlice(token_c);
+  CHECK(slice);
+  static const uint32_t kCherryTestData[9] =
+      {10, 20, 30, 40, 50, 60, 70, 80, UINT32_C(0x12345678)};
+  memcpy(slice->data, kCherryTestData, slice->size);
+
+  TapOutTextPrint(token_b, "a test message");
+  CHECK(!g_tx_callback_called);
+
+  /* Call TapOutFinishedCaptureBuffer(), which should send the data. */
+  TapOutSetTxFun(TestCaptureTxExpectCapture);
+  TapOutFinishedCaptureBuffer();
+  CHECK(g_tx_callback_called);
 }
 
 static void PrintToStderr(const char* message) {
@@ -146,6 +220,7 @@ int main(int argc, char** argv) {
   TestDescriptorBadDType();
   TestDescriptorShapeTooBig();
   TestBadToken();
+  TestCapture();
 
   puts("PASS");
   return EXIT_SUCCESS;

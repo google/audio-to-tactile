@@ -70,7 +70,7 @@ void AudioTactileBleCom::Init(const char* device_name, void (*event_fun)()) {
   Bluefruit.autoConnLed(false);
   Bluefruit.configPrphBandwidth(BANDWIDTH_MAX);
   Bluefruit.begin();
-  Bluefruit.setTxPower(4);
+  Bluefruit.setTxPower(-8);
   char advertising_name[kMaxAdvertisingNameLength + 1];
   MakeAdvertisingName(device_name, advertising_name);
   Bluefruit.setName(advertising_name);

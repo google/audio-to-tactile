@@ -25,7 +25,7 @@
 #define M_1_SQRT2 0.70710678118654752440
 #endif /* M_1_SQRT2 */
 
-static void TestStreaming() {
+static void TestStreaming(void) {
   puts("TestStreaming");
   const int kNumChannels = 4;
   const float kSampleRateHz = 44100.0f;
@@ -85,7 +85,7 @@ static void TestStreaming() {
 static float SignalA(int c, float t) { return sin((15 + c) * 1000 * t); }
 static float SignalB(int c, float t) { return sin((5 + c) * 1000 * t); }
 
-static void TestInterruptedPlayback() {
+static void TestInterruptedPlayback(void) {
   puts("TestInterruptedPlayback");
   const int kNumChannels = 4;
   const float kSampleRateHz = 8000.0f;
@@ -146,7 +146,7 @@ static void TestInterruptedPlayback() {
 float EnvelopeChannel0(float t) { return 30 * t; }
 float EnvelopeChannel1(float t) { return 1.3 - cos(400 * t); }
 
-static void TestGetRms() {
+static void TestGetRms(void) {
   puts("TestGetRms");
   const int kNumChannels = 2;
   const float kSampleRateHz = 16000.0f;
@@ -220,7 +220,7 @@ static void* MockPlayback(void* arg) {
   return NULL;
 }
 
-static void TestPlaybackThread() {
+static void TestPlaybackThread(void) {
   puts("TestPlaybackThread");
   const int kNumChannels = 1;
   const float kSampleRateHz = 8000.0f;

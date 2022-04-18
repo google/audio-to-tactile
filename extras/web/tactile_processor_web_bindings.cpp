@@ -131,7 +131,7 @@ static void MainTick() {
   for (int c = 0; c < kNumTactors; ++c) {
     // Get volume for the cth tactor.
     const float activation =
-        std::min<float>(std::max<float>(engine.volume[c] / 0.1f, 0.0f), 1.0f);
+        std::min<float>(std::max<float>(engine.volume[c] / 0.4f, 0.0f), 1.0f);
 
     // Render the cth texture with color according to `activation`.
     const int index = static_cast<int>(std::round(255 * activation));

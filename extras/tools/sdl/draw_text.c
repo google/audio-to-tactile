@@ -566,7 +566,7 @@ int DrawTextInitFontTexture(SDL_Renderer* renderer) {
   return success;
 }
 
-void DrawTextFreeFontTexture() {
+void DrawTextFreeFontTexture(void) {
   if (font_texture) {
     SDL_DestroyTexture(font_texture);
   }

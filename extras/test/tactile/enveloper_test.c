@@ -78,33 +78,33 @@ static void TestBasic(float sample_rate_hz, int decimation_factor) {
   float baseband_energy = ComputeEnergy(baseband, 0.0f, 0.05f, output_rate);
   float vowel_energy = ComputeEnergy(vowel, 0.0f, 0.05f, output_rate);
   float fricative_energy = ComputeEnergy(fricative, 0.0f, 0.05f, output_rate);
-  CHECK(baseband_energy < 0.005);
-  CHECK(vowel_energy < 0.005);
-  CHECK(fricative_energy < 0.005);
+  CHECK(baseband_energy < 0.005f);
+  CHECK(vowel_energy < 0.005f);
+  CHECK(fricative_energy < 0.005f);
 
   /* During the 80 Hz tone, baseband channel is strongest. */
   baseband_energy = ComputeEnergy(baseband, 0.07f, 0.13f, output_rate);
   vowel_energy = ComputeEnergy(vowel, 0.07f, 0.13f, output_rate);
   fricative_energy = ComputeEnergy(fricative, 0.07f, 0.13f, output_rate);
-  CHECK(baseband_energy > 0.001);
-  CHECK(baseband_energy > 1.1 * vowel_energy);
-  CHECK(baseband_energy > 1.1 * fricative_energy);
+  CHECK(baseband_energy > 0.001f);
+  CHECK(baseband_energy > 2.0f * vowel_energy);
+  CHECK(baseband_energy > 2.0f * fricative_energy);
 
   /* During the 1500 Hz tone, vowel RMS is highest. */
   baseband_energy = ComputeEnergy(baseband, 0.22f, 0.28f, output_rate);
   vowel_energy = ComputeEnergy(vowel, 0.22f, 0.28f, output_rate);
   fricative_energy = ComputeEnergy(fricative, 0.22f, 0.28f, output_rate);
-  CHECK(vowel_energy > 0.001);
-  CHECK(vowel_energy > 1.1 * baseband_energy);
-  CHECK(vowel_energy > 1.1 * fricative_energy);
+  CHECK(vowel_energy > 0.001f);
+  CHECK(vowel_energy > 2.0f * baseband_energy);
+  CHECK(vowel_energy > 2.0f * fricative_energy);
 
   /* During the 5000 Hz tone, fricative RMS is highest. */
   baseband_energy = ComputeEnergy(baseband, 0.37f, 0.43f, output_rate);
   vowel_energy = ComputeEnergy(vowel, 0.37f, 0.43f, output_rate);
   fricative_energy = ComputeEnergy(fricative, 0.37f, 0.43f, output_rate);
-  CHECK(fricative_energy > 0.001);
-  CHECK(fricative_energy > 1.1 * baseband_energy);
-  CHECK(fricative_energy > 1.1 * vowel_energy);
+  CHECK(fricative_energy > 0.001f);
+  CHECK(fricative_energy > 2.0f * baseband_energy);
+  CHECK(fricative_energy > 2.0f * vowel_energy);
 
   free(output);
   free(input);

@@ -88,6 +88,29 @@ const EnveloperParams kDefaultEnveloperParams = {
     /*compressor_delta=*/0.01f,
 };
 
+static float ComputeFilteredPeak(
+    const BiquadFilterCoeffs* filter, const EnveloperChannelParams* params_c,
+    float input_sample_rate_hz) {
+  /* Coefficients of the first few Fourier series terms for a half-waved
+   * rectified and squared signal:
+   *
+   *   max(0, cos(x))^2 = sum_k kSeriesCoeffs[k] cos(k x).
+   */
+  static const float kSeriesCoeffs[4] =
+      {0.25f, (float)(4 / (3 * M_PI)), 0.25f, (float)(4 / (15 * M_PI))};
+  const float freq_hz =
+      (float)sqrt(params_c->bpf_low_edge_hz * params_c->bpf_high_edge_hz);
+
+  /* Apply the filter to the Fourier series and evaluate at the signal peak. */
+  float peak = kSeriesCoeffs[0];
+  int k;
+  for (k = 1; k <= 3; ++k) {
+    peak += (float)ComplexDoubleAbs(BiquadFilterFrequencyResponse(
+        filter, k * freq_hz / input_sample_rate_hz)) * kSeriesCoeffs[k];
+  }
+  return peak;
+}
+
 int EnveloperInit(Enveloper* state,
                   const EnveloperParams* params,
                   float input_sample_rate_hz,
@@ -116,6 +139,8 @@ int EnveloperInit(Enveloper* state,
   for (c = 0; c < kEnveloperNumChannels; ++c) {
     const EnveloperChannelParams* params_c = &params->channel_params[c];
     EnveloperChannel* state_c = &state->channels[c];
+    state_c->peak = ComputeFilteredPeak(
+        &state->energy_biquad_coeffs, params_c, input_sample_rate_hz);
     state_c->output_gain = params_c->output_gain;
 
     if (!DesignButterworthOrder2Bandpass(
@@ -153,8 +178,8 @@ void EnveloperReset(Enveloper* state) {
     BiquadFilterInitZero(&state_c->bpf_biquad_state[0]);
     BiquadFilterInitZero(&state_c->bpf_biquad_state[1]);
     BiquadFilterInitZero(&state_c->energy_biquad_state);
-    state_c->smoothed_energy = 1e-6f;
-    state_c->noise = 1e-7f;
+    state_c->smoothed_energy = 1e-5f * state_c->equalization;
+    state_c->noise = state_c->smoothed_energy;
   }
 }
 
@@ -164,6 +189,47 @@ void EnveloperUpdatePrecomputedParams(Enveloper* state) {
   /* Precompute `delta^exponent`. */
   state->compressor_offset =
       FastPow(state->compressor_delta, state->compressor_exponent);
+
+  /* Enveloper's process for envelope extraction and compression inherently
+   * amplifies lower frequencies somewhat more than higher frequencies.
+   *
+   * After half-wave rectification, roughly half of the signal is zero, and the
+   * other half are semiperiodic pulses. The signal is then squared and lowpass
+   * filtered with cutoff `energy_cutoff_hz`. For the baseband channel, the
+   * pulse rate is well below the cutoff and the pulse peak height is mostly
+   * maintained. But for higher channels, the pulse rate is above the cutoff and
+   * pulse peak height is substantially reduced. PCEN's AGC amplifies these
+   * differences because (by design) the AGC emphasizes signal onsets.
+   *
+   * To compensate for this effect, we compute and use an `equalization`
+   * factor for each channel as follows:
+   *
+   * 1. Suppose the input is a unit-amplitude sinusoid with frequency at the
+   *    geometric midpoint of the channel band. ComputeFilteredPeak() computes
+   *    the peak signal height after half-wave rectification, squaring, and
+   *    lowpass filtering. This value is stored in `state_c->peak`.
+   *
+   * 2. In the loop below, `pcen_peak` computes the signal peak value after
+   *    PCEN. The `energy_tau_s` parameter is assumed to be large enough that
+   *    the denominator has smoothed to the signal average, which is 1/4. We
+   *    compute `equalization` such that scaling the denominator by this factor
+   *    would make PCEN's output approximately equal to kTargetOutput.
+   *
+   * 3. In EnveloperProcessSamples(), we scale the `smoothed_energy` signal by
+   *    `equalization`.
+   */
+  int c;
+  for (c = 0; c < kEnveloperNumChannels; ++c) {
+    EnveloperChannel* state_c = &state->channels[c];
+
+    const float kTargetOutput = 0.8f;
+    const float pcen_peak =
+        FastPow(FastExp2(-2 * state->agc_exponent) * state_c->peak +
+            state->compressor_delta, state->compressor_exponent)
+        - state->compressor_offset;
+    state_c->equalization = FastPow(kTargetOutput / pcen_peak,
+        1.0f / (state->agc_exponent * state->compressor_exponent));
+  }
 }
 
 /* Smooth gate function `x^2 / (x^2 + halfway_point^2)`. The function behaves
@@ -222,7 +288,9 @@ void EnveloperProcessSamples(Enveloper* state,
       float noise = state_c->noise;
 
       /* Update PCEN denominator. */
-      smoothed_energy += energy_smoother_coeff * (energy - smoothed_energy);
+      smoothed_energy += energy_smoother_coeff * (
+          state_c->equalization * energy - smoothed_energy);
+
       if (prev_smoothed_energy > smoothed_energy) {
         smoothed_energy = prev_smoothed_energy;
       }

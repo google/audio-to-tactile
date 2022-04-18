@@ -1,4 +1,4 @@
-# Copyright 2019 Google LLC
+# Copyright 2019, 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -138,7 +138,7 @@ def main(argv):
         worker.play(wav_samples)
 
       # Get the volume meters for each tactor and make a simple visualization.
-      volume = (worker.volume_meters / 0.1).clip(0.0, 1.0)
+      volume = (worker.volume_meters / 0.4).clip(0.0, 1.0)
       print('\r' + ' '.join(volume_meter(v) for v in volume), end='')
 
       time.sleep(0.025)

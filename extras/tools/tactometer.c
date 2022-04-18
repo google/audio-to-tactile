@@ -201,7 +201,7 @@ static int PortaudioCallback(const void* input_buffer, void* output_buffer,
 }
 
 /* Starts portaudio. Returns 1 on success, 0 on failure. */
-static int StartPortaudio() {
+static int StartPortaudio(void) {
   /* Initialize portaudio. */
   engine.pa_error = Pa_Initialize();
   if (engine.pa_error != paNoError) { return 0; }
@@ -245,7 +245,7 @@ static int StartPortaudio() {
   return 1;
 }
 
-static void CleanupPortaudio() {
+static void CleanupPortaudio(void) {
   if (engine.pa_error != paNoError) {  /* Print PA error if there is one. */
     fprintf(stderr, "Error: portaudio: %s\n", Pa_GetErrorText(engine.pa_error));
   }
@@ -255,7 +255,7 @@ static void CleanupPortaudio() {
 }
 
 /* Starts SDL. Returns 1 on success, 0 on failure. */
-static int StartSdl() {
+static int StartSdl(void) {
   /* Initialize SDL. */
   if (SDL_Init(SDL_INIT_VIDEO) != 0) {
     fprintf(stderr, "Error: Failed to initialize SDL\n");
@@ -275,7 +275,7 @@ static int StartSdl() {
   return DrawTextInitFontTexture(engine.app.renderer);
 }
 
-static void CleanupSdl() {
+static void CleanupSdl(void) {
   if (strlen(SDL_GetError())) {  /* Print SDL error if there is one. */
     fprintf(stderr, "Error: SDL: %s\n", SDL_GetError());
   }
@@ -340,7 +340,7 @@ static void DrawKey(int x, int y, const char* label, int pressed) {
 }
 
 /* Draws frequency and amplitude UI. */
-static void DrawFrequencyAndAmplitudeMeters() {
+static void DrawFrequencyAndAmplitudeMeters(void) {
   DrawText(engine.app.renderer, 5, 30,
       "frequency: %5.0f Hz", engine.frequency_hz);
   DrawText(engine.app.renderer, 5, 55,
@@ -362,7 +362,7 @@ static void BekesyFun(int first_call);
 
 /* Keytar mode ****************************************************************/
 
-static void KeytarHandleKeyboard() {
+static void KeytarHandleKeyboard(void) {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
     if (event.type == SDL_QUIT ||
@@ -429,7 +429,7 @@ static void KeytarFun(int unused) {
 
 /* Bekesy threshold mode ******************************************************/
 
-static void BekesyReset() {
+static void BekesyReset(void) {
   engine.frequency_hz = kFrequenciesHz[engine.selected_frequency_index];
   engine.bekesy_prev_reversal_db = 0.0f;
   engine.bekesy_midpoint_db_sum = 0.0f;
@@ -440,7 +440,7 @@ static void BekesyReset() {
 /* Prints a table to stderr of frequencies and amplitude thresholds, in CSV
  * format for convenient copying.
  */
-static void BekesyPrintThresholds() {
+static void BekesyPrintThresholds(void) {
   int first = 1;
   int i;
   for (i = 0; i < kNumFrequencies; ++i) {
@@ -458,7 +458,7 @@ static void BekesyPrintThresholds() {
   }
 }
 
-static int BekesyHandleKeyboard() {
+static int BekesyHandleKeyboard(void) {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
     if (event.type == SDL_QUIT ||

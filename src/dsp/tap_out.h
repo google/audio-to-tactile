@@ -20,27 +20,40 @@
  * library a set of tap-out outputs is first defined, then any (and possibly
  * multiple) outputs may be selected for capture, and this selection may be
  * changed dynamically.
+ * 
+ * When tap_out is capturing data, the device sends a "Capture" message of
+ * binary data over USB serial to the PC or phone once every mic buffer. To
+ * coexist with regular text-mode `Serial.println()` serial communication:
+ * 
+ *  - tap_out only prints binary serial messages while a receiver is listening.
+ *    If the device doesn't get a "heartbeat" message for ~400 ms, tap_out
+ *    deactivates. This way text-mode messages can still be read in the Arduino
+ *    serial monitor when tap_out is inactive.
  *
- * 1. Use `TapOutAddDescriptor()` to define a "descriptor" with name and other
+ *  - You should put `if (TapOutIsActive()) { ... }` around Serial.println()
+ *    calls to avoid them from interrupting the binary communication. In case
+ *    something slips by, the protocol uses marker bytes (0xfe) to ignore it.
+ *    
+ * Instructions:
+ *
+ * 1. Use `TapOutSetTxFun()` and `TapOutSetErrorFun()` to set callbacks.
+ *
+ * 2. Use `TapOutAddDescriptor()` to define a "descriptor" with name and other
  *    metadata for each tap-out output that could be captured.
  *
  *    const TapOutDescriptor kMicInputDescriptor =
  *      {"mic input", "i2", 1, {kSamplesPerBuffer}};
  *    TapOutToken mic_input_token = TapOutAddDescriptor(&kMicInputDescriptor);
  *
- * 2. Use `TapOutWriteDescriptors()` to serialize the descriptor metadata. This
- *    serialization tells the receiver what outputs are available.
+ * 3. When serial data is received, call `TapOutReceiveMessage()` to parse it.
+ *    This is used to respond to control messages, e.g. "Start Capture":
  *
- *    if (TapOutWriteDescriptors()) {
- *      Serial.write((const char*)g_tap_out_buffer, g_tap_out_buffer_size);
+ *    if (Serial.available() > 0) {
+ *      char data[16];
+ *      int size = min(Serial.available(), sizeof(data));
+ *      Serial.read(data, size);
+ *      TapOutReceiveMessage(data, size);
  *    }
- *
- * 3. Select which outputs to capture with `TapOutEnable()`. This may be done
- *    at any time so that which outputs are selected may be changed dynamically.
- *
- *    TapOutTokens outputs[kTapOutMaxOutputs];
- *    outputs[0] = mic_input_token;
- *    TapOutEnable(outputs, 1);
  *
  * 4. For each tap-out output, use `TapOutGetSlice()` to determine whether that
  *    output is currently enabled, and if it is, where to write the output.
@@ -50,12 +63,18 @@
  *      memcpy(slice->data, mic_samples_data, slice->size);
  *    }
  *
- * 5. If any outputs are enabled, the buffer should be sent to the receiver
- *    after each time it is filled.
+ * 5. At the end of each mic buffer, call `TapOutFinishedCaptureBuffer()`
+ *    indicate that captured data should now be sent.
  *
- *    if (TapOutIsEnabled()) {
- *      Serial.write((const char*)g_tap_out_buffer, g_tap_out_buffer_size);
- *    }
+ *    TapOutFinishedCaptureBuffer();
+ *
+ * On the wire, the protocol used is
+ *
+ *  [0] kTapOutMarker (= 0xfe)
+ *  [1] <op code> - Indicates the type of message.
+ *  [2] <payload size> - The size of the payload.
+ * 
+ * Followed by the payload data.
  */
 
 #ifndef AUDIO_TO_TACTILE_SRC_DSP_TAP_OUT_H_
@@ -70,8 +89,22 @@ enum {
   kTapOutMaxDims = 3,
   /* Max number of simultaneously enabled outputs. */
   kTapOutMaxOutputs = 4,
-  /* Marker byte to help the receiver detect and skip across extra bytes. */
+  /* Marker byte to help detect and skip across extra bytes. */
   kTapOutMarker = 0xfe,
+};
+
+/* Message ops for communication. */
+enum {
+  /* "Heartbeat" with empty payload to indicate that receiver is listening. */
+  kTapOutMessageHeartbeat = 0x01,
+  /* Request with empty payload to get the tap out descriptors. */
+  kTapOutMessageGetDescriptors = 0x02,
+  /* Message containing the descriptors. */
+  kTapOutMessageDescriptors = 0x03,
+  /* Request to begin capture. Payload specifies which outputs. */
+  kTapOutMessageStartCapture = 0x04,
+  /* Message containing captured tap out output. */
+  kTapOutMessageCapture = 0x05,
 };
 
 /* Descriptor metadata for one tap-out output. */
@@ -113,6 +146,12 @@ enum { kInvalidTapOutToken = 0 };
 extern uint8_t g_tap_out_buffer[kTapOutBufferCapacity];
 extern int g_tap_out_buffer_size;
 
+/* Sets callback for transmitting serial data. */
+void TapOutSetTxFun(void (*fun)(const char*, int));
+
+/* Sets an error callback for printing error messages. */
+void TapOutSetErrorFun(void (*fun)(const char*));
+
 /* Adds a descriptor for one tap-out output and returns a token to refer to this
  * output. On failure, a zero-valued token is returned. Additionally, a
  * diagnostic message is printed to the error function if one was set with
@@ -131,6 +170,17 @@ int /*bool*/ TapOutWriteDescriptors(void);
 /* Clears all descriptors. */
 void TapOutClearDescriptors(void);
 
+/* Returns 1 if tap out heartbeat is live, and 0 if not. To avoid conflict,
+ * other serial communication should be avoided when this function returns 1.
+ */
+int /*bool*/ TapOutIsActive(void);
+
+/* Interprets received serial data. */
+void TapOutReceiveMessage(const char* data, int size);
+
+/* Indicates that a buffer has just finished. */
+void TapOutFinishedCaptureBuffer(void);
+
 /* Enables `outputs` for capture. For each output, the function prepares a
  * TapOutSlice of g_tap_out_buffer to write data for that output. Returns 1 on
  * success, or 0 on failure (e.g. if buffer capacity is exceeded).
@@ -139,8 +189,6 @@ void TapOutClearDescriptors(void);
  */
 int /*bool*/ TapOutEnable(const TapOutToken* outputs, int num_outputs);
 
-/* Returns 1 if any outputs are enabled, and 0 if not. */
-int /*bool*/ TapOutIsEnabled(void);
 
 /* Gets the buffer slice associated with `output`, if it is enabled, or returns
  * NULL if that output is disabled.
@@ -153,8 +201,5 @@ const TapOutSlice* TapOutGetSlice(TapOutToken output);
  * fit within the slice size.
  */
 void TapOutTextPrint(TapOutToken output, const char* format, ...);
-
-/* Sets an error callback for printing error messages. */
-void TapOutSetErrorFun(void (*fun)(const char*));
 
 #endif  /* AUDIO_TO_TACTILE_SRC_DSP_TAP_OUT_H_ */
