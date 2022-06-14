@@ -45,8 +45,7 @@
 // fric--aa----uw----bb-----iy-----eh----sh f---ih  << Tactile processor naming
 // (9)---(1)---(2)---(0)----(4)---( 5)---(8)---(3)  << Tactile processor number
 //
-// where bb is baseband.
-
+// where bb is baseband. The rightmost tactor with ih is disabled.
 
 #include <algorithm>
 
@@ -62,6 +61,7 @@
 #include "pwm_sleeve.h"
 #include "tactile/envelope_tracker.h"
 #include "tactile/tactile_pattern.h"
+#include "tactile/tap_out.h"
 #include "tactile_processor_cpp.h"
 #include "temperature_monitor.h"
 #include "ui.h"
@@ -125,6 +125,15 @@ SoftwareTimer g_occasional_tasks_timer;
 int g_measure_sensors_counter = 0;
 int g_write_settings_countdown = -1;
 
+constexpr bool kTapOutEnabled = true;
+struct {
+  TapOutToken mic_input;
+  TapOutToken carl_features;
+  TapOutToken smoothed_energy;
+  TapOutToken noise_energy;
+  TapOutToken tactile_output;
+} g_tokens;
+
 #if defined(kPdmSelectPin) && defined(kTactileSwitchPin)
 #define SELECTABLE_MIC 1
 
@@ -139,6 +148,7 @@ void OnPwmSequenceEnd();
 void OnBleEvent();
 void OnPdmNewData();
 void OccasionalTasks(TimerHandle_t);
+void SetupTapOut();
 
 void setup() {
   // Set the indicator led pin to output.
@@ -171,12 +181,12 @@ void setup() {
 
   // Set the default channel map.
   g_settings.channel_map = ChannelMap{
-    /*num_input_channels=*/kTactileProcessorNumTactors,
-    /*num_output_channels=*/kTactileProcessorNumTactors,
-    /*gains=*/{1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f},
-    // Ordered as
-    // fric--aa----uw----bb-----iy-----eh----sh f---ih
-    // (9)---(1)---(2)---(0)----(4)---( 5)---(8)---(3)
+      /*num_input_channels=*/kTactileProcessorNumTactors,
+      /*num_output_channels=*/kTactileProcessorNumTactors,
+      /*gains=*/{1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f},
+      // Ordered as
+    // fric--aa----uw----bb-----iy-----eh----sh f---disabled
+    // (9)---(1)---(2)---(0)----(4)---( 5)---(8)---(disabled)
     /*source=*/{9, 1, 2, 0, 4, 5, 8, 3, 8, 9},
   };
 
@@ -197,6 +207,8 @@ void setup() {
   TactilePatternStart(&g_tactile_pattern, kTactilePatternConfirm);
   g_tactile_pattern_active = true;
 
+  SetupTapOut();
+
   Serial.println("Firmware built " __DATE__);
 
   // Initialize flash and read settings file.
@@ -214,6 +226,9 @@ void setup() {
         "Flash file system found, but did not find " kFlashSettingsFile
         "; using default settings.");
   }
+
+  // Apply tuning read from settings file.
+  g_tactile_processor.ApplyTuning(g_settings.tuning);
 
   // Force analog mic if input is not selectable on this device.
 #if !SELECTABLE_MIC
@@ -384,6 +399,82 @@ void HandleMessage(const Message& message) {
   }
 }
 
+void SetupTapOut() {
+  TapOutSetTxFun([](const char* data, int size) { Serial.write(data, size); });
+
+  static const TapOutDescriptor kMicInputDescriptor =
+      {"mic_input", "int16", 1, {kAdcDataSize}};
+  g_tokens.mic_input = TapOutAddDescriptor(&kMicInputDescriptor);
+
+  static const TapOutDescriptor kCarlFeaturesDescriptor =
+      {"carl_features", "float", 2,
+        {1, CarlFrontendNumChannels(g_tactile_processor.get()->frontend)}};
+  g_tokens.carl_features = TapOutAddDescriptor(&kCarlFeaturesDescriptor);
+
+  static const TapOutDescriptor kSmoothedEnergyDescriptor =
+      {"smoothed_energy", "float", 2, {1, kEnveloperNumChannels}};
+  g_tokens.smoothed_energy = TapOutAddDescriptor(&kSmoothedEnergyDescriptor);
+
+  static const TapOutDescriptor kNoiseEnergyDescriptor =
+      {"noise_energy", "float", 2, {1, kEnveloperNumChannels}};
+  g_tokens.noise_energy = TapOutAddDescriptor(&kNoiseEnergyDescriptor);
+
+  static const TapOutDescriptor kTactileOutputDescriptor =
+      {"tactile_output", "uint8", 2, {kNumPwmValues, 8}};
+  g_tokens.tactile_output = TapOutAddDescriptor(&kTactileOutputDescriptor);
+}
+
+void CaptureTapOutData() {
+  const TapOutSlice* slice;
+  if ((slice = TapOutGetSlice(g_tokens.mic_input)) != nullptr) {
+    memcpy(slice->data, g_mic_data, slice->size);
+  }
+
+  if ((slice = TapOutGetSlice(g_tokens.carl_features)) != nullptr) {
+    memcpy(slice->data, g_tactile_processor.get()->frame, slice->size);
+  }
+
+  if ((slice = TapOutGetSlice(g_tokens.smoothed_energy)) != nullptr) {
+    const Enveloper& enveloper = g_tactile_processor.get()->enveloper;
+    uint8_t* data = slice->data;
+    for (int c = 0; c < kEnveloperNumChannels; ++c) {
+      memcpy(data, &enveloper.channels[c].smoothed_energy, sizeof(float));
+      data += sizeof(float);
+    }
+  }
+
+  if ((slice = TapOutGetSlice(g_tokens.noise_energy)) != nullptr) {
+    const Enveloper& enveloper = g_tactile_processor.get()->enveloper;
+    uint8_t* data = slice->data;
+    for (int c = 0; c < kEnveloperNumChannels; ++c) {
+      memcpy(data, &enveloper.channels[c].noise, sizeof(float));
+      data += sizeof(float);
+    }
+  }
+
+  if ((slice = TapOutGetSlice(g_tokens.tactile_output)) != nullptr) {
+    constexpr int kNumTactors = 8;
+    constexpr int kTopValue = 255;
+
+    for (int c = 0; c < kNumTactors; ++c) {
+      const float gain = g_settings.channel_map.gains[c];
+      const float scale = 0.5f * kTopValue * gain;
+      const float offset = scale + 0.5f;
+
+      const float* src =
+          g_tactile_output + g_settings.channel_map.sources[c];
+      uint8_t* dest = slice->data + c;
+      for (int i = 0; i < kNumPwmValues; ++i) {
+        *dest = static_cast<uint8_t>(scale * (*src) + offset);
+        src += kTactileProcessorNumTactors;
+        dest += kNumTactors;
+      }
+    }
+  }
+
+  TapOutFinishedCaptureBuffer();
+}
+
 void loop() {
   if (g_measure_battery) {
     if (g_settings.input == InputSelection::kAnalogMic) {
@@ -437,6 +528,13 @@ void loop() {
     }
   }
 
+  if (kTapOutEnabled && Serial.available() > 0) {
+    char data[16];
+    int size = std_shim::min<int>(Serial.available(), sizeof(data));
+    Serial.readBytes(data, size);
+    TapOutReceiveMessage(data, size);
+  }
+
   if (g_new_mic_data) {
     // Convert ADC values to floats. The raw ADC values can swing from -2048 to
     // 2048, (12 bits) for analog mic and 32,768 for PDM mic (16 bits)
@@ -468,6 +566,10 @@ void loop() {
       g_tactile_output = g_tactile_processor.ProcessSamples(g_audio_input);
     }
     g_post_processor.PostProcessSamples(g_tactile_output);
+
+    if (kTapOutEnabled && TapOutIsActive()) {
+      CaptureTapOutData();
+    }
 
     g_new_mic_data = false;
     nrf_gpio_pin_toggle(kLedPinGreen);
@@ -623,17 +725,28 @@ void OccasionalTasks(TimerHandle_t) {
     return;
   }
 
-  g_measure_sensors_counter++;
-  if (g_measure_sensors_counter % 4 == 1) {
-    // Measure battery every 10 seconds, on an odd count.
-    g_measure_battery = true;
-  } else if (g_measure_sensors_counter % 8 == 0) {
-    // Measure temperature every 20 seconds, on an even count.
-    g_measure_temperature = true;
-    g_measure_sensors_counter = 0;
+  // To avoid disrupting tap out recordings, we pause countdowns on the below
+  // occasional tasks while tap out is actively recording.
+  const bool tap_out_is_active = kTapOutEnabled && TapOutIsActive();
+
+  // The analog mic, battery, and temperature measurements all use the same ADC.
+  // If the analog mic is selected, we pause measuring the battery and
+  // temperature while tap out is recording.
+  // TODO: Consider making this behavior configurable.
+  if (!(tap_out_is_active && g_settings.input == InputSelection::kAnalogMic)) {
+    g_measure_sensors_counter++;
+    if (g_measure_sensors_counter % 4 == 1) {
+      // Measure battery every 10 seconds, on an odd count.
+      g_measure_battery = true;
+    } else if (g_measure_sensors_counter % 8 == 0) {
+      // Measure temperature every 20 seconds, on an even count.
+      g_measure_temperature = true;
+      g_measure_sensors_counter = 0;
+    }
   }
 
-  if (g_write_settings_countdown > 0) {
+  // Pause writing flash settings while tap out is recording.
+  if (!tap_out_is_active && g_write_settings_countdown > 0) {
     // Decrement countdown for writing settings to flash.
     --g_write_settings_countdown;
   }

@@ -45,13 +45,15 @@ const EnveloperParams kDefaultEnveloperParams = {
         {
             /*bpf_low_edge_hz=*/80.0f,
             /*bpf_high_edge_hz=*/500.0f,
-            /*output_gain=*/1.0f,
+            /*denoising_strength=*/25.0f,
+            /*output_gain=*/2.5f,
         },
         /* Vowel channel, sensitive to 500-3500 Hz. */
         {
             /*bpf_low_edge_hz=*/500.0f,
             /*bpf_high_edge_hz=*/3500.0f,
-            /*output_gain=*/1.0f,
+            /*denoising_strength=*/4.0f,
+            /*output_gain=*/2.5f,
         },
         /* "sh" fricative channel, sensitive to 2500-3500 Hz.
          * This channel should respond especially to "sh", "ch" and other
@@ -64,7 +66,8 @@ const EnveloperParams kDefaultEnveloperParams = {
             /* Sh fricative channel. */
             /*bpf_low_edge_hz=*/2500.0f,
             /*bpf_high_edge_hz=*/3500.0f,
-            /*output_gain=*/1.0f,
+            /*denoising_strength=*/2.5f,
+            /*output_gain=*/2.5f,
         },
         /* Fricative channel, sensitive to 4000-6000 Hz.
          * This channel should respond especially to "s" and "z" alveolar
@@ -75,18 +78,21 @@ const EnveloperParams kDefaultEnveloperParams = {
             /* Fricative channel. */
             /*bpf_low_edge_hz=*/4000.0f,
             /*bpf_high_edge_hz=*/6000.0f,
-            /*output_gain=*/1.0f,
+            /*denoising_strength=*/2.5f,
+            /*output_gain=*/2.5f,
         },
     },
     /*energy_cutoff_hz=*/500.0f,
     /*energy_tau_s=*/0.01f,
     /*noise_db_s=*/2.0f,
-    /*denoising_strength=*/1.0f,
     /*denoising_transition_db=*/10.0f,
     /*agc_strength=*/0.7f,
+    /*gain_tau_attack_s=*/0.005f,
+    /*gain_tau_release_s=*/0.15f,
     /*compressor_exponent=*/0.25f,
-    /*compressor_delta=*/0.01f,
 };
+
+static const float kCompressorStabilization = 0.125f;
 
 static float ComputeFilteredPeak(
     const BiquadFilterCoeffs* filter, const EnveloperChannelParams* params_c,
@@ -120,11 +126,9 @@ int EnveloperInit(Enveloper* state,
     return 0;
   } else if (!(input_sample_rate_hz > 0.0f) ||
              !(params->energy_tau_s >= 0.0f) ||
-             !(params->denoising_strength > 0.0f) ||
              !(params->denoising_transition_db > 0.0f) ||
              !(0.0f <= params->agc_strength && params->agc_strength <= 1.0f) ||
              !(params->compressor_exponent > 0.0f) ||
-             !(params->compressor_delta > 0.0f) ||
              !(decimation_factor > 0)) {
     fprintf(stderr, "EnveloperInit: Invalid EnveloperParams.\n");
     return 0;
@@ -141,6 +145,7 @@ int EnveloperInit(Enveloper* state,
     EnveloperChannel* state_c = &state->channels[c];
     state_c->peak = ComputeFilteredPeak(
         &state->energy_biquad_coeffs, params_c, input_sample_rate_hz);
+    state_c->gate_thresh_factor = params_c->denoising_strength;
     state_c->output_gain = params_c->output_gain;
 
     if (!DesignButterworthOrder2Bandpass(
@@ -156,15 +161,21 @@ int EnveloperInit(Enveloper* state,
   state->decimation_factor = decimation_factor;
   state->agc_exponent = -params->agc_strength;
   state->compressor_exponent = params->compressor_exponent;
-  state->compressor_delta = params->compressor_delta;
 
   state->energy_smoother_coeff =
       EnveloperSmootherCoeff(state, params->energy_tau_s);
   state->noise_coeffs[1] =
       EnveloperGrowthCoeff(state, params->noise_db_s);
-  state->gate_thresh_factor = params->denoising_strength;
   state->gate_transition_factor =
       DecibelsToPowerRatio(params->denoising_transition_db);
+  state->gain_smoother_coeffs[0] =
+      EnveloperSmootherCoeff(state, params->gain_tau_attack_s);
+  state->gain_smoother_coeffs[1] =
+      EnveloperSmootherCoeff(state, params->gain_tau_release_s);
+
+  /* Warm up duration is 500 ms. */
+  state->num_warm_up_samples =
+      (int)(0.5f * input_sample_rate_hz / decimation_factor + 0.5f);
 
   EnveloperUpdatePrecomputedParams(state);
   EnveloperReset(state);
@@ -178,17 +189,20 @@ void EnveloperReset(Enveloper* state) {
     BiquadFilterInitZero(&state_c->bpf_biquad_state[0]);
     BiquadFilterInitZero(&state_c->bpf_biquad_state[1]);
     BiquadFilterInitZero(&state_c->energy_biquad_state);
-    state_c->smoothed_energy = 1e-5f * state_c->equalization;
-    state_c->noise = state_c->smoothed_energy;
+    state_c->smoothed_energy = 0.0f;
+    state_c->noise = 0.0f;
+    state_c->smoothed_gain = 0.0f;
   }
+
+  state->warm_up_counter = state->num_warm_up_samples;
 }
 
 void EnveloperUpdatePrecomputedParams(Enveloper* state) {
   /* Precompute noise estimation decay coefficient. */
   state->noise_coeffs[0] = 1.0f / state->noise_coeffs[1];
-  /* Precompute `delta^exponent`. */
-  state->compressor_offset =
-      FastPow(state->compressor_delta, state->compressor_exponent);
+  /* Precompute compressor delta = kCompressorStabilization^(1/exponent). */
+  state->compressor_delta = (float) pow(kCompressorStabilization,
+                                        1.0f / state->compressor_exponent);
 
   /* Enveloper's process for envelope extraction and compression inherently
    * amplifies lower frequencies somewhat more than higher frequencies.
@@ -222,11 +236,12 @@ void EnveloperUpdatePrecomputedParams(Enveloper* state) {
   for (c = 0; c < kEnveloperNumChannels; ++c) {
     EnveloperChannel* state_c = &state->channels[c];
 
-    const float kTargetOutput = 0.8f;
+    /* Target output is -3 dBFS, a little below maximum to avoid saturation. */
+    const float kTargetOutput = (float)(1.0 / M_SQRT2);
     const float pcen_peak =
         FastPow(FastExp2(-2 * state->agc_exponent) * state_c->peak +
             state->compressor_delta, state->compressor_exponent)
-        - state->compressor_offset;
+        - kCompressorStabilization;
     state_c->equalization = FastPow(kTargetOutput / pcen_peak,
         1.0f / (state->agc_exponent * state->compressor_exponent));
   }
@@ -246,13 +261,12 @@ void EnveloperProcessSamples(Enveloper* state,
                              int num_samples,
                              float* output) {
   const float energy_smoother_coeff = state->energy_smoother_coeff;
-  const float gate_thresh_factor = state->gate_thresh_factor;
   const float gate_transition_factor = state->gate_transition_factor;
   const float agc_exponent = state->agc_exponent;
   const float compressor_exponent = state->compressor_exponent;
   const float compressor_delta = state->compressor_delta;
-  const float compressor_offset = state->compressor_offset;
   const int decimation_factor = state->decimation_factor;
+  int warm_up_counter = state->warm_up_counter;
   int i;
 
   for (i = decimation_factor - 1; i < num_samples; i += decimation_factor) {
@@ -286,6 +300,7 @@ void EnveloperProcessSamples(Enveloper* state,
 
       float smoothed_energy = state_c->smoothed_energy;
       float noise = state_c->noise;
+      float smoothed_gain = state_c->smoothed_gain;
 
       /* Update PCEN denominator. */
       smoothed_energy += energy_smoother_coeff * (
@@ -296,31 +311,60 @@ void EnveloperProcessSamples(Enveloper* state,
       }
       prev_smoothed_energy = smoothed_energy;
 
-      /* Update noise level estimate. */
-      noise *= state->noise_coeffs[smoothed_energy > noise];
+      if (warm_up_counter) {  /* While warming up. */
+        /* When processing first starts up, we don't yet have a good estimate of
+         * the noise. During this "warm up" period, we compute `noise` to be the
+         * average of the `energy` samples seen so far, and multiplied by 2 to
+         * err on the side that the actual noise level might be somewhat higher.
+         */
+        noise += 2.0f * energy;  /* Sum up `energy`. */
+
+        /* Divide to get the average. */
+        const float average =
+            noise / (state->num_warm_up_samples - warm_up_counter + 1);
+        /* Store the average on the last warm up sample. Otherwise, store the
+         * unnormalized energy sum.
+         */
+        state_c->noise = (warm_up_counter == 1) ? average : noise;
+        noise = average;  /* Work with the average in the processing below. */
+      } else {  /* After warm up is done. */
+        /* Update noise level estimate. */
+        noise *= state->noise_coeffs[smoothed_energy > noise];
+        state_c->noise = noise;
+      }
+
       if (noise < 1e-9f) { noise = 1e-9f; }
 
-      state_c->smoothed_energy = smoothed_energy;
-      state_c->noise = noise;
-
-      const float thresh = gate_thresh_factor * noise;
+      const float thresh = state_c->gate_thresh_factor * noise;
       const float diff = smoothed_energy - thresh;
-      float agc_output;
+      float gain;
       if (diff <= 1e-9f) {
-        agc_output = 0.0f;  /* Gain of zero if smoothed_energy <= thresh. */
+        gain = 0.0f;  /* Gain of zero if smoothed_energy <= thresh. */
       } else {
         /* Apply soft noise gate and AGC gain. */
-        agc_output = SoftGate(diff, gate_transition_factor * thresh) *
-            FastPow(smoothed_energy, agc_exponent) * energy;
+        gain = SoftGate(diff, gate_transition_factor * thresh) *
+            FastPow(smoothed_energy, agc_exponent);
       }
+
+      /* Update smoothed AGC gain with asymmetric smoother. */
+      smoothed_gain += state->gain_smoother_coeffs[gain < smoothed_gain] *
+                       (gain - smoothed_gain);
+
+      state_c->smoothed_energy = smoothed_energy;
+      state_c->smoothed_gain = smoothed_gain;
 
       /* Apply power law compression and output gain. */
       output[c] = state_c->output_gain *
-                  (FastPow(agc_output + compressor_delta, compressor_exponent)
-                   - compressor_offset);
+                  (FastPow(smoothed_gain * energy + compressor_delta,
+                           compressor_exponent)
+                   - kCompressorStabilization);
     }
+
+    if (warm_up_counter) { --warm_up_counter; }
 
     output += kEnveloperNumChannels;
     input += decimation_factor;
   }
+
+  state->warm_up_counter = warm_up_counter;
 }

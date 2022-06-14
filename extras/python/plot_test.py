@@ -23,7 +23,7 @@ import matplotlib.figure
 import numpy as np
 from PIL import Image
 
-from extras.python.phonetics import plot
+from extras.python import plot
 
 
 class PlotTest(unittest.TestCase):

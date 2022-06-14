@@ -20,11 +20,11 @@
  * library a set of tap-out outputs is first defined, then any (and possibly
  * multiple) outputs may be selected for capture, and this selection may be
  * changed dynamically.
- * 
+ *
  * When tap_out is capturing data, the device sends a "Capture" message of
  * binary data over USB serial to the PC or phone once every mic buffer. To
  * coexist with regular text-mode `Serial.println()` serial communication:
- * 
+ *
  *  - tap_out only prints binary serial messages while a receiver is listening.
  *    If the device doesn't get a "heartbeat" message for ~400 ms, tap_out
  *    deactivates. This way text-mode messages can still be read in the Arduino
@@ -33,7 +33,7 @@
  *  - You should put `if (TapOutIsActive()) { ... }` around Serial.println()
  *    calls to avoid them from interrupting the binary communication. In case
  *    something slips by, the protocol uses marker bytes (0xfe) to ignore it.
- *    
+ *
  * Instructions:
  *
  * 1. Use `TapOutSetTxFun()` and `TapOutSetErrorFun()` to set callbacks.
@@ -42,7 +42,7 @@
  *    metadata for each tap-out output that could be captured.
  *
  *    const TapOutDescriptor kMicInputDescriptor =
- *      {"mic input", "i2", 1, {kSamplesPerBuffer}};
+ *      {"mic input", "int16", 1, {kSamplesPerBuffer}};
  *    TapOutToken mic_input_token = TapOutAddDescriptor(&kMicInputDescriptor);
  *
  * 3. When serial data is received, call `TapOutReceiveMessage()` to parse it.
@@ -51,7 +51,7 @@
  *    if (Serial.available() > 0) {
  *      char data[16];
  *      int size = min(Serial.available(), sizeof(data));
- *      Serial.read(data, size);
+ *      Serial.readBytes(data, size);
  *      TapOutReceiveMessage(data, size);
  *    }
  *
@@ -73,14 +73,18 @@
  *  [0] kTapOutMarker (= 0xfe)
  *  [1] <op code> - Indicates the type of message.
  *  [2] <payload size> - The size of the payload.
- * 
+ *
  * Followed by the payload data.
  */
 
-#ifndef AUDIO_TO_TACTILE_SRC_DSP_TAP_OUT_H_
-#define AUDIO_TO_TACTILE_SRC_DSP_TAP_OUT_H_
+#ifndef AUDIO_TO_TACTILE_SRC_TACTILE_TAP_OUT_H_
+#define AUDIO_TO_TACTILE_SRC_TACTILE_TAP_OUT_H_
 
 #include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 enum {
   /* Tap out buffer capacity in bytes. */
@@ -202,4 +206,7 @@ const TapOutSlice* TapOutGetSlice(TapOutToken output);
  */
 void TapOutTextPrint(TapOutToken output, const char* format, ...);
 
-#endif  /* AUDIO_TO_TACTILE_SRC_DSP_TAP_OUT_H_ */
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
+#endif  /* AUDIO_TO_TACTILE_SRC_TACTILE_TAP_OUT_H_ */

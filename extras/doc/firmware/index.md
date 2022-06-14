@@ -13,47 +13,9 @@ program/compile firmware.
 
 ## How to flash device firmware given an ino.zip
 
-Given an ino.zip file, you can update the device firmware as follows. This
-assumes your computer has Python installed, but does not require Arduino:
-
-1. Install the
-   [adafruit-nrfutil](https://github.com/adafruit/Adafruit_nRF52_nrfutil) Python
-   library with shell command
-
-    ~~~{.sh}
-    pip3 install --user adafruit-nrfutil
-    ~~~
-
-    or see the [installation
-    instructions](https://github.com/adafruit/Adafruit_nRF52_nrfutil#installation)
-    for other options.
-
-2. Download the [flash_firmware.py script](https://raw.githubusercontent.com/google/audio-to-tactile/main/extras/tools/flash_firmware.py)
-   and new firmware ino.zip to your computer.
-
-3. Use a micro USB cable to connect the device to the computer.
-
-4. Turn on the device.
-
-5. Navigate to the directory with the script and firmware, and run the script
-   with shell command
-
-    ~~~{.sh}
-    python3 flash_firmware.py firmware.ino.zip
-    ~~~
-
-   The script prints "`Device programmed`" if successful.
-
-**Troubleshooting:** The script auto-detects the port where the device is
-connected. It looks for a device with "nrf52" in its name, otherwise it just
-attempts to use the first available port. If this port selection fails for
-some reason, you can specify the port with the following command, replacing
-the port name with the correct port:
-
-~~~{.sh}
-python3 flash_firmware.py /dev/ttyACM1 firmware.ino.zip
-~~~
-
+Given an ino.zip file, you can update the device firmware over a USB
+connection using the
+[flash_firmware.py script](../tools/flash_firmware/index.md).
 
 
 ## Programming and with USB

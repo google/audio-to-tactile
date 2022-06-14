@@ -35,11 +35,11 @@ import numpy as np
 
 from extras.python import dsp
 from extras.python import frontend
+from extras.python import plot
 from extras.python.phonetics import embed_vowel
 from extras.python.phonetics import hk_util
 from extras.python.phonetics import phone_model
 from extras.python.phonetics import phone_util
-from extras.python.phonetics import plot
 from extras.python.phonetics.sliding_window import sliding_window
 
 FLAGS = flags.FLAGS

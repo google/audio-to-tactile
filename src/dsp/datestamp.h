@@ -38,29 +38,30 @@ extern "C" {
  *   DATESTR_TO_UINT32(__DATE__)
  * results in a compile-time constant.
  */
-#define DATESTR_TO_UINT32(datestr) (                            \
-  (uint32_t)((datestr)[ 7] - '0') * UINT32_C(10000000) +        \
-  (uint32_t)((datestr)[ 8] - '0') * UINT32_C( 1000000) +        \
-  (uint32_t)((datestr)[ 9] - '0') * UINT32_C(  100000) +        \
-  (uint32_t)((datestr)[10] - '0') * UINT32_C(   10000) +        \
-  (                                                             \
-  /* Jan */ ((datestr)[0] == 'J' && (datestr)[1] == 'a') ?  1 : \
-  /* Feb */ ((datestr)[0] == 'F'                       ) ?  2 : \
-  /* Mar */ ((datestr)[0] == 'M' && (datestr)[2] == 'r') ?  3 : \
-  /* Apr */ ((datestr)[0] == 'A' && (datestr)[1] == 'p') ?  4 : \
-  /* May */ ((datestr)[0] == 'M'                       ) ?  5 : \
-  /* Jun */ ((datestr)[0] == 'J' && (datestr)[2] == 'n') ?  6 : \
-  /* Jul */ ((datestr)[0] == 'J'                       ) ?  7 : \
-  /* Aug */ ((datestr)[0] == 'A'                       ) ?  8 : \
-  /* Sep */ ((datestr)[0] == 'S'                       ) ?  9 : \
-  /* Oct */ ((datestr)[0] == 'O'                       ) ? 10 : \
-  /* Nov */ ((datestr)[0] == 'N'                       ) ? 11 : \
-  /* Dec */                                                12   \
-  ) * UINT32_C(100) +                                           \
-  (((datestr)[4] <= '0') ? 0 :                                  \
-      (uint32_t)((datestr)[4] - '0') * UINT32_C(10)) +          \
-  (uint32_t)((datestr)[5] - '0')                                \
-)
+#define DATESTR_TO_UINT32(datestr) (                                \
+  ((datestr)[3] != ' ') ? 0 : (                                     \
+      (uint32_t)((datestr)[ 7] - '0') * UINT32_C(10000000) +        \
+      (uint32_t)((datestr)[ 8] - '0') * UINT32_C( 1000000) +        \
+      (uint32_t)((datestr)[ 9] - '0') * UINT32_C(  100000) +        \
+      (uint32_t)((datestr)[10] - '0') * UINT32_C(   10000) +        \
+      (                                                             \
+      /* Jan */ ((datestr)[0] == 'J' && (datestr)[1] == 'a') ?  1 : \
+      /* Feb */ ((datestr)[0] == 'F'                       ) ?  2 : \
+      /* Mar */ ((datestr)[0] == 'M' && (datestr)[2] == 'r') ?  3 : \
+      /* Apr */ ((datestr)[0] == 'A' && (datestr)[1] == 'p') ?  4 : \
+      /* May */ ((datestr)[0] == 'M'                       ) ?  5 : \
+      /* Jun */ ((datestr)[0] == 'J' && (datestr)[2] == 'n') ?  6 : \
+      /* Jul */ ((datestr)[0] == 'J'                       ) ?  7 : \
+      /* Aug */ ((datestr)[0] == 'A'                       ) ?  8 : \
+      /* Sep */ ((datestr)[0] == 'S'                       ) ?  9 : \
+      /* Oct */ ((datestr)[0] == 'O'                       ) ? 10 : \
+      /* Nov */ ((datestr)[0] == 'N'                       ) ? 11 : \
+      /* Dec */                                                12   \
+      ) * UINT32_C(100) +                                           \
+      (((datestr)[4] <= '0') ? 0 :                                  \
+          (uint32_t)((datestr)[4] - '0') * UINT32_C(10)) +          \
+      (uint32_t)((datestr)[5] - '0')                                \
+))
 
 #ifdef __cplusplus
 }  /* extern "C" */

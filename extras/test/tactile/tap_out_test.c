@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include "src/dsp/tap_out.h"
+#include "src/tactile/tap_out.h"
 
 #include <string.h>
 
@@ -45,8 +45,10 @@ static void TestDescriptors(void) {
   CHECK(TapOutAddDescriptor(&kCherry) == 3);
 
   CHECK(TapOutWriteDescriptors());
-  static const uint8_t kExpected[4 + 3 * 20] = {
-    0xfe, kTapOutMessageDescriptors, 3 * 20, 3,
+  static const uint8_t kExpected[8 + 3 * 20] = {
+    0xfe, kTapOutMessageDescriptors, 5 + 3 * 20,
+    94, 138, 52, 1,  /* uint32 value encoding 20220510. */
+    3,
     1, /* kDescriptorA. */
     'A', 'p', 'p', 'l', 'e', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     9, 3, 8, 0,
@@ -58,7 +60,9 @@ static void TestDescriptors(void) {
     5, 9, 0, 0,
   };
   CHECK(g_tap_out_buffer_size == sizeof(kExpected));
-  CHECK(CheckBytes(g_tap_out_buffer, kExpected, sizeof(kExpected)));
+  /* Compare bytes, but ignore the build date field. */
+  CHECK(CheckBytes(g_tap_out_buffer, kExpected, 3));
+  CHECK(CheckBytes(g_tap_out_buffer + 7, kExpected + 7, sizeof(kExpected) - 7));
 }
 
 static void TestSlices(void) {
@@ -133,8 +137,10 @@ static void TestBadToken(void) {
 static int /*bool*/ g_tx_callback_called = 0;
 
 static void TestCaptureTxExpectDescriptors(const char* data, int size) {
-  static const uint8_t kExpected[4 + 2 * 20] = {
-    kTapOutMarker, kTapOutMessageDescriptors, 2 * 20, 2,
+  const uint8_t kExpected[8 + 2 * 20] = {
+    kTapOutMarker, kTapOutMessageDescriptors, 5 + 2 * 20,
+    0, 0, 0, 0,
+    2,
     1, /* kDescriptorB. */
     'B', 'a', 'n', 'a', 'n', 'a', 0, 0, 0, 0, 0, 0, 0, 0, 0,
     11, 30, 0, 0,
@@ -143,7 +149,10 @@ static void TestCaptureTxExpectDescriptors(const char* data, int size) {
     5, 9, 0, 0,
   };
   CHECK(size == sizeof(kExpected));
-  CHECK(CheckBytes((const uint8_t*)data, kExpected, sizeof(kExpected)));
+  /* Compare bytes, but ignore the build date field. */
+  CHECK(CheckBytes((const uint8_t*)data, kExpected, 3));
+  CHECK(CheckBytes((const uint8_t*)data + 7, kExpected + 7,
+                   sizeof(kExpected) - 7));
   g_tx_callback_called = 1;
 }
 

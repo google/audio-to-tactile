@@ -331,7 +331,7 @@ limitations under the License.
       checkbox.className = 'channelEnable';
       checkbox.type = 'checkbox';
       checkbox.id = 'channelEnable' + c;
-      checkbox.checked = true;
+      checkbox.checked = (DEFAULT_GAINS[c] > 0);
 
       var source = document.createElement('input');  // Make number element.
       source.type = 'number';
@@ -347,7 +347,7 @@ limitations under the License.
       slider.name = slider.id;
       slider.min = 1;
       slider.max = 63;
-      slider.value = 63;
+      slider.value = DEFAULT_GAINS[c] || 63;
 
       var gainText = tr.insertCell();
       gainText.id = 'channelGainText' + c;

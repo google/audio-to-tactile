@@ -103,6 +103,7 @@ int WriteWavHeaderGenericInternal(WavWriter* w, size_t num_samples,
   const int extended = num_channels > 2 || bits_per_sample > 16;
   const uint32_t fmt_chunk_size = extended ? 40 : 16;
   const uint32_t data_chunk_size = (bits_per_sample / 8) * num_samples;
+  const uint32_t data_chunk_padding = data_chunk_size % 2;
   const int block_align = num_channels * (bits_per_sample / 8);
 
   if (w == NULL || w->io_ptr == NULL) {
@@ -112,9 +113,11 @@ int WriteWavHeaderGenericInternal(WavWriter* w, size_t num_samples,
   WriteString("RIFF", w);
   /* Write the size of the file minus the 8 bytes for the "RIFF" ID and RIFF
    * chunk size. The constant 20 counts the "WAVE" ID, "fmt " ID, fmt chunk
-   * size, "data" ID, and data chunk size.
+   * size, "data" ID, data chunk size, and data chunk padding.
    */
-  WriteUint32(20 + fmt_chunk_size + (extended ? 12 : 0) + data_chunk_size, w);
+  WriteUint32(20 + fmt_chunk_size + (extended ? 12 : 0) + data_chunk_size +
+                  data_chunk_padding,
+              w);
   WriteString("WAVE", w);
   if (w->has_error) {
     return 0;
@@ -147,7 +150,7 @@ int WriteWavHeaderGenericInternal(WavWriter* w, size_t num_samples,
   }
   if (w->has_error) { return 0; }
 
-  /* Write data chunk. */
+  /* Write data chunk. data_chunk_padding is not included in the size. */
   WriteString("data", w);
   WriteUint32(data_chunk_size, w);
   if (w->has_error) { return 0; }
@@ -177,6 +180,7 @@ int WriteWavSamplesGeneric(WavWriter* w, const int16_t* samples,
   for (i = 0; i < num_samples; ++i) {
     WriteUint16(samples[i], w);
   }
+  /* 16-bit samples never need a pad byte. */
   if (w->has_error) {
     return 0;
   }
@@ -193,6 +197,10 @@ int WriteWavSamplesGeneric24Bit(WavWriter* w, const int32_t* samples,
   w->has_error = 0; /* Clear the error flag. */
   for (i = 0; i < num_samples; ++i) {
     WriteUint32MsbTo24(samples[i], w);
+  }
+  /* Pad byte to ensure 16-bit alignment. */
+  if (num_samples % 2 == 1) {
+    WriteUnsignedChar(0, w);
   }
   if (w->has_error) {
     return 0;

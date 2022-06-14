@@ -48,6 +48,8 @@ int main(int argc, char** argv) {
 
   TestDatestrToUint32("Jun  9 2021", UINT32_C(20210609));
 
+  TestDatestrToUint32("Bogus", 0);
+
   puts("PASS");
   return EXIT_SUCCESS;
 }

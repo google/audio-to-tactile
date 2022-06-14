@@ -56,7 +56,7 @@ class ChannelMap
   /** Interface for one tuning knob, accessed through the [ChannelMap.get] operator. */
   class Entry(val numInputChannels: Int, val index: Int) {
     /** Input source channel as a 0-base index. */
-    var source = defaultSource(index).coerceIn(0 until numInputChannels)
+    var source = 0
     /** Whether this channel is enabled. */
     var enabled = true
 
@@ -91,11 +91,14 @@ class ChannelMap
     val gainString
       get() = gainMapping(gain)
 
+    init {
+      reset()
+    }
+
     /** Resets `Entry` to initial settings. */
     fun reset() {
       source = defaultSource(index).coerceIn(0 until numInputChannels)
-      enabled = true
-      _enabledGain = UNIT_GAIN
+      gain = defaultGain(index)
     }
 
     /** Creates a deep copy of the `Entry`. */
@@ -173,6 +176,9 @@ class ChannelMap
      * (9)---(1)---(2)---(0)----(4)---( 5)---(8)---(3)
      */
     fun defaultSource(i: Int) = listOf(9, 1, 2, 0, 4, 5, 8, 3).elementAtOrElse(i, { it })
+
+    /** Gets the default gain for channel i. The box tactor is disabled by default. */
+    fun defaultGain(i: Int) = if (i == 7 /* box tactor */) { 0 } else UNIT_GAIN
 
     /** Gets name abbreviation for a source, corresponding to TactileProcessor channels. */
     fun sourceName(sourceIndex: Int) =

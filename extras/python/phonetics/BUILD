@@ -127,8 +127,8 @@ py_library(
     deps = [
         ":hk_util",
         ":phone_util",
-        ":plot",
         ":stats",
+        "//extras/python:plot",
     ],
 )
 
@@ -165,24 +165,6 @@ py_test(
 )
 
 py_library(
-    name = "plot",
-    srcs = ["plot.py"],
-    srcs_version = "PY3",
-    deps = [
-    ],
-)
-
-py_test(
-    name = "plot_test",
-    srcs = ["plot_test.py"],
-    python_version = "PY3",
-    srcs_version = "PY3",
-    deps = [
-        ":plot",
-    ],
-)
-
-py_library(
     name = "read_nist_sphere",
     srcs = ["read_nist_sphere.py"],
     srcs_version = "PY3",
@@ -209,8 +191,8 @@ py_binary(
         ":classify_phoneme",
         "//extras/python:dsp",
         "//extras/python:frontend",
+        "//extras/python:plot",
         "//extras/python/phonetics:phone_util",
-        "//extras/python/phonetics:plot",
         "//extras/python/phonetics:sliding_window",
     ],
 )
@@ -225,10 +207,10 @@ py_binary(
         ":hk_util",
         ":phone_model",
         ":phone_util",
-        ":plot",
         ":sliding_window",
         "//extras/python:dsp",
         "//extras/python:frontend",
+        "//extras/python:plot",
     ],
 )
 

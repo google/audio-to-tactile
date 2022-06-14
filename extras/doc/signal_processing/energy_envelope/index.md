@@ -61,8 +61,9 @@ For each channel, audio is processed this way:
   c. The noise gate soft threshold is set at `denoising_strength * noise`
      and with a transition width of `denoising_transition_db` dB.
 
-3. A (partially) normalized energy `agc_output` is computed as
-   `soft_gate_weight * smoothed_energy^-agc_strength * energy`.
+3. The gated AGC gain `soft_gate_weight * smoothed_energy^-agc_strength` is
+   computed and smoothed with a one-pole lowpass filter, then applied to
+   the energy. This denoises and partially normalizes the energy.
 
 4. As in PCEN, the normalized energy is compressed with a power law as
    `(agc_output + delta)^exponent - delta^exponent`.

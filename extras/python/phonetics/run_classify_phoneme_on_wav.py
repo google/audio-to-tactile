@@ -30,9 +30,9 @@ import numpy as np
 
 from extras.python import dsp
 from extras.python import frontend
+from extras.python import plot
 from extras.python.phonetics import classify_phoneme
 from extras.python.phonetics import phone_util
-from extras.python.phonetics import plot
 from extras.python.phonetics.sliding_window import sliding_window
 
 FLAGS = flags.FLAGS

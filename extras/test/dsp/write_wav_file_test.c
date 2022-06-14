@@ -68,9 +68,24 @@ static const uint8_t kTest24BitMonoWavFile[92] = {
     3,  0,  24, 0,  22,  0,   24, 0,   4,   0,   0,   0,   1,   0,   0,   0,
 /*                                                         f    a    c    t  */
     0,  0,  16, 0,  128, 0,   0,  170, 0,   56,  155, 113, 102, 97,  99,  116,
-/*                                       d    a    t    a  */
-    4,  0,  0,  0,   4,   0,   0,   0,   100, 97,  116, 97,  12,  0,   0,   0,
-    0,  7,  0,  0,   254, 255, 0,   255, 127, 0,   0,   128};
+/*                                     d    a    t    a  */
+    4,  0,  0,  0,  4,   0,   0,  0,   100, 97,  116, 97,  12,  0,   0,   0,
+    0,  7,  0,  0,  254, 255, 0,  255, 127, 0,   0,   128};
+
+/* A 48kHz mono WAV file with int24 samples made from
+ * int16 samples {7, -2, INT16_MAX}.
+ */
+static const uint8_t kTest24BitMonoOddWavFile[90] = {
+/*  R   I   F   F                      W    A    V    E    f    m    t    _  */
+    82, 73, 70, 70, 82,  0,   0,  0,   87,  65,  86,  69,  102, 109, 116, 32,
+    40, 0,  0,  0,  254, 255, 1,  0,   128, 187, 0,   0,   128, 50,  2,   0,
+    3,  0,  24, 0,  22,  0,   24, 0,   4,   0,   0,   0,   1,   0,   0,   0,
+/*                                                         f    a    c    t  */
+    0,  0,  16, 0,  128, 0,   0,  170, 0,   56,  155, 113, 102, 97,  99,  116,
+/*                                     d    a    t    a  */
+    4,  0,  0,  0,  3,   0,   0,  0,   100, 97,  116, 97,  9,   0,   0,   0,
+/*                                          pad */
+    0,  7,  0,  0,  254, 255, 0,  255, 127, 0};
 
 static void CheckFileBytes(const char* file_name, const uint8_t* expected_bytes,
                            size_t num_bytes) {
@@ -143,11 +158,28 @@ static void TestWriteMono24BitWav(void) {
   remove(wav_file_name);
 }
 
+static void TestWriteMono24BitWavPadding(void) {
+  puts("TestWriteMono24BitWavPadding");
+  /* An odd number of samples such that the samples do not align to 16-bits. A
+   * pad byte should get appended to the samples. */
+  static const int32_t kSamples[3] = {7 << 16,
+                                      -(2 << 16),
+                                      INT16_MAX << 16};
+  const char* wav_file_name = NULL;
+
+  wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
+  CHECK(WriteWavFile24Bit(wav_file_name, kSamples, 3, 48000, 1));
+
+  CheckFileBytes(wav_file_name, kTest24BitMonoOddWavFile, 90);
+  remove(wav_file_name);
+}
+
 int main(int argc, char** argv) {
   TestWriteMonoWav();
   TestWriteMonoWavStreaming();
   TestWrite3ChannelWav();
   TestWriteMono24BitWav();
+  TestWriteMono24BitWavPadding();
 
   puts("PASS");
   return EXIT_SUCCESS;

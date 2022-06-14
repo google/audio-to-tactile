@@ -1,4 +1,4 @@
-/* Copyright 2019, 2021 Google LLC
+/* Copyright 2019, 2021-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,6 +89,8 @@ typedef struct {
   float* workspace;
   /* PCEN frame buffer. */
   float* frame;
+  /* 2D vowel embedding coordinate. */
+  float vowel_coord[2];
   /* Interpolation weights for the hexagonal vowel cluster. */
   float vowel_hex_weights[7];
 } TactileProcessor;

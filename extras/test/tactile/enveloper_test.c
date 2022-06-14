@@ -28,17 +28,17 @@ static float Taper(float t, float t_min, float t_max) {
   return Clip((t - t_min) / 0.005f, 0, 1) * Clip((t_max - t) / 0.005f, 0, 1);
 }
 
-/* Computes energy integral of `x` over [t_start, t_end]. */
-static float ComputeEnergy(const float* x, float t_start, float t_end,
-                           float sample_rate_hz) {
-  double accum = 0.0;
+/* Gets the maximum of `x` over [t_start, t_end]. */
+static float ComputeMax(const float* x, float t_start, float t_end,
+                        float sample_rate_hz) {
+  float max_value = 0.0f;
   int i_start = (int)(t_start * sample_rate_hz + 0.5f) * kEnveloperNumChannels;
   int i_end = (int)(t_end * sample_rate_hz + 0.5f) * kEnveloperNumChannels;
   int i;
   for (i = i_start; i <= i_end; i += kEnveloperNumChannels) {
-    accum += (double)x[i] * x[i];
+    if (x[i] > max_value) { max_value = x[i]; }
   }
-  return accum / sample_rate_hz;
+  return max_value;
 }
 
 static void TestBasic(float sample_rate_hz, int decimation_factor) {
@@ -75,36 +75,36 @@ static void TestBasic(float sample_rate_hz, int decimation_factor) {
   const float* fricative = output + 3;
 
   /* For t < 0.05, all output is close to zero. */
-  float baseband_energy = ComputeEnergy(baseband, 0.0f, 0.05f, output_rate);
-  float vowel_energy = ComputeEnergy(vowel, 0.0f, 0.05f, output_rate);
-  float fricative_energy = ComputeEnergy(fricative, 0.0f, 0.05f, output_rate);
-  CHECK(baseband_energy < 0.005f);
-  CHECK(vowel_energy < 0.005f);
-  CHECK(fricative_energy < 0.005f);
+  float baseband_max = ComputeMax(baseband, 0.0f, 0.05f, output_rate);
+  float vowel_max = ComputeMax(vowel, 0.0f, 0.05f, output_rate);
+  float fricative_max = ComputeMax(fricative, 0.0f, 0.05f, output_rate);
+  CHECK(baseband_max < 0.005f);
+  CHECK(vowel_max < 0.005f);
+  CHECK(fricative_max < 0.005f);
 
   /* During the 80 Hz tone, baseband channel is strongest. */
-  baseband_energy = ComputeEnergy(baseband, 0.07f, 0.13f, output_rate);
-  vowel_energy = ComputeEnergy(vowel, 0.07f, 0.13f, output_rate);
-  fricative_energy = ComputeEnergy(fricative, 0.07f, 0.13f, output_rate);
-  CHECK(baseband_energy > 0.001f);
-  CHECK(baseband_energy > 2.0f * vowel_energy);
-  CHECK(baseband_energy > 2.0f * fricative_energy);
+  baseband_max = ComputeMax(baseband, 0.07f, 0.13f, output_rate);
+  vowel_max = ComputeMax(vowel, 0.07f, 0.13f, output_rate);
+  fricative_max = ComputeMax(fricative, 0.07f, 0.13f, output_rate);
+  CHECK(baseband_max > 0.2f);
+  CHECK(baseband_max > 1.1f * vowel_max);
+  CHECK(baseband_max > 1.1f * fricative_max);
 
   /* During the 1500 Hz tone, vowel RMS is highest. */
-  baseband_energy = ComputeEnergy(baseband, 0.22f, 0.28f, output_rate);
-  vowel_energy = ComputeEnergy(vowel, 0.22f, 0.28f, output_rate);
-  fricative_energy = ComputeEnergy(fricative, 0.22f, 0.28f, output_rate);
-  CHECK(vowel_energy > 0.001f);
-  CHECK(vowel_energy > 2.0f * baseband_energy);
-  CHECK(vowel_energy > 2.0f * fricative_energy);
+  baseband_max = ComputeMax(baseband, 0.22f, 0.28f, output_rate);
+  vowel_max = ComputeMax(vowel, 0.22f, 0.28f, output_rate);
+  fricative_max = ComputeMax(fricative, 0.22f, 0.28f, output_rate);
+  CHECK(vowel_max > 0.2f);
+  CHECK(vowel_max > 1.1f * baseband_max);
+  CHECK(vowel_max > 1.1f * fricative_max);
 
   /* During the 5000 Hz tone, fricative RMS is highest. */
-  baseband_energy = ComputeEnergy(baseband, 0.37f, 0.43f, output_rate);
-  vowel_energy = ComputeEnergy(vowel, 0.37f, 0.43f, output_rate);
-  fricative_energy = ComputeEnergy(fricative, 0.37f, 0.43f, output_rate);
-  CHECK(fricative_energy > 0.001f);
-  CHECK(fricative_energy > 2.0f * baseband_energy);
-  CHECK(fricative_energy > 2.0f * vowel_energy);
+  baseband_max = ComputeMax(baseband, 0.37f, 0.43f, output_rate);
+  vowel_max = ComputeMax(vowel, 0.37f, 0.43f, output_rate);
+  fricative_max = ComputeMax(fricative, 0.37f, 0.43f, output_rate);
+  CHECK(fricative_max > 0.2f);
+  CHECK(fricative_max > 1.1f * baseband_max);
+  CHECK(fricative_max > 1.1f * vowel_max);
 
   free(output);
   free(input);
@@ -144,7 +144,7 @@ static void TestStreaming(int decimation_factor) {
   srand(0);
   const int kChannels = kEnveloperNumChannels;
   const float sample_rate_hz = 16000.0f;
-  const int output_frames = 100;
+  const int output_frames = 16000;
   const int input_size = output_frames * decimation_factor;
   float* input = (float*)CHECK_NOTNULL(malloc(input_size * sizeof(float)));
   float* nonstreaming_undecimated_output = (float*)CHECK_NOTNULL(malloc(
@@ -153,7 +153,11 @@ static void TestStreaming(int decimation_factor) {
       output_frames * kChannels * sizeof(float)));
   int i;
   for (i = 0; i < input_size; ++i) {
-    input[i] = 0.2f * ((float) rand() / RAND_MAX - 0.5f);
+    float t = i / sample_rate_hz;
+    input[i] = 1e-2f * ((float) rand() / RAND_MAX - 0.5f);
+    if (t > 0.5f) {
+      input[i] += 0.2f * FastPow(sin(2.0 * M_PI * 200.0 * t), 8.0f);
+    }
   }
 
   Enveloper enveloper;
@@ -185,7 +189,7 @@ static void TestStreaming(int decimation_factor) {
    * undecimated output in the sense of relative L1 error,
    *
    *   || actual - expected ||_1
-   *   ------------------------- < 0.03.
+   *   ------------------------- < 0.01.
    *       || expected ||_1
    */
   float l1_diff = 0.0f;
@@ -201,7 +205,7 @@ static void TestStreaming(int decimation_factor) {
       l1_expected += fabs(expected);
     }
   }
-  CHECK(l1_diff / l1_expected < 0.03f);
+  CHECK(l1_diff / l1_expected < 0.01f);
   if (decimation_factor == 1) {
     /* If there is no decimation, then outputs should match very accurately. */
     CHECK(l1_diff < 1e-5f);

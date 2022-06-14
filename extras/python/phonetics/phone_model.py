@@ -32,9 +32,9 @@ import numpy as np
 import optax
 import scipy.ndimage
 
+from extras.python import plot
 from extras.python.phonetics import hk_util
 from extras.python.phonetics import phone_util
-from extras.python.phonetics import plot
 from extras.python.phonetics import stats
 
 # By default, train to classify these monophthong vowel classes.

@@ -13,12 +13,15 @@
  * limitations under the License.
  */
 
-#include "dsp/tap_out.h"
+#include "tactile/tap_out.h"
 
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+
+#include "dsp/datestamp.h"
+#include "dsp/serialize.h"
 
 enum {
   /* Max number of output descriptors that can be defined. */
@@ -172,7 +175,7 @@ TapOutToken TapOutAddDescriptor(const TapOutDescriptor* descriptor) {
 
 int TapOutWriteDescriptors(void) {
 
-  const int total = 4 + g_num_descriptors * kBytesPerDescriptor;
+  const int total = 8 + g_num_descriptors * kBytesPerDescriptor;
   if (total > kTapOutBufferCapacity) {
     Error("Descriptors exceed kTapOutBufferCapacity.");
     return 0;
@@ -184,7 +187,9 @@ int TapOutWriteDescriptors(void) {
 
   *dest++ = kTapOutMarker;
   *dest++ = kTapOutMessageDescriptors;
-  *dest++ = g_num_descriptors * kBytesPerDescriptor;
+  *dest++ = 5 + g_num_descriptors * kBytesPerDescriptor;
+  LittleEndianWriteU32(DATESTAMP_UINT32, dest);
+  dest += 4;
   *dest++ = (uint8_t)g_num_descriptors;
 
   int i;
@@ -220,7 +225,7 @@ int TapOutEnable(const TapOutToken* outputs, int num_outputs) {
     return 1;
   }
 
-  if (num_outputs >= kTapOutMaxOutputs) {
+  if (num_outputs > kTapOutMaxOutputs) {
     Error("TapOutEnable: Exceeded kTapOutMaxOutputs (%d).", num_outputs);
     return 0;
   }

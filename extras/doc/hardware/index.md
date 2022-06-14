@@ -10,7 +10,7 @@ describes what we have built. This list is in reverse chronological order.
 ### Slim bracelet (v0.5)
 
 This is the latest electronics board revision. Similar to v0.4 but with few
-electronic bugs fixes. This design is still in manufacturing and testing.
+electronic bug fixes. This design is still in manufacturing and testing.
 
 ### Slim bracelet (v0.4)
 

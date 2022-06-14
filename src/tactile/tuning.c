@@ -18,14 +18,16 @@
 #include "dsp/fast_fun.h"
 
 const TuningKnobs kDefaultTuningKnobs = {{
-  /* kKnobInputGain           */ 127,
-  /* kKnobOutputGain          */ 191,
-  /* kKnobEnergyTau           */  85,
-  /* kKnobNoiseAdaptation     */ 127,
-  /* kKnobDenoisingStrength   */  33,
-  /* kKnobDenoisingTransition */  51,
-  /* kKnobAgcStrength         */ 191,
-  /* kKnobCompressor          */  96,
+  /* kKnobInputGain            */ 127,
+  /* kKnobOutputGain           */ 161,
+  /* kKnobNoiseAdaptation      */ 127,
+  /* kKnobDenoisingBaseband    */ 255,
+  /* kKnobDenoisingVowel       */ 100,
+  /* kKnobDenoisingShFricative */  77,
+  /* kKnobDenoisingFricative   */  77,
+  /* kKnobDenoisingTransition  */  36,
+  /* kKnobAgcStrength          */ 191,
+  /* kKnobCompressor           */  96,
 }};
 
 const TuningKnobInfo kTuningKnobInfo[kNumTuningKnobs] = {
@@ -34,25 +36,16 @@ const TuningKnobInfo kTuningKnobInfo[kNumTuningKnobs] = {
         "%.1f dB",
         "Gain applied to the input audio before any processing.",
         kTuningMapLinearly,
-        -40.0f, /* In units of dB. */
-        40.315f,
+        -30.0f, /* In units of dB. */
+        30.2363f,
     },
     { /* kKnobOutputGain */
         "Output gain",
         "%.1f dB",
         "The `output_gain` parameter of all Enveloper channels.",
         kTuningMapLinearly,
-        -18.0f, /* In units of dB. */
-        6.0f,
-    },
-    { /* kKnobEnergyTau */
-        "Energy smoothing",
-        "%.3f s",
-        "The `energy_tau_s` energy smoothing time constant for all Enveloper "
-        "channels. Larger value means more smoothing.",
-        kTuningMapLogarithmically,
-        0.001f, /* In units of seconds. */
-        1.0f,
+        -30.0f, /* In units of dB. */
+        30.2363f,
     },
     { /* kKnobNoiseAdaptation */
         "Noise adaptation",
@@ -63,10 +56,37 @@ const TuningKnobInfo kTuningKnobInfo[kNumTuningKnobs] = {
         0.2f, /* In units of seconds. */
         20.0f,
     },
-    { /* kKnobDenoisingStrength */
-        "Denoising strength",
+    { /* kKnobDenoisingBaseband */
+        "Denoising: baseband",
         "%.1f",
-        "Enveloper denoising strength. This parameter scales the soft noise "
+        "Baseband denoising strength. This parameter scales the soft noise "
+        "gate threshold. Larger value implies stronger denoising. ",
+        kTuningMapLogarithmically,
+        0.5f,
+        100.0f,
+    },
+    { /* kKnobDenoisingVowel */
+        "Denoising: vowel",
+        "%.1f",
+        "Vowel denoising strength. This parameter scales the soft noise "
+        "gate threshold. Larger value implies stronger denoising. ",
+        kTuningMapLogarithmically,
+        0.5f,
+        100.0f,
+    },
+    { /* kKnobDenoisingShFricative */
+        "Denoising: sh fricative",
+        "%.1f",
+        "Sh fricative denoising strength. This parameter scales the soft noise "
+        "gate threshold. Larger value implies stronger denoising. ",
+        kTuningMapLogarithmically,
+        0.5f,
+        100.0f,
+    },
+    { /* kKnobDenoisingFricative */
+        "Denoising: fricative",
+        "%.1f",
+        "Fricative denoising strength. This parameter scales the soft noise "
         "gate threshold. Larger value implies stronger denoising. ",
         kTuningMapLogarithmically,
         0.5f,
@@ -78,8 +98,8 @@ const TuningKnobInfo kTuningKnobInfo[kNumTuningKnobs] = {
         "Soft noise gate transition width. A large value makes the gate more "
         "gradual, which helps avoid \"breathing\" artifacts.",
         kTuningMapLinearly,
-        5.0f,
-        30.0f,
+        1.0f,
+        15.0f,
     },
     { /* kKnobAgcStrength */
         "AGC strength",

@@ -33,28 +33,37 @@ static float Taper(float t, float t_min, float t_max) {
   return Clip((t - t_min) / 0.005f, 0, 1) * Clip((t_max - t) / 0.005f, 0, 1);
 }
 
-/* Computes energy integral of `x` over [t_start, t_end]. */
-static float ComputeEnergy(const float* x, float t_start, float t_end,
-                           float sample_rate_hz) {
-  double accum = 0.0;
+/* Gets the maximum of `x` over [t_start, t_end]. */
+static float ComputeMax(const float* x, float t_start, float t_end,
+                        float sample_rate_hz) {
+  float max_value = 0.0f;
   const int i_start = (int)(t_start * sample_rate_hz + 0.5f);
   const int i_end = (int)(t_end * sample_rate_hz + 0.5f);
   int i;
   for (i = i_start; i <= i_end; ++i) {
-    const double value = x[i * kTactileProcessorNumTactors];
-    accum += value * value;
+    const float value = x[i * kTactileProcessorNumTactors];
+    if (value > max_value) { max_value = value; }
   }
-  return accum / sample_rate_hz;
+  return max_value;
 }
 
-static float ComputeVowelEnergy(const float* x, float t_start, float t_end,
-                                float sample_rate_hz) {
-  double energy = 0.0;
-  int c;
-  for (c = 1; c <= 7; ++c) {
-    energy += ComputeEnergy(x + c, t_start, t_end, sample_rate_hz);
+static float ComputeVowelMax(const float* x, float t_start, float t_end,
+                                   float sample_rate_hz) {
+  float max_value = 0.0f;
+  const int i_start = (int)(t_start * sample_rate_hz + 0.5f);
+  const int i_end = (int)(t_end * sample_rate_hz + 0.5f);
+  x += i_start * kTactileProcessorNumTactors;
+  int i;
+  for (i = i_start; i <= i_end; ++i) {
+    float sum = 0.0f;
+    int c;
+    for (c = 1; c <= 7; ++c) {
+      sum += x[c];
+    }
+    if (sum > max_value) { max_value = sum; }
+    x += kTactileProcessorNumTactors;
   }
-  return energy;
+  return max_value;
 }
 
 /* Runs TactileProcessor on a sequence of tones. */
@@ -102,36 +111,36 @@ static void TestTones(float sample_rate_hz, int decimation_factor) {
              - output_rate) < 1e-6f);
 
   /* For t < 0.05, all output is close to zero. */
-  float baseband_energy = ComputeEnergy(baseband, 0.0f, 0.05f, output_rate);
-  float vowel_energy = ComputeVowelEnergy(output, 0.0f, 0.05f, output_rate);
-  float fricative_energy = ComputeEnergy(fricative, 0.0f, 0.05f, output_rate);
-  CHECK(baseband_energy < 1e-6f);
-  CHECK(vowel_energy < 1e-6f);
-  CHECK(fricative_energy < 1e-6f);
+  float baseband_max = ComputeMax(baseband, 0.0f, 0.05f, output_rate);
+  float vowel_max = ComputeVowelMax(output, 0.0f, 0.05f, output_rate);
+  float fricative_max = ComputeMax(fricative, 0.0f, 0.05f, output_rate);
+  CHECK(baseband_max < 1e-6f);
+  CHECK(vowel_max < 1e-6f);
+  CHECK(fricative_max < 1e-6f);
 
   /* During the 80 Hz tone, baseband channel is strongest. */
-  baseband_energy = ComputeEnergy(baseband, 0.07f, 0.13f, output_rate);
-  vowel_energy = ComputeVowelEnergy(output, 0.07f, 0.13f, output_rate);
-  fricative_energy = ComputeEnergy(fricative, 0.07f, 0.13f, output_rate);
-  CHECK(baseband_energy > 1e-4f);
-  CHECK(baseband_energy > 2.5f * vowel_energy);
-  CHECK(baseband_energy > 2.5f * fricative_energy);
+  baseband_max = ComputeMax(baseband, 0.07f, 0.23f, output_rate);
+  vowel_max = ComputeVowelMax(output, 0.07f, 0.23f, output_rate);
+  fricative_max = ComputeMax(fricative, 0.07f, 0.23f, output_rate);
+  CHECK(baseband_max > 0.2f);
+  CHECK(baseband_max > 1.1f * vowel_max);
+  CHECK(baseband_max > 1.1f * fricative_max);
 
   /* During the 1500 Hz tone, vowel RMS is highest. */
-  baseband_energy = ComputeEnergy(baseband, 0.22f, 0.28f, output_rate);
-  vowel_energy = ComputeVowelEnergy(output, 0.22f, 0.28f, output_rate);
-  fricative_energy = ComputeEnergy(fricative, 0.22f, 0.28f, output_rate);
-  CHECK(vowel_energy > 1e-4f);
-  CHECK(vowel_energy > 2.5f * baseband_energy);
-  CHECK(vowel_energy > 2.5f * fricative_energy);
+  baseband_max = ComputeMax(baseband, 0.22f, 0.28f, output_rate);
+  vowel_max = ComputeVowelMax(output, 0.22f, 0.28f, output_rate);
+  fricative_max = ComputeMax(fricative, 0.22f, 0.28f, output_rate);
+  CHECK(vowel_max > 0.2f);
+  CHECK(vowel_max > 1.1f * baseband_max);
+  CHECK(vowel_max > 1.1f * fricative_max);
 
   /* During the 5000 Hz tone, fricative RMS is highest. */
-  baseband_energy = ComputeEnergy(baseband, 0.37f, 0.43f, output_rate);
-  vowel_energy = ComputeVowelEnergy(output, 0.37f, 0.43f, output_rate);
-  fricative_energy = ComputeEnergy(fricative, 0.37f, 0.43f, output_rate);
-  CHECK(fricative_energy > 1e-4f);
-  CHECK(fricative_energy > 2.5f * baseband_energy);
-  CHECK(fricative_energy > 2.5f * vowel_energy);
+  baseband_max = ComputeMax(baseband, 0.37f, 0.43f, output_rate);
+  vowel_max = ComputeVowelMax(output, 0.37f, 0.43f, output_rate);
+  fricative_max = ComputeMax(fricative, 0.37f, 0.43f, output_rate);
+  CHECK(fricative_max > 0.2f);
+  CHECK(fricative_max > 1.1f * baseband_max);
+  CHECK(fricative_max > 1.1f * vowel_max);
 
   free(output);
   free(input);

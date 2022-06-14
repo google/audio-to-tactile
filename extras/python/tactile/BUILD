@@ -94,3 +94,32 @@ py_binary(
         "//extras/python:dsp",
     ],
 )
+
+py_library(
+    name = "tap_out",
+    srcs = ["tap_out.py"],
+    srcs_version = "PY3",
+    deps = [
+    ],
+)
+
+py_test(
+    name = "tap_out_test",
+    srcs = ["tap_out_test.py"],
+    python_version = "PY3",
+    srcs_version = "PY3",
+    deps = [
+        ":tap_out",
+    ],
+)
+
+py_binary(
+    name = "run_tap_out",
+    srcs = ["run_tap_out.py"],
+    srcs_version = "PY3",
+    deps = [
+        ":tap_out",
+        "//extras/python:dsp",
+        "//extras/python:plot",
+    ],
+)

@@ -43,8 +43,8 @@ extern "C" {
  * See `kTuningKnobInfo` in tuning.c for additional documentation.
  */
 enum {
-  /* Input gain applied before any processing. The range is about -40 dB to
-   * +40 dB with control value = 127 corresponding to 0 dB (unit gain).
+  /* Input gain applied before any processing. The range is about -30 dB to
+   * +30 dB with control value = 127 corresponding to 0 dB (unit gain).
    *
    * NOTE: Unlike other tuning knobs, TactileProcessor itself does not use the
    * input gain. Instead, the mapped input gain should be read with
@@ -59,24 +59,22 @@ enum {
 
   /* The `output_gain` parameter of all Enveloper channels based on a control
    * value between 0 and 255. The control is such that value = 0 corresponds to
-   * -18 dB gain, value = 191 to +0 dB, and value = 255 to +6 dB.
+   * -30 dB gain and value = 255 to +30 dB.
    */
   kKnobOutputGain,
-
-  /* The `energy_tau_s` energy smoothing time constant for all Enveloper
-   * channels. It logarithmically maps control values to the range [0.005, 2.0].
-   */
-  kKnobEnergyTau,
 
   /* The `noise_db_s` noise estimate adaptation rate for all Enveloper
    * channels. It logarithmically maps control values to the range [0.2, 20.0].
    */
   kKnobNoiseAdaptation,
 
-  /* Denoising strength, a positive value where larger means stronger denoising.
-   * This parameter scales the soft noise gate threshold.
+  /* The denoising strength for each Enveloper channel. Larger means stronger
+   * denoising. This parameter scales the soft noise gate threshold.
    */
-  kKnobDenoisingStrength,
+  kKnobDenoisingBaseband,
+  kKnobDenoisingVowel,
+  kKnobDenoisingShFricative,
+  kKnobDenoisingFricative,
 
   /* Soft noise gate transition width in dB. A large value makes the gate
    * more gradual, which helps avoid "breathing" artifacts.

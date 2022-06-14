@@ -39,6 +39,7 @@ This code uses the Apache License 2.0. See the LICENSE file for details.
       * [Yuan et al. 2005](extras/doc/signal_processing/references/yuan2005/index.md)
 * [Perceptual measurements](extras/doc/perceptual_measurements/index.md)
 * [Tools](extras/doc/tools/index.md)
+  * [flash_firmware](extras/doc/tools/flash_firmware/index.md)
   * [play_buzz](extras/doc/tools/play_buzz/index.md)
   * [Tactometer](extras/doc/tools/tactometer/index.md)
 

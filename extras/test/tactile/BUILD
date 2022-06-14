@@ -81,6 +81,15 @@ c_test(
 )
 
 c_test(
+    name = "tap_out_test",
+    srcs = ["tap_out_test.c"],
+    deps = [
+        "//:dsp",
+        "//:tactile",
+    ],
+)
+
+c_test(
     name = "tuning_test",
     srcs = ["tuning_test.c"],
     deps = [

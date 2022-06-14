@@ -49,6 +49,8 @@ const ENVELOPE_TRACKER_MEASUREMENT_PERIOD_MS = 30;
 
 /** Default ChannelMap sources. */
 const DEFAULT_SOURCES = [9, 1, 2, 0, 4, 5, 8, 3, 8, 9];
+/** Default ChannelMap gains. */
+const DEFAULT_GAINS = [63, 63, 63, 63, 63, 63, 63, 0, 63, 63];
 
 /**
  * Linearly maps `value_in` from [0, 255] to [min_in, min_out].
@@ -197,13 +199,13 @@ class BleManager {
     this.nusTx = null;
     this.connected = false;
 
-    // State informatin for channels.
+    // State information for channels.
     this.channelData = [];
     for (let c = 0; c < NUM_TACTORS; c++) {
       this.channelData.push({
-        source: c + 1,
-        enabled: true,
-        gain: 63
+        source: DEFAULT_SOURCES[c] + 1,
+        enabled: (DEFAULT_GAINS[c] > 0),
+        gain: DEFAULT_GAINS[c] || 63
       });
     }
 
@@ -214,25 +216,21 @@ class BleManager {
         default: 127,
         currentValue: 127,
         mapping: (x) => {
-          return lin_mapping(x, -40.0, 40.315)
+          return lin_mapping(x, -30.0, 30.2363)
               .toFixed(1)
               .replace('-', '&minus;');
         },
         units: 'dB',
       },
       {label: 'Output gain',
-        default: 191,
-        currentValue: 191,
+        default: 161,
+        currentValue: 161,
         mapping: (x) => {
-          return lin_mapping(x, -18.0, 6.0).toFixed(1).replace('-', '&minus;');
+          return lin_mapping(x, -30.0, 30.2363)
+              .toFixed(1)
+              .replace('-', '&minus;');
         },
         units: 'dB',
-      },
-      {label: 'Energy smoothing',
-        default: 85,
-        currentValue: 85,
-        mapping: (x) => { return log_mapping(x, 0.001, 1.0).toFixed(3); },
-        units: 's',
       },
       {label: 'Noise adaptation',
         default: 127,
@@ -240,15 +238,30 @@ class BleManager {
         mapping: (x) => { return log_mapping(x, 0.2, 20.0).toFixed(1); },
         units: 'dB/s',
       },
-      {label: 'Denoising strength',
-        default: 33,
-        currentValue: 33,
+      {label: 'Denoising: baseband',
+        default: 255,
+        currentValue: 255,
+        mapping: (x) => { return log_mapping(x, 0.5, 100.0).toFixed(1); },
+      },
+      {label: 'Denoising: vowel',
+        default: 100,
+        currentValue: 100,
+        mapping: (x) => { return log_mapping(x, 0.5, 100.0).toFixed(1); },
+      },
+      {label: 'Denoising: sh fricative',
+        default: 77,
+        currentValue: 77,
+        mapping: (x) => { return log_mapping(x, 0.5, 100.0).toFixed(1); },
+      },
+      {label: 'Denoising: fricative',
+        default: 77,
+        currentValue: 77,
         mapping: (x) => { return log_mapping(x, 0.5, 100.0).toFixed(1); },
       },
       {label: 'Denoising transition',
-        default: 51,
-        currentValue: 51,
-        mapping: (x) => { return lin_mapping(x, 5.0, 30.0).toFixed(1); },
+        default: 36,
+        currentValue: 36,
+        mapping: (x) => { return lin_mapping(x, 1.0, 15.0).toFixed(1); },
         units: 'dB',
       },
       {label: 'AGC strength',
@@ -353,8 +366,8 @@ class BleManager {
   resetChannelMap() {
     for (let c = 0; c < NUM_TACTORS; c++) {
       this.channelData[c].source = DEFAULT_SOURCES[c] + 1;
-      this.channelData[c].gain = 63;
-      this.channelData[c].enabled = true;
+      this.channelData[c].gain = DEFAULT_GAINS[c] || 63;
+      this.channelData[c].enabled = (DEFAULT_GAINS[c] > 0);
     }
     this.channelUIUpdate();
     this.requestSetChannelMap();
@@ -674,3 +687,4 @@ class BleManager {
     this.nusRx.writeValue(bytes);
   }
 }
+

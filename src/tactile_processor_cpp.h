@@ -46,6 +46,11 @@ class TactileProcessorWrapper {
   // Applies tuning settings. Can be called anytime.
   void ApplyTuning(const TuningKnobs& tuning_knobs);
 
+  // Gets the TactileProcessor C object.
+  TactileProcessor* get() const {
+    return tactile_processor_;
+  }
+
   // Returns the sampling rate after decimation (reduced).
   float GetOutputSampleRate() const {
     return sample_rate_ / decimation_factor_;

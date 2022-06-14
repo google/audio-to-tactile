@@ -54,8 +54,9 @@
  *     c. The noise gate soft threshold is set at `denoising_strength * noise`
  *        and with a transition width of `denoising_transition_db` dB.
  *
- *   3. A (partially) normalized energy is computed as
- *      agc_output = soft_gate_weight * smoothed_energy^-agc_strength * energy.
+ *   3. The gated AGC gain `soft_gate_weight * smoothed_energy^-agc_strength` is
+ *      computed and smoothed with a one-pole lowpass filter, then applied to
+ *      the energy. This denoises and partially normalizes the energy.
  *
  *   4. The normalized energy is compressed with a power law as
  *      `(agc_output + delta)^exponent - delta^exponent`.
@@ -99,6 +100,10 @@ typedef struct {
    */
   float bpf_low_edge_hz;
   float bpf_high_edge_hz;
+  /* Denoising strength, a positive value where larger means stronger denoising.
+   * This parameter scales the soft noise gate threshold.
+   */
+  float denoising_strength;
   /* The final output is multiplied by this gain. */
   float output_gain;
 } EnveloperChannelParams;
@@ -116,10 +121,6 @@ typedef struct {
 
   /* Noise estimate adaptation rate in dB per second. */
   float noise_db_s;
-  /* Denoising strength, a positive value where larger means stronger denoising.
-   * This parameter scales the soft noise gate threshold.
-   */
-  float denoising_strength;
   /* Soft noise gate transition width in dB. A large value makes the gate
    * more gradual, which helps avoid a "breathing" artifact from noise
    * fluctuations crossing above the threshold.
@@ -129,10 +130,11 @@ typedef struct {
   /* Parameters for per-channel energy normalization (PCEN). */
   /* Normalization strength (0 => bypass, 1 => full normalization). */
   float agc_strength;
+  /* Gain smoothing attack and release time constants in seconds. */
+  float gain_tau_attack_s;
+  float gain_tau_release_s;
   /* Compression exponent in a memoryless nonlinearity, between 0.0 and 1.0. */
   float compressor_exponent;
-  /* Delta added to stabilize the compression. */
-  float compressor_delta;
 } EnveloperParams;
 extern const EnveloperParams kDefaultEnveloperParams;
 
@@ -141,12 +143,14 @@ typedef struct {
   BiquadFilterCoeffs bpf_biquad_coeffs[2];
   float peak;
   float equalization;
+  float gate_thresh_factor;
   float output_gain;
 
   BiquadFilterState bpf_biquad_state[2];
   BiquadFilterState energy_biquad_state;
   float smoothed_energy;
   float noise;
+  float smoothed_gain;
 } EnveloperChannel;
 
 /* Enveloper data and state variables. */
@@ -159,15 +163,16 @@ typedef struct {
   float input_sample_rate_hz;
   /* Decimation factor after computing the energy envelope. */
   int decimation_factor;
+  int num_warm_up_samples;
 
   float energy_smoother_coeff;
   float noise_coeffs[2];
-  float gate_thresh_factor;
   float gate_transition_factor;
   float agc_exponent;
+  float gain_smoother_coeffs[2]; /* [0] = attack coeff, [1] = release coeff. */
   float compressor_exponent;
   float compressor_delta;
-  float compressor_offset;
+  int warm_up_counter;
 } Enveloper;
 
 /* Initialize state with the specified parameters. The output sample rate is
