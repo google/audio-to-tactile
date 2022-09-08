@@ -1,4 +1,4 @@
-/* Copyright 2019, 2021 Google LLC
+/* Copyright 2019, 2021-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
 #include "dsp/read_wav_file.h"
 
 #include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -87,7 +88,17 @@ int16_t* Read16BitWavFile(const char* file_name, size_t* num_samples,
   *num_channels = info.num_channels;
   *sample_rate_hz = info.sample_rate_hz;
 
-  samples = (int16_t*) malloc(info.remaining_samples * sizeof(int16_t));
+  /* `info.remaining_samples * sizeof(int16_t)` might overflow size_t on some
+   * systems. The C standard only guarantees that size_t can represent at least
+   * 0 to 65535, but `remaining_samples` is a uint32_t value.
+   */
+  if (info.remaining_samples > SIZE_MAX / sizeof(int16_t)) {
+    LOG_ERROR("Error: WAV samples allocation would exceed %zu bytes.\n",
+              SIZE_MAX);
+    goto fail;
+  }
+
+  samples = (int16_t*)malloc(info.remaining_samples * sizeof(int16_t));
   if (samples == NULL) {
     LOG_ERROR("Error: Allocation of %zu bytes for WAV samples failed.\n",
               sizeof(int16_t) * info.remaining_samples);
@@ -157,11 +168,18 @@ int32_t* ReadWavFile(const char* file_name, size_t* num_samples,
     info.destination_alignment_bytes = 4;
     info.sample_format = kInt32;
   }
-  /* This allocation is fine even if the sample type is float because the size
-   * of a float is almost always 32 bits. */
-  CHECK(sizeof(float) == 4);  /* Assumes IEEE 754. */
-  samples = (int32_t*) malloc(info.remaining_samples * sizeof(int32_t));
 
+  /* Prevent overflow. */
+  if (info.remaining_samples > SIZE_MAX / sizeof(int32_t)) {
+    LOG_ERROR("Error: WAV samples allocation would exceed %zu bytes.\n",
+              SIZE_MAX);
+    goto fail;
+  }
+
+  /* This allocation is fine even if the sample type is float because we assert
+   * in read_wav_file_generic.c that sizeof(float) == 4.
+   */
+  samples = (int32_t*)malloc(info.remaining_samples * sizeof(int32_t));
   if (samples == NULL) {
     LOG_ERROR("Error: Allocation of %zu bytes for WAV samples failed.\n",
             sizeof(int) * info.remaining_samples);

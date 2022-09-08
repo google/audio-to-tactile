@@ -1,4 +1,4 @@
-/* Copyright 2019, 2021 Google LLC
+/* Copyright 2019, 2021-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 #include "src/dsp/read_wav_file.h"
 
 #include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -49,6 +50,14 @@ static const uint8_t kTest16BitMonoWavFile[52] = {
 /*                      d    a   t    a                                      */
     2,   0,   16,  0,   100, 97, 116, 97, 8,   0,   0,  0,  7,   0,   254, 255,
     255, 127, 0,   128};
+
+/* Header of a big WAV file. */
+static const uint8_t kTestBigWavFileHeader[48] = {
+/*  R    I    F    F                      W    A    V   E   f    m    t    _ */
+    82,  73,  70,  70,  44,  0,  0,   0,  87,  65,  86, 69, 102, 109, 116, 32,
+    16,  0,   0,   0,   1,   0,  1,   0,  128, 187, 0,  0,  0,   119, 1,   0,
+/*                      d    a   t    a                                      */
+    2,   0,   16,  0,   100, 97, 116, 97, 1,   0,   0,  64, 0,     0, 0,   0};
 
 /* A 16kHz 3-channel WAV file with int16_t samples {{0, 1, 2}, {3, 4, 5}}. */
 static const uint8_t kTest3ChannelWavFile[92] = {
@@ -183,6 +192,33 @@ static void TestReadMonoWav16BitGeneric(void) {
   CHECK(samples[3] == kExpectedSamples[3]);
   CHECK(num_channels == 1);
   CHECK(sample_rate_hz == 48000);
+
+  free(samples);
+  remove(wav_file_name);
+}
+
+static void TestReadBigWavFile(void) {
+  puts("TestReadBigWavFile");
+  const char* wav_file_name = NULL;
+  int32_t* samples = NULL;
+  size_t num_samples;
+  int num_channels;
+  int sample_rate_hz;
+
+  wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
+  WriteBytesAsFile(wav_file_name, kTestBigWavFileHeader, 48);
+
+  samples =
+      ReadWavFile(wav_file_name, &num_samples, &num_channels, &sample_rate_hz);
+
+  if (SIZE_MAX <= UINT32_MAX) {
+    CHECK(samples == NULL);
+    CHECK(num_samples == 0);
+    CHECK(num_channels == 0);
+    CHECK(sample_rate_hz == 0);
+  } else {
+    CHECK(num_samples == 2);
+  }
 
   free(samples);
   remove(wav_file_name);
@@ -437,6 +473,7 @@ int main(int argc, char** argv) {
   srand(0);
   TestReadMonoWav();
   TestReadMonoWav16BitGeneric();
+  TestReadBigWavFile();
   TestReadMonoWav24BitGeneric();
   TestReadMonoWavFloatGeneric();
   TestReadMonoWavStreaming();
