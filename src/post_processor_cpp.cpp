@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Google LLC
+// Copyright 2020-2022 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,6 +41,10 @@ bool PostProcessorWrapper::Init(float output_sample_rate, int block_size,
 
 void PostProcessorWrapper::PostProcessSamples(float* input_output) {
   PostProcessorProcessSamples(&post_processor_, input_output, block_size_);
+}
+
+void PostProcessorWrapper::LowBattery() {
+  ::PostProcessorLowBattery(&post_processor_);
 }
 
 }  // namespace audio_tactile

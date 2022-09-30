@@ -100,7 +100,7 @@ constexpr int kSettingsWriteDelayCycles =
 
 bool g_initialize_pwm = false;
 bool g_low_battery = false;
-bool g_vibration_warning = false;
+int g_low_battery_counter = 0;
 bool g_notify_mic_switch = false;
 
 float g_latest_battery_v = 0.0f;
@@ -289,10 +289,6 @@ void HandleMessage(const Message& message) {
       Serial.println("Message: GetTuning.");
       BleCom.tx_message().WriteTuning(g_settings.tuning);
       BleCom.SendTxMessage();
-      // The web interface sends a GetTuning message as soon as it is connected.
-      // Play "connect" pattern as UI feedback that connection is established.
-      // TactilePatternStart(&g_tactile_pattern, kTactilePatternConnect);
-      // g_tactile_pattern_active = true;
       break;
     case MessageType::kTuning:
       // Message specifying new tuning knobs.
@@ -536,6 +532,25 @@ void loop() {
   }
 
   if (g_new_mic_data) {
+    // Handle low battery voltage.
+    if (g_low_battery) {
+      g_post_processor.LowBattery();
+
+      ++g_low_battery_counter;
+      if (g_low_battery_counter > 10) {
+        // If the battery is low for more than 10 consecutive buffers, play a
+        // tactile pattern to warn that the battery is low.
+        TactilePatternStart(&g_tactile_pattern, "  A66   88   88  ");
+        g_tactile_pattern_active = true;
+        // Don't play the warning pattern again for 500 buffers.
+        g_low_battery_counter = -500;
+      }
+    } else if (g_low_battery_counter < 0) {
+      ++g_low_battery_counter;
+    } else {
+      g_low_battery_counter = 0;
+    }
+
     // Convert ADC values to floats. The raw ADC values can swing from -2048 to
     // 2048, (12 bits) for analog mic and 32,768 for PDM mic (16 bits)
     float scale = TuningGetInputGain(&g_settings.tuning);
@@ -575,13 +590,6 @@ void loop() {
     nrf_gpio_pin_toggle(kLedPinGreen);
   }
 
-  if (g_low_battery && !g_vibration_warning) {
-    // Play a tactile pattern to warn that the battery is low.
-    TactilePatternStart(&g_tactile_pattern, "A66   888   888");
-    g_tactile_pattern_active = true;
-    g_low_battery = false;
-    g_vibration_warning = true;
-  }
   // Notify the user about switching to a different mic.
   if (g_notify_mic_switch) {
     TactilePatternStart(&g_tactile_pattern, kTactilePatternConnect);
@@ -682,14 +690,8 @@ void OnBleEvent() {
 }
 
 void LowBatteryWarning() {
-  if (PuckBatteryMonitor.GetEvent() == 0) {
-    nrf_gpio_pin_write(kLedPinBlue, 1);
-    g_low_battery = true;
-  }
-  if (PuckBatteryMonitor.GetEvent() == 1) {
-    nrf_gpio_pin_write(kLedPinBlue, 0);
-    g_low_battery = false;
-  }
+  g_low_battery = (PuckBatteryMonitor.GetEvent() == 0);
+  nrf_gpio_pin_write(kLedPinBlue, g_low_battery ? 1 : 0);
 }
 
 #if SELECTABLE_MIC

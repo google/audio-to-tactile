@@ -64,10 +64,7 @@ WARNING_OPTS = [
 })
 
 # Build with C89 standard compatibility.
-DEFAULT_C_OPTS = WARNING_OPTS + select({
-    CONDITION_WINDOWS: ["/Za"],
-    "//conditions:default": ["-std=c89"],
-})
+DEFAULT_C_OPTS = WARNING_OPTS + ["-std=c89"]
 
 def c_binary(name = None, **kwargs):
     """cc_binary with DEFAULT_COPTS."""

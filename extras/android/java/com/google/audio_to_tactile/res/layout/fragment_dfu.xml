@@ -117,11 +117,11 @@ limitations under the License.
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:layout_width="200dp"
+            android:layout_width="250dp"
             android:layout_height="wrap_content"
             android:maxLength="17"
             android:fontFamily="monospace"
-            android:digits="-/0123456789ABCDEF"
+            android:digits=":0123456789ABCDEF"
             android:inputType="textShortMessage|textNoSuggestions|text|textCapCharacters"
             android:text="@string/other_device_address_textfield_default" />
 

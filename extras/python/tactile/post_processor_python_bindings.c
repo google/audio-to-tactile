@@ -1,4 +1,4 @@
-/* Copyright 2020-2021 Google LLC
+/* Copyright 2020-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@
  *                mid_gain=0.31623,
  *                high_gain=0.53088,
  *                gain=1.0,
- *                max_amplitude=0.96,
  *                cutoff_hz=1000.0)
  *    """Constructor. [Wraps `PostProcessorInit()` in the C library.]"""
  *
@@ -82,19 +81,17 @@ static int PostProcessorObjectInit(PostProcessorObject* self,
                                    "mid_gain",
                                    "high_gain",
                                    "gain",
-                                   "max_amplitude",
                                    "cutoff_hz",
                                    NULL};
 
   if (!PyArg_ParseTupleAndKeywords(
-          args, kw, "fi|pfffff:__init__", (char**)keywords,
+          args, kw, "fi|pffff:__init__", (char**)keywords,
           &sample_rate_hz,
           &num_channels,
           &params.use_equalizer,
           &params.mid_gain,
           &params.high_gain,
           &params.gain,
-          &params.max_amplitude,
           &params.cutoff_hz)) {
     return -1;  /* PyArg_ParseTupleAndKeywords failed. */
   }

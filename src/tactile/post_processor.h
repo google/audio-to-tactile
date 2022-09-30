@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,24 +25,31 @@
  *
  * 2. Signals are multiplied by the output gain factor.
  *
- * 3. Signals are hard clipped. Particularly, PCEN produces large onset peaks,
- *    and extreme peaks needs to be clipped to a producible amplitude.
+ * 3. Signals are hard clipped to [-0.96, 0.96] (a few percent headroom for the
+ *    Butterworth filter in the next step). PCEN produces large onset peaks, and
+ *    extreme peaks needs to be clipped to a producible amplitude.
  *
  * 4. Signals are lowpass filtered with a second-order Butterworth filter.
  *    Energy above 1 kHz does not contribute at all to tactile perception, but
  *    may produce audible leakage. Also, this lowpassing softens cusps that hard
  *    clipping introduced into the waveform in the previous step.
  *
- * In the last step, the lowpass filter's impulse response is nonnegative except
- * for a small negative ripple. If we ignore that ripple, its nonnegative shape
- * implies that the filter does not increase the signal's max amplitude, so we
- * don't need to clip a second time.
+ *    (The lowpass filter's impulse response is nonnegative except for a small
+ *    negative ripple. If we ignore that ripple, its nonnegative shape implies
+ *    that the filter does not increase the signal's max amplitude, so we don't
+ *    need to clip a second time.)
+ *
+ * 5. To limit the peak power drawn by the tactors, signals are scaled down when
+ *    needed so that (sum_c x[c]^2) <= output_limit. The output_limit is tuned
+ *    automatically: when PostProcessorLowBattery() is called, the limit is
+ *    reduced, and otherwise it is slowly increased.
  */
 
 #ifndef AUDIO_TO_TACTILE_SRC_TACTILE_POST_PROCESSOR_H_
 #define AUDIO_TO_TACTILE_SRC_TACTILE_POST_PROCESSOR_H_
 
 #include "dsp/biquad_filter.h"
+#include "tactile/tuning.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,10 +67,10 @@ typedef struct {
   float high_gain;
   /* Output gain, applied just before clipping. */
   float gain;
-  /* Maximum amplitude, beyond which the signal is clipped. */
-  float max_amplitude;
   /* Lowpass cutoff frequency in Hz. */
   float cutoff_hz;
+  /* Limit for summed output power. */
+  float output_limit;
 } PostProcessorParams;
 
 /* Set `params` to default values. */
@@ -77,10 +84,12 @@ typedef struct {
 typedef struct {
   BiquadFilterCoeffs equalizer_biquad_coeffs[2];
   BiquadFilterCoeffs lpf_biquad_coeffs;
-  float max_amplitude;
   int num_channels;
 
   PostProcessorChannelState channels[kPostProcessorMaxChannels];
+  float limit_grow_coeff;
+  float output_limit;
+  int recovery;
 } PostProcessor;
 
 /* Initializes post processing. Returns 1 on success, 0 on failure. */
@@ -98,6 +107,11 @@ void PostProcessorReset(PostProcessor* state);
 void PostProcessorProcessSamples(PostProcessor* state,
                                  float* input_output,
                                  int num_frames);
+
+/* Tells the post processor that the battery is low. When called, the post
+ * processor scales down the output to consume less power.
+ */
+void PostProcessorLowBattery(PostProcessor* state);
 
 #ifdef __cplusplus
 }  /* extern "C" */

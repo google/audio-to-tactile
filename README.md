@@ -29,6 +29,7 @@ This code uses the Apache License 2.0. See the LICENSE file for details.
 * [Hardware](extras/doc/hardware/index.md)
 * [Firmware](extras/doc/firmware/index.md)
 * [Mechanical](extras/doc/mechanical/index.md)
+* [Android app](extras/doc/android_app/index.md)
 * [Signal processing](extras/doc/signal_processing/index.md)
   * [Energy envelope](extras/doc/signal_processing/energy_envelope/index.md)
   * [Frontend](extras/doc/signal_processing/frontend/index.md)

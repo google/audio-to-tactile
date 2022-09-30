@@ -1,4 +1,4 @@
-/* Copyright 2019, 2021 Google LLC
+/* Copyright 2019, 2021-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,7 +49,6 @@
  *                use_equalizer=True,
  *                mid_gain_db=-10.0,
  *                high_gain_db=-5.5,
- *                max_amplitude=0.96,
  *                post_processing_cutoff_hz=1000.0)
  *    """Constructor. [Wraps `TactileWorkerMake()` in the C library.]
  *
@@ -76,7 +75,6 @@
  *        tactile output.
  *      mid_gain_db: Float, equalizer mid band gain in dB.
  *      high_gain_db: Float, equalizer high band gain in dB.
- *      max_amplitude: Float. Tactile signals above this amplitude are clipped.
  *      post_processing_cutoff_hz: Float, cutoff in Hz of post-processing
  *        lowpass filter.
  *
@@ -152,17 +150,16 @@ static int TactileWorkerObjectInit(TactileWorkerObject* self, PyObject* args,
       "input_device", "output_device", "chunk_size", "sample_rate_hz",
       "channels", "channel_gains_db", "global_gain_db", "cutoff_hz",
       "use_equalizer", "mid_gain_db", "high_gain_db",
-      "max_amplitude", "post_processing_cutoff_hz", NULL};
+      "post_processing_cutoff_hz", NULL};
 
   if (!PyArg_ParseTupleAndKeywords(
-          args, kw, "|zziiszffpffff:__init__", (char**)keywords,
+          args, kw, "|zziiszffpfff:__init__", (char**)keywords,
           &params.input_device,
           &params.output_device, &params.chunk_size, &sample_rate_hz, &channels,
           &channel_gains_db, &global_gain_db,
           &params.tactile_processor_params.enveloper_params.energy_cutoff_hz,
           &params.post_processor_params.use_equalizer,
           &mid_gain_db, &high_gain_db,
-          &params.post_processor_params.max_amplitude,
           &params.post_processor_params.cutoff_hz)) {
     return -1; /* PyArg_ParseTupleAndKeywords failed. */
   }

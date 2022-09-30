@@ -1,4 +1,4 @@
-/* Copyright 2019-2020 Google LLC
+/* Copyright 2019-2020, 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,7 @@
  * small lookup tables.
  *
  * NOTE: This library assumes `float` uses 32-bit IEEE 754 floating point
- * representation. Most current machines do, but not all, which makes this
- * library somewhat non portable in spite of the "portable" directory name.
+ * representation. Most current machines do, but not all.
  *
  * You can use rules of logs and exponents to compute related functions:
  *  - Natural log: log(x) = FastLog2(x) * M_LN2.
@@ -30,6 +29,9 @@
  *  - Exponential: e^x = FastExp2(x / M_LN2).
  *  - Power of 10: 10^x = FastExp2(log2(10) * x).
  *  - Power of constant b: b^x = FastExp2(log2(b) * x).
+ *  - Square root: sqrt(x) = FastPow(x, 0.5f)
+ *    [Note: on modern x86 processors, `sqrtf()` from math.h is comparably fast,
+ *    but more accurate, compiling to a `sqrtss` SSE instruction.]
  *
  * Accuracy:
  *  - FastLog2(x) has max absolute error of about 0.003.

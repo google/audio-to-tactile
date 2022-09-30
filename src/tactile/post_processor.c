@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,22 @@
 #include <stdlib.h>
 
 #include "dsp/butterworth.h"
+#include "dsp/fast_fun.h"
 #include "tactile/tactor_equalizer.h"
+
+/* `output_limit` is constrained to [kLimitMin, kLimitMax]. */
+static const float kLimitMin = 1.0f;
+static const float kLimitMax = 6.0f;
+/* When the battery is low, `output_limit` is reduced by this factor. */
+static const float kLimitReduceFactor = 0.8f;
+/* Otherwise, `output_limit` is increased at this rate in Db/s. */
+static const float kLimitGrowRateDbPerSecond = 2.0f;
+
+/* When the battery is low, output power is reduced to `kRecoveryLimit` for the
+ * next `kRecoveryNumBuffers` buffers, so that hopefully the battery recovers.
+ */
+static const float kRecoveryLimit = 0.25f;
+static const int kRecoveryNumBuffers = 10;
 
 void PostProcessorSetDefaultParams(PostProcessorParams* params) {
   if (params) {
@@ -27,7 +42,6 @@ void PostProcessorSetDefaultParams(PostProcessorParams* params) {
     params->mid_gain = 0.31623f;
     params->high_gain = 0.53088f;
     params->gain = 1.0f;
-    params->max_amplitude = 0.96f;
     params->cutoff_hz = 1000.0f;
   }
 }
@@ -64,7 +78,8 @@ int PostProcessorInit(PostProcessor* state,
   state->equalizer_biquad_coeffs[0].b2 *= params->gain;
 
   state->num_channels = num_channels;
-  state->max_amplitude = params->max_amplitude;
+  state->limit_grow_coeff = (float)exp(
+      (float)(M_LN10 / 10.0) * kLimitGrowRateDbPerSecond / sample_rate_hz);
   PostProcessorReset(state);
   return 1;
 }
@@ -77,19 +92,44 @@ void PostProcessorReset(PostProcessor* state) {
     BiquadFilterInitZero(&channel->equalizer_biquad_state[1]);
     BiquadFilterInitZero(&channel->lpf_biquad_state);
   }
+  state->output_limit = kLimitReduceFactor * kLimitMax;
+  state->recovery = 0;
+}
+
+void PostProcessorLowBattery(PostProcessor* state) {
+  if (!state->recovery) {
+    /* When battery goes low, reduce limit by a bit. */
+    state->output_limit *= kLimitReduceFactor;
+    if (state->output_limit < kLimitMin) { state->output_limit = kLimitMin; }
+  }
+  state->recovery = kRecoveryNumBuffers;
 }
 
 void PostProcessorProcessSamples(PostProcessor* state,
                                  float* input_output,
                                  int num_frames) {
+  float output_limit = state->output_limit;
+
+  if (state->recovery) {
+    /* Use extra low limit for a few buffers to give battery time to recover. */
+    output_limit = kRecoveryLimit;
+    --state->recovery;
+  } else if (output_limit < kLimitMax) {
+    /* Otherwise, slowly grow the limit. */
+    output_limit *= state->limit_grow_coeff;
+    if (output_limit > kLimitMax) { output_limit = kLimitMax; }
+    state->output_limit = output_limit;
+  }
+
   const int num_channels = state->num_channels;
-  const float max_amplitude = state->max_amplitude;
   int n;
   for (n = 0; n < num_frames; ++n) {
+    float power = 0.0f;
+
     int c;
     for (c = 0; c < num_channels; ++c) {
       PostProcessorChannelState* channel = &state->channels[c];
-      float sample = *input_output;
+      float sample = input_output[c];
 
       /* Apply equalizer. */
       sample = BiquadFilterProcessOneSample(
@@ -100,16 +140,27 @@ void PostProcessorProcessSamples(PostProcessor* state,
           &channel->equalizer_biquad_state[1], sample);
 
       /* Apply hard clipping. */
-      if (sample > max_amplitude) { sample = max_amplitude; }
-      if (sample < -max_amplitude) { sample = -max_amplitude; }
+      const float kClipAmplitude = 0.96f;
+      if (sample > kClipAmplitude) { sample = kClipAmplitude; }
+      if (sample < -kClipAmplitude) { sample = -kClipAmplitude; }
 
       /* Apply lowpass filter. */
       sample = BiquadFilterProcessOneSample(
           &state->lpf_biquad_coeffs,
           &channel->lpf_biquad_state, sample);
 
-      *input_output = sample;
-      ++input_output;
+      power += sample * sample;
+      input_output[c] = sample;
     }
+
+    /* Limit the power when needed. */
+    if (power > output_limit) {
+      const float limiter_gain = FastPow(output_limit / power, 0.5f);
+      for (c = 0; c < num_channels; ++c) {
+        input_output[c] *= limiter_gain;
+      }
+    }
+
+    input_output += num_channels;
   }
 }

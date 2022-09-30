@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Google LLC
+// Copyright 2020-2022 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,6 +40,10 @@ class PostProcessorWrapper {
   // will need to be converted to PWM in uint16_t format to send to the PWM
   // hardware module. The range of input and output is a float from -1 to 1.
   void PostProcessSamples(float* input_output);
+
+  // Tells the post processor that the battery is low. When called, the post
+  // processor scales down the output to consume less power.
+  void LowBattery();
 
  private:
   PostProcessor post_processor_;

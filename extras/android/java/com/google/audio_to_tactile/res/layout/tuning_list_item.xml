@@ -30,6 +30,7 @@ limitations under the License.
         android:scaleType="center"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/tuning_item_divider"
         app:srcCompat="@drawable/ic_tuning_item"
         app:tint="?colorPrimaryVariant" />
 
@@ -63,7 +64,6 @@ limitations under the License.
         android:background="?android:attr/listDivider"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="@+id/tuning_item_name"
-        app:layout_constraintTop_toBottomOf="@+id/tuning_item_icon" />
+        app:layout_constraintStart_toStartOf="@+id/tuning_item_name" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

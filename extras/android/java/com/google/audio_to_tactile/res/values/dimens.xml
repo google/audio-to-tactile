@@ -32,7 +32,7 @@ limitations under the License.
   <dimen name="list_top_padding">8dp</dimen>
 
   <!-- Home fragment. -->
-  <dimen name="connect_button_width">160dp</dimen>
+  <dimen name="connect_button_width">200dp</dimen>
   <dimen name="battery_voltage_width">90dp</dimen>
   <dimen name="temperature_width">90dp</dimen>
   <dimen name="input_level_plot_height">120dp</dimen>
@@ -41,7 +41,7 @@ limitations under the License.
   <item name="tactile_pattern_max_length" type="dimen" format="integer">15</item>
 
   <!-- Tuning fragment. -->
-  <dimen name="tuning_item_layout_height">56dp</dimen>
+  <dimen name="tuning_item_layout_height">60dp</dimen>
   <dimen name="tuning_item_name_width">120dp</dimen>
   <dimen name="tuning_item_value_width">90dp</dimen>
 
@@ -53,9 +53,9 @@ limitations under the License.
   <item name="tuning_knob_control_value_max" type="dimen" format="float">255.0</item>
 
   <!-- Channel map fragment. -->
-  <dimen name="channel_map_tactor_header_width">56dp</dimen>
-  <dimen name="channel_map_source_header_margin_start">24dp</dimen>
-  <dimen name="channel_map_gain_header_margin_start">48dp</dimen>
+  <dimen name="channel_map_tactor_header_width">60dp</dimen>
+  <dimen name="channel_map_source_header_margin_start">28dp</dimen>
+  <dimen name="channel_map_gain_header_margin_start">52dp</dimen>
   <dimen name="channel_map_item_layout_height">56dp</dimen>
   <dimen name="channel_map_item_tactor_index_width">32dp</dimen>
   <dimen name="channel_map_item_source_index_width">56dp</dimen>
@@ -93,7 +93,7 @@ limitations under the License.
 
   <!-- Log fragment. -->
   <dimen name="log_item_layout_height">20dp</dimen>
-  <dimen name="log_item_timestamp_width">72dp</dimen>
+  <dimen name="log_item_timestamp_width">80dp</dimen>
   <dimen name="log_timestamp_text_size">8sp</dimen>
   <dimen name="log_message_text_size">10sp</dimen>
 
