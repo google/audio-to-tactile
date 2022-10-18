@@ -190,7 +190,7 @@ limitations under the License.
   function updateChannels() {
     for (var c = 0; c < NUM_TACTORS; c ++) {
       document.getElementById('channelSource' + c).value =
-          bleInstance.channelData[c].source;
+          bleInstance.channelData[c].source + 1;
       document.getElementById('channelEnable' + c).checked =
           bleInstance.channelData[c].enabled;
       document.getElementById('channelGain' + c).value =
@@ -338,7 +338,7 @@ limitations under the License.
       source.id = 'channelSource' + c;
       source.min = 1;
       source.max = NUM_TACTORS + 1;
-      source.value = DEFAULT_SOURCES[c];
+      source.value = DEFAULT_SOURCES[c] + 1;
 
       var slider = document.createElement('input');  // Make gain slider element.
       slider.className = 'knobSlider';
@@ -374,7 +374,7 @@ limitations under the License.
 
       ((c, source, slider, gainText, checkbox, testButton) => {
         source.addEventListener('change', function () {
-          bleInstance.setChannelData(c, 'source', source.value);
+          bleInstance.setChannelData(c, 'source', source.value - 1);
           bleInstance.requestSetChannelMap();
         }, false);
         // Update the text display when the slider changes.

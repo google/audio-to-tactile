@@ -40,6 +40,7 @@ html {
 .dropdown {
   color: blue;
   text-decoration: underline;
+  cursor: pointer;
 }
 
 .highlighted-letters {

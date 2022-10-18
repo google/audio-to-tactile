@@ -1,5 +1,5 @@
 /**
- * Copyright 2021 Google LLC
+ * Copyright 2021-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,10 @@
  * runs, as well as calculating final threshold values.
  */
 
-goog.module('audio_to_tactile.extras.web.training.levitt');
-
 class LevittExperiment {
+  /**
+   * Constructs an experiment in initial state.
+   */
   constructor(
       initialLevel, changeDelta, decreaseStepByRun = false,
       multiplicativeStep = false, maxRuns = 16, debug = false, minLevel = 1,
@@ -251,5 +252,3 @@ class LevittExperiment {
     return contents;
   }
 }
-
-exports = {LevittExperiment};

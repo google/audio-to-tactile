@@ -42,6 +42,7 @@ const MESSAGE_TYPE_DEVICE_NAME = 29;
 const MESSAGE_TYPE_GET_DEVICE_NAME = 30;
 const MESSAGE_TYPE_OTA_BOOTLOADMODE = 31;
 const MESSAGE_TYPE_CALIBRATE_CHANNEL = 35;
+const MESSAGE_TYPE_TACTILE_EX_PATTERN = 36;
 
 const NUM_TACTORS = 10;
 const ENVELOPE_TRACKER_RECORD_POINTS = 33;
@@ -51,6 +52,34 @@ const ENVELOPE_TRACKER_MEASUREMENT_PERIOD_MS = 30;
 const DEFAULT_SOURCES = [9, 1, 2, 0, 4, 5, 8, 3, 8, 9];
 /** Default ChannelMap gains. */
 const DEFAULT_GAINS = [63, 63, 63, 63, 63, 63, 63, 0, 63, 63];
+
+/**
+ * Tactile pattern opcodes and waveform codes.
+ * These should match the definitions in tactile/tactile_pattern.h.
+ */
+const TACTILE_PATTERN_OP_PLAY = 0x80;
+const TACTILE_PATTERN_OP_SET_WAVEFORM = 0xa0;
+const TACTILE_PATTERN_OP_SET_GAIN = 0xb0;
+const TACTILE_PATTERN_OP_SET_ALL_WAVEFORM = 0x01;
+const TACTILE_PATTERN_OP_SET_ALL_GAIN = 0x02;
+const TACTILE_PATTERN_OP_MOVE = 0x03;
+const TACTILE_PATTERN_WAVEFORM_SIN25HZ = 0;
+const TACTILE_PATTERN_WAVEFORM_SIN30HZ = 1;
+const TACTILE_PATTERN_WAVEFORM_SIN35HZ = 2;
+const TACTILE_PATTERN_WAVEFORM_SIN45HZ = 3;
+const TACTILE_PATTERN_WAVEFORM_SIN50HZ = 4;
+const TACTILE_PATTERN_WAVEFORM_SIN60HZ = 5;
+const TACTILE_PATTERN_WAVEFORM_SIN70HZ = 6;
+const TACTILE_PATTERN_WAVEFORM_SIN90HZ = 7;
+const TACTILE_PATTERN_WAVEFORM_SIN100HZ = 8;
+const TACTILE_PATTERN_WAVEFORM_SIN125HZ = 9;
+const TACTILE_PATTERN_WAVEFORM_SIN150HZ = 10;
+const TACTILE_PATTERN_WAVEFORM_SIN175HZ = 11;
+const TACTILE_PATTERN_WAVEFORM_SIN200HZ = 12;
+const TACTILE_PATTERN_WAVEFORM_SIN250HZ = 13;
+const TACTILE_PATTERN_WAVEFORM_SIN300HZ = 14;
+const TACTILE_PATTERN_WAVEFORM_SIN350HZ = 15;
+const TACTILE_PATTERN_WAVEFORM_CHIRP = 16;
 
 /**
  * Linearly maps `value_in` from [0, 255] to [min_in, min_out].
@@ -72,6 +101,30 @@ function lin_mapping(value_in, min_out, max_out) {
  */
 function log_mapping(value_in, min_out, max_out) {
   return Math.exp(lin_mapping(value_in, Math.log(min_out), Math.log(max_out)));
+}
+
+/**
+ * Converts control value in the range 0--63 to a linear gain.
+ * @param {number} controlValue integer in the range 0--63.
+ * @return {number} linear gain in [0.0, 1.0].
+ */
+function channelGainFromControlValue(controlValue) {
+  controlValue = Math.round(Math.min(controlValue, 63));
+  if (controlValue >= 1) {
+    let gainDb = (18.0 / 62.0) * (controlValue - 63.0);
+    return Math.pow(10.0, gainDb / 20.0);
+  }
+  return 0.0;
+}
+
+/**
+ * Tactile pattern Play opcode for the given duration
+ * @param {number} durationMs duration in units of milliseconds, 20--640 ms
+ * @return {number} opcode
+ */
+function tactilePatternOpPlayMs(durationMs) {
+  return TACTILE_PATTERN_OP_PLAY +
+    (Math.round(Math.min(Math.max(durationMs, 20), 640) / 20) - 1);
 }
 
 /** Function that does nothing, for use as a default UI function. */
@@ -203,7 +256,7 @@ class BleManager {
     this.channelData = [];
     for (let c = 0; c < NUM_TACTORS; c++) {
       this.channelData.push({
-        source: DEFAULT_SOURCES[c] + 1,
+        source: DEFAULT_SOURCES[c],
         enabled: (DEFAULT_GAINS[c] > 0),
         gain: DEFAULT_GAINS[c] || 63
       });
@@ -320,8 +373,8 @@ class BleManager {
     let size = 4;
     let messagePayload = new Uint8Array(size);
     let messageType = MESSAGE_TYPE_CALIBRATE_CHANNEL;
-    let referenceChannelData = this.channelData[referenceChannel].source - 1;
-    let testChannelData = this.channelData[testChannel].source - 1;
+    let referenceChannelData = this.channelData[referenceChannel].source;
+    let testChannelData = this.channelData[testChannel].source;
 
     // Write channels in the first byte.
     messagePayload[0] = (referenceChannelData & 15) | (testChannelData << 4);
@@ -336,6 +389,80 @@ class BleManager {
     messagePayload[3] = amplitude >> 8;
 
     this.writeMessage(messageType, messagePayload);
+  }
+
+  /**
+   * Constructs and writes a tactile ex pattern message to the device to play
+   * a test tone on one tactor.
+   * @param {number} tactor Tactor index
+   * @param {number} amplitude Linear amplitude in [0.0, 1.0]
+   */
+  requestPlayTestTone(tactor, amplitude) {
+    if (!this.connected) { return; }
+
+    // Convert tactor index to channel index.
+    let channel = this.channelData[tactor].source;
+    this.writeMessage(
+        MESSAGE_TYPE_TACTILE_EX_PATTERN,
+        // TODO: Port `TactilePattern.parse()` from Kotlin to JS so
+        // that ex patterns can be written more nicely as human-readable text.
+        new Uint8Array([ // (5-byte payload)
+          // Set gain.
+          TACTILE_PATTERN_OP_SET_GAIN + channel,
+          Math.round(Math.max(0.0, Math.min(amplitude, 1.0)) * 255),
+          // Play 125 Hz tone for 400 ms.
+          TACTILE_PATTERN_OP_SET_WAVEFORM + channel,
+          TACTILE_PATTERN_WAVEFORM_SIN125HZ,
+          tactilePatternOpPlayMs(400),
+        ]));
+  }
+
+  /**
+   * Constructs and writes a tactile ex pattern message to the device to play
+   * an "ABA" calibration pattern on two tactors. It plays:
+   *  1. ("A") 125 Hz tone on tactor1 for 400 ms.
+   *  2. Pause for 300 ms.
+   *  3. ("B") 125 Hz tone on tactor2 for 400 ms.
+   *  4. Pause for 300 ms.
+   *  5. ("A") 125 Hz tone on tactor1 for 400 ms.
+   * 
+   * @param {number} tactor1 First tactor index
+   * @param {number} amplitude1 Tone amplitude for first tactor in [0.0, 1.0]
+   * @param {number} tactor2 Second tactor index
+   * @param {number} amplitude2 Tone amplitude for second tactor in [0.0, 1.0]
+   */
+  requestPlayABAPattern(tactor1, amplitude1, tactor2, amplitude2) {
+    if (!this.connected) { return; }
+
+    // Convert tactor indices to channel indices.
+    let channel1 = this.channelData[tactor1].source;
+    let channel2 = this.channelData[tactor2].source;
+    this.writeMessage(
+        MESSAGE_TYPE_TACTILE_EX_PATTERN,
+        new Uint8Array([ // (15-byte payload)
+          // Set gain on channel1.
+          TACTILE_PATTERN_OP_SET_GAIN + channel1,
+          Math.round(Math.max(0.0, Math.min(amplitude1, 1.0)) * 255),
+          // Play 125 Hz tone on channel1 for 400 ms.
+          TACTILE_PATTERN_OP_SET_WAVEFORM + channel1,
+          TACTILE_PATTERN_WAVEFORM_SIN125HZ,
+          tactilePatternOpPlayMs(400),
+          // 300 ms pause.
+          tactilePatternOpPlayMs(300),
+          // Set gain on channel2.
+          TACTILE_PATTERN_OP_SET_GAIN + channel2,
+          Math.round(Math.max(0.0, Math.min(amplitude2, 1.0)) * 255),
+          // Play 125 Hz tone on channel2 for 400 ms.
+          TACTILE_PATTERN_OP_SET_WAVEFORM + channel2,
+          TACTILE_PATTERN_WAVEFORM_SIN125HZ,
+          tactilePatternOpPlayMs(400),
+          // 300 ms pause.
+          tactilePatternOpPlayMs(300),
+          // Play 125 Hz tone on channel1 for 400 ms.
+          TACTILE_PATTERN_OP_SET_WAVEFORM + channel1,
+          TACTILE_PATTERN_WAVEFORM_SIN125HZ,
+          tactilePatternOpPlayMs(400),
+        ]));
   }
 
   /** Send a request to device to update channel gains. */
@@ -365,7 +492,7 @@ class BleManager {
    */
   resetChannelMap() {
     for (let c = 0; c < NUM_TACTORS; c++) {
-      this.channelData[c].source = DEFAULT_SOURCES[c] + 1;
+      this.channelData[c].source = DEFAULT_SOURCES[c];
       this.channelData[c].gain = DEFAULT_GAINS[c] || 63;
       this.channelData[c].enabled = (DEFAULT_GAINS[c] > 0);
     }
@@ -405,7 +532,7 @@ class BleManager {
 
   /**
    * Sets values in channelData.
-   * @param {number} c Index of channel.
+   * @param {number} c Index of tactor.
    * @param {string} field Name of field to set.
    * @param {number|boolean} val Value to assign to the field.  Can be a source
    *    index, a gain value, or a boolean for enabled.
@@ -461,8 +588,8 @@ class BleManager {
             this.setTuningData(i, messagePayload[i]);
           }
           this.tuningKnobsUIUpdate();
-          this.requestGetDeviceName();
         }
+        this.requestGetDeviceName();
         break;
       case MESSAGE_TYPE_DEVICE_NAME:
         let name = String.fromCharCode.apply(null, messagePayload);
@@ -517,10 +644,8 @@ class BleManager {
     }
     let i = 1;
     for (let c = 0; c < numOutput; c += 2, i++) {
-      this.channelData[c].source =
-          (messagePayload[i] & 15) + 1;
-      this.channelData[c + 1].source =
-          (messagePayload[i] >> 4) + 1;
+      this.channelData[c].source = messagePayload[i] & 15;
+      this.channelData[c + 1].source = messagePayload[i] >> 4;
     }
     const setGain = ((c, value, BLEInstance) => {
       if (c < NUM_TACTORS) {
@@ -628,15 +753,15 @@ class BleManager {
     messagePayload[0] = (numInput & 15) | numOutput << 4;
     let i = 1;
     if (testChannels.length) {
-      let testChannelData0 = this.channelData[testChannels[0]].source - 1;
-      let testChannelData1 = this.channelData[testChannels[1]].source - 1;
+      let testChannelData0 = this.channelData[testChannels[0]].source;
+      let testChannelData1 = this.channelData[testChannels[1]].source;
       messagePayload[i] = (testChannelData0 & 15) | testChannelData1 << 4;
       i++;
     } else {
       // Write source mapping, 4 bits per channel.
       for (let c = 0; c < numOutput; c += 2, i++) {
-        let source0 = this.channelData[c].source - 1;
-        let source1 = this.channelData[c + 1].source - 1;
+        let source0 = this.channelData[c].source;
+        let source1 = this.channelData[c + 1].source;
         messagePayload[i] = (source0 & 15) | (source1 & 15) << 4;
       }
     }
