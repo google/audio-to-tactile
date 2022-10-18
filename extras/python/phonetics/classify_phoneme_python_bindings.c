@@ -1,4 +1,4 @@
-/* Copyright 2020-2021 Google LLC
+/* Copyright 2020-2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,8 +97,7 @@
  * https://docs.scipy.org/doc/numpy/reference/c-api.array.html
  */
 
-#include <string.h>
-
+#define PY_SSIZE_T_CLEAN
 #include "Python.h"
 /* Disallow Numpy 1.7 deprecated symbols. */
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION

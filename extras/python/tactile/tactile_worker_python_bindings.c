@@ -123,6 +123,7 @@
  * https://numpy.org/doc/stable/reference/c-api/array.html
  */
 
+#define PY_SSIZE_T_CLEAN
 #include "Python.h"
 /* Disallow Numpy 1.7 deprecated symbols. */
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
