@@ -324,8 +324,7 @@ class BleViewModel @Inject constructor(private val bleCom: BleCom) : ViewModel()
     _channelMap.value = _channelMap.value // Notify observers.
     _channelMap.value?.let {
       // Send [ChannelGainUpdateMessage] over BLE to the connected device.
-      val testChannels = Pair(it[0].source, it[tactorIndex].source)
-      sendMessageIfConnected(ChannelGainUpdateMessage(it, testChannels))
+      sendMessageIfConnected(ChannelGainUpdateMessage(it, Pair(0, tactorIndex)))
     }
   }
 
@@ -333,8 +332,7 @@ class BleViewModel @Inject constructor(private val bleCom: BleCom) : ViewModel()
   fun channelMapTest(tactorIndex: Int) {
     _channelMap.value?.let {
       // Send [ChannelGainUpdateMessage] over BLE to the connected device.
-      val testChannel = it[tactorIndex].source
-      sendMessageIfConnected(ChannelGainUpdateMessage(it, Pair(testChannel, testChannel)))
+      sendMessageIfConnected(ChannelGainUpdateMessage(it, Pair(tactorIndex, tactorIndex)))
     }
   }
 

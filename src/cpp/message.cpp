@@ -241,7 +241,7 @@ bool DeserializeChannelMap(Slice<const uint8_t> payload,
 
 // Writes channel gain update to `dest`. Returns final position of `dest`.
 uint8_t* SerializeChannelGainUpdate(
-    const ChannelMap& channel_map, const int* test_channels, uint8_t* dest) {
+    const ChannelMap& channel_map, const int* test_tactors, uint8_t* dest) {
   const int num_in =
       std_shim::min<int>(kMaxInputChannels, channel_map.num_input_channels);
   const int num_out =
@@ -250,8 +250,8 @@ uint8_t* SerializeChannelGainUpdate(
   // Write number of input and output channels in the first byte.
   *dest++ = static_cast<uint8_t>((num_in & 15) | num_out << 4);
   // Write the two test channel indices, 4 bits for each.
-  *dest++ = static_cast<uint8_t>((test_channels[0] & 15)
-                                | test_channels[1] << 4);
+  *dest++ = static_cast<uint8_t>((test_tactors[0] & 15)
+                                | test_tactors[1] << 4);
   // Write channel gains, 6 bits per channel.
   return SerializeChannelMapGains(channel_map, dest);
 }
@@ -261,12 +261,12 @@ bool DeserializeChannelGainUpdate(Slice<const uint8_t> payload,
                                   int expected_inputs,
                                   int expected_outputs,
                                   ChannelMap* channel_map,
-                                  int* test_channels) {
+                                  int* test_tactors) {
   if (DeserializeNumChannelsAndCheckSize(payload, /*is_gain_update=*/true,
         expected_inputs, expected_outputs, channel_map)) {
     const uint8_t* src = payload.data() + 1;
-    test_channels[0] = *src & 15;  // Read the two test channel indices.
-    test_channels[1] = *src >> 4;
+    test_tactors[0] = *src & 15;  // Read the two test tactor indices.
+    test_tactors[1] = *src >> 4;
     DeserializeChannelMapGains(src + 1, channel_map);
     return true;
   }
@@ -288,39 +288,39 @@ bool Message::ReadChannelMap(ChannelMap* channel_map, int expected_inputs,
 }
 
 void Message::WriteChannelGainUpdate(
-    const ChannelMap& channel_map, int test_channels[2]) {
+    const ChannelMap& channel_map, int test_tactors[2]) {
   uint8_t* start = bytes_ + kHeaderSize;
   uint8_t* end = SerializeChannelGainUpdate(
-      channel_map, test_channels, bytes_ + kHeaderSize);
+      channel_map, test_tactors, bytes_ + kHeaderSize);
   bytes_[3] = static_cast<uint8_t>(end - start);
   set_type(MessageType::kChannelGainUpdate);
 }
 
 bool Message::ReadChannelGainUpdate(ChannelMap* channel_map,
-                                    int test_channels[2], int expected_inputs,
+                                    int test_tactors[2], int expected_inputs,
                                     int expected_outputs) const {
   return DeserializeChannelGainUpdate(
-      payload(), expected_inputs, expected_outputs, channel_map, test_channels);
+      payload(), expected_inputs, expected_outputs, channel_map, test_tactors);
 }
 
-bool Message::ReadCalibrateChannel(ChannelMap* channel_map,
-                                    int calibration_channels[2],
-                                    float* calibration_amplitude) const {
+bool Message::ReadCalibrateTactor(ChannelMap* channel_map,
+                                  int calibration_tactors[2],
+                                  float* calibration_amplitude) const {
   if (payload_size() != 4) { return false; }
   const uint8_t* src = payload().data();
 
   // Read the two test channel indices.
-  calibration_channels[0] = *src & 15;
-  calibration_channels[1] = *src >> 4;
+  calibration_tactors[0] = *src & 15;
+  calibration_tactors[1] = *src >> 4;
 
   // validate that these indices are < channel_map->num_output_channels
-  if (calibration_channels[0] >= channel_map->num_output_channels ||
-      calibration_channels[1] >= channel_map->num_output_channels) {
+  if (calibration_tactors[0] >= channel_map->num_output_channels ||
+      calibration_tactors[1] >= channel_map->num_output_channels) {
     return false;
   }
 
   // Read and set the new gain.
-  channel_map->gains[calibration_channels[1]] =
+  channel_map->gains[calibration_tactors[1]] =
       ChannelGainFromControlValue(*++src);
 
   // Read playback amplitude, converting uint16 value to a float in [0, 1].

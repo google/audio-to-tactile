@@ -336,34 +336,39 @@ void HandleMessage(const Message& message) {
       // Reset countdown to update flash settings.
       g_write_settings_countdown = kSettingsWriteDelayCycles;
       break;
-    case MessageType::kChannelGainUpdate:
+    case MessageType::kChannelGainUpdate: {
       Serial.println("Message: ChannelGainUpdate.");
-      int test_channels[2];
-      if (message.ReadChannelGainUpdate(&g_settings.channel_map, test_channels,
+      int tactors[2];
+      if (message.ReadChannelGainUpdate(&g_settings.channel_map, tactors,
                                         kTactileProcessorNumTactors,
                                         kTactileProcessorNumTactors)) {
+        // Map tactors to channel indices.
+        const int ref_channel = g_settings.channel_map.sources[tactors[0]];
+        const int test_channel = g_settings.channel_map.sources[tactors[1]];
         TactilePatternStartCalibrationTones(&g_tactile_pattern,
-                                            test_channels[0], test_channels[1]);
+                                            ref_channel, test_channel);
         g_tactile_pattern_active = true;
         // Reset countdown to update flash settings.
         g_write_settings_countdown = kSettingsWriteDelayCycles;
       }
-      break;
-    case MessageType::kCalibrateChannel:
-      Serial.println("Message: CalibrateChannel.");
-      int calibration_channels[2];
+      } break;
+    case MessageType::kCalibrateTactor: {
+      Serial.println("Message: CalibrateTactor.");
+      int tactors[2];
       float calibration_amplitude;
-      if (message.ReadCalibrateChannel(&g_settings.channel_map,
-                                       calibration_channels,
-                                       &calibration_amplitude)) {
-        TactilePatternStartCalibrationTonesThresholds(
-            &g_tactile_pattern, calibration_channels[0],
-            calibration_channels[1], calibration_amplitude);
+      if (message.ReadCalibrateTactor(&g_settings.channel_map, tactors,
+                                      &calibration_amplitude)) {
+        // Map tactors to channel indices.
+        const int ref_channel = g_settings.channel_map.sources[tactors[0]];
+        const int test_channel = g_settings.channel_map.sources[tactors[1]];
+        TactilePatternStartCalibrationTonesThresholds(&g_tactile_pattern,
+                                                      ref_channel, test_channel,
+                                                      calibration_amplitude);
         g_tactile_pattern_active = true;
         // Reset countdown to update flash settings.
         g_write_settings_countdown = kSettingsWriteDelayCycles;
       }
-      break;
+      } break;
     case MessageType::kDeviceName:
       Serial.println("Message: DeviceName.");
       if (message.ReadDeviceName(g_settings.device_name)) {
@@ -455,7 +460,7 @@ void CaptureTapOutData() {
     for (int c = 0; c < kNumTactors; ++c) {
       const float gain = g_settings.channel_map.gains[c];
       const float scale = 0.5f * kTopValue * gain;
-      const float offset = scale + 0.5f;
+      const float offset = 0.5f * kTopValue + 0.5f;
 
       const float* src =
           g_tactile_output + g_settings.channel_map.sources[c];

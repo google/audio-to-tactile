@@ -354,8 +354,8 @@ class ChannelMapMessage(val channelMap: ChannelMap) : Message() {
   }
 }
 
-/** Message of channel map gains, but not sources, and indices of two test channels. */
-class ChannelGainUpdateMessage(val channelMap: ChannelMap, val testChannels: Pair<Int, Int>) :
+/** Message of channel map gains, but not sources, and indices of two test tactors. */
+class ChannelGainUpdateMessage(val channelMap: ChannelMap, val testTactors: Pair<Int, Int>) :
   Message() {
   override val type = MESSAGE_TYPE_CHANNEL_GAIN_UPDATE
   override val payloadSize = computePayloadSize(channelMap.numOutputChannels)
@@ -364,7 +364,7 @@ class ChannelGainUpdateMessage(val channelMap: ChannelMap, val testChannels: Pai
     buffer.put(Byte.fromNibbles(channelMap.numInputChannels % 16, channelMap.numOutputChannels))
 
     // Write the two test channel indices, 4 bits for each.
-    buffer.put(Byte.fromNibbles(testChannels.first, testChannels.second))
+    buffer.put(Byte.fromNibbles(testTactors.first, testTactors.second))
 
     ChannelMapMessage.serializeGains(channelMap, buffer)
   }
@@ -375,14 +375,14 @@ class ChannelGainUpdateMessage(val channelMap: ChannelMap, val testChannels: Pai
     fun deserializePayload(buffer: ByteBuffer): ChannelGainUpdateMessage? {
       val channelMap =
         ChannelMapMessage.deserializeNumChannels(buffer, ::computePayloadSize) ?: return null
-      val testChannels = deserializeTestChannels(buffer)
+      val testTactors = deserializeTestTactors(buffer)
       ChannelMapMessage.deserializeGains(buffer, channelMap)
 
-      return ChannelGainUpdateMessage(channelMap, testChannels)
+      return ChannelGainUpdateMessage(channelMap, testTactors)
     }
 
     /** Reads the two test channel indices, 4 bits each. */
-    private fun deserializeTestChannels(buffer: ByteBuffer): Pair<Int, Int> {
+    private fun deserializeTestTactors(buffer: ByteBuffer): Pair<Int, Int> {
       val byte = buffer.get()
       return Pair(byte.lowerNibble(), byte.upperNibble())
     }

@@ -41,7 +41,7 @@ const MESSAGE_TYPE_BATTERY_VOLTAGE = 28;
 const MESSAGE_TYPE_DEVICE_NAME = 29;
 const MESSAGE_TYPE_GET_DEVICE_NAME = 30;
 const MESSAGE_TYPE_OTA_BOOTLOADMODE = 31;
-const MESSAGE_TYPE_CALIBRATE_CHANNEL = 35;
+const MESSAGE_TYPE_CALIBRATE_TACTOR = 35;
 const MESSAGE_TYPE_TACTILE_EX_PATTERN = 36;
 
 const NUM_TACTORS = 10;
@@ -364,23 +364,21 @@ class BleManager {
    * Constructs and writes a message to the device to trigger
    * a tactile playback with a calibration pattern at the
    * specified amplitude.
-   * @param {number} referenceChannel First channel index
-   * @param {number} testChannel Second channel index
+   * @param {number} referenceTactor First tactor index
+   * @param {number} testTactor Second tactor index
    * @param {number} amplitude Amplitude for playback, between [0.0, 1.0]
    */
-  requestSetChannelCalibrate(referenceChannel, testChannel, amplitude) {
+  requestSetTactorCalibrate(referenceTactor, testTactor, amplitude) {
     if (!this.connected) { return; }
     let size = 4;
     let messagePayload = new Uint8Array(size);
-    let messageType = MESSAGE_TYPE_CALIBRATE_CHANNEL;
-    let referenceChannelData = this.channelData[referenceChannel].source;
-    let testChannelData = this.channelData[testChannel].source;
+    let messageType = MESSAGE_TYPE_CALIBRATE_TACTOR;
 
-    // Write channels in the first byte.
-    messagePayload[0] = (referenceChannelData & 15) | (testChannelData << 4);
+    // Write tactors in the first byte.
+    messagePayload[0] = (referenceTactor & 15) | (testTactor << 4);
 
-    // Write gain for test channel
-    messagePayload[1] = this.channelData[testChannel].gain;
+    // Write gain for test tactor
+    messagePayload[1] = this.channelData[testTactor].gain;
 
     // Convert amplitude to an integer
     amplitude = Math.max(0.0, Math.min(amplitude, 1.0));
@@ -425,7 +423,7 @@ class BleManager {
    *  3. ("B") 125 Hz tone on tactor2 for 400 ms.
    *  4. Pause for 300 ms.
    *  5. ("A") 125 Hz tone on tactor1 for 400 ms.
-   * 
+   *
    * @param {number} tactor1 First tactor index
    * @param {number} amplitude1 Tone amplitude for first tactor in [0.0, 1.0]
    * @param {number} tactor2 Second tactor index
@@ -736,26 +734,24 @@ class BleManager {
   /**
    * Constructs and writes a message to the device to update the
    * channel gain or channel map to the current values.
-   * @param {!Array<number>} testChannels Array containing 0 or 2
+   * @param {!Array<number>} testTactors Array containing 0 or 2
    *    indices into the channel array.
    * @param {number} messageType Message code integer for
    *    MESSAGE_TYPE_CHANNEL_GAIN_UPDATE or MESSAGE_TYPE_CHANNEL_MAP.
    * @private
    */
-  requestSetChannelMapOrGainUpdate(testChannels, messageType) {
+  requestSetChannelMapOrGainUpdate(testTactors, messageType) {
     if (!this.connected) { return; }
     const numInput = NUM_TACTORS;
     const numOutput = NUM_TACTORS;
     let size = 1 + 3 * Math.ceil(numOutput / 4) +
-        (testChannels.length ? 1 : Math.ceil(numOutput / 2));
+        (testTactors.length ? 1 : Math.ceil(numOutput / 2));
     let messagePayload = new Uint8Array(size);
     // Write number of input and output channels in the first byte.
     messagePayload[0] = (numInput & 15) | numOutput << 4;
     let i = 1;
-    if (testChannels.length) {
-      let testChannelData0 = this.channelData[testChannels[0]].source;
-      let testChannelData1 = this.channelData[testChannels[1]].source;
-      messagePayload[i] = (testChannelData0 & 15) | testChannelData1 << 4;
+    if (testTactors.length) {
+      messagePayload[i] = (testTactors[0] & 15) | testTactors[1] << 4;
       i++;
     } else {
       // Write source mapping, 4 bits per channel.

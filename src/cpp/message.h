@@ -76,7 +76,7 @@ enum class MessageType {
   kFlashWriteStatus = 32,
   kOnConnectionBatch = 33,
   kGetOnConnectionBatch = 34,
-  kCalibrateChannel = 35,
+  kCalibrateTactor = 35,
   kTactileExPattern = 36,
 };
 
@@ -208,25 +208,25 @@ class Message {
                       int expected_outputs = -1) const;
 
   // Writes a kChannelGainUpdate message, which both updates the channel gains
-  // and plays calibration test tones on two channels. Gains are encoded with 6
+  // and plays calibration test tones on two tactors. Gains are encoded with 6
   // bits per channel as done in the kChannelMap message.
   //
   // NOTE: kChannelGainUpdate sends the gains, but not the source mapping. A
   // kChannelMap message needs to be sent to update the source mapping.
   void WriteChannelGainUpdate(const ChannelMap& channel_map,
-                              int test_channels[2]);
+                              int test_tactors[2]);
   // Reads a kChannelGainUpdate message. As in ReadChannelMap, it checks that
   // the number of inputs and outputs agrees with `expected_inputs` and
   // `expected_outputs`. Set these args to -1 to allow any number of channels.
-  bool ReadChannelGainUpdate(ChannelMap* channel_map, int test_channels[2],
+  bool ReadChannelGainUpdate(ChannelMap* channel_map, int test_tactors[2],
                              int expected_inputs = -1,
                              int expected_outputs = -1) const;
 
-  // Reads a kCalibrateChannel message. Requires two calibration channels
+  // Reads a kCalibrateTactor message. Requires two calibration tactors
   // and an amplitude for calibration playback.
-  bool ReadCalibrateChannel(ChannelMap* channel_map,
-                            int calibration_channels[2],
-                            float* calibration_amplitude) const;
+  bool ReadCalibrateTactor(ChannelMap* channel_map,
+                           int calibration_tactors[2],
+                           float* calibration_amplitude) const;
 
   // Writes a kStatsRecord message.
   void WriteStatsRecord(const EnvelopeTracker& envelope_tracker);

@@ -1,4 +1,4 @@
-// Copyright 2021 Google LLC
+// Copyright 2021-2022 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -239,9 +239,9 @@ void TestChannelMap() {
 void TestChannelGainUpdate() {
   puts("TestChannelGainUpdate");
   ChannelMap channel_map;
-  int test_channels[2];
+  int test_tactors[2];
   ChannelMap recovered;
-  int recovered_test_channels[2];
+  int recovered_test_tactors[2];
   Message message;
 
   channel_map.num_input_channels = 16;
@@ -249,20 +249,20 @@ void TestChannelGainUpdate() {
   for (int num_out = 0; num_out <= 12; ++num_out) {
     channel_map.num_output_channels = num_out;
     for (int c = 0; c < 2; ++c) {
-      test_channels[c] = std::uniform_int_distribution<int>(0, 15)(rng);
+      test_tactors[c] = std::uniform_int_distribution<int>(0, 15)(rng);
     }
     for (int c = 0; c < num_out; ++c) {
       channel_map.gains[c] =
           std::uniform_real_distribution<float>(0.125f, 1.0f)(rng);
     }
 
-    message.WriteChannelGainUpdate(channel_map, test_channels);
-    CHECK(message.ReadChannelGainUpdate(&recovered, recovered_test_channels));
+    message.WriteChannelGainUpdate(channel_map, test_tactors);
+    CHECK(message.ReadChannelGainUpdate(&recovered, recovered_test_tactors));
 
     CHECK(recovered.num_input_channels == channel_map.num_input_channels);
     CHECK(recovered.num_output_channels == channel_map.num_output_channels);
     for (int c = 0; c < 2; ++c) {
-      CHECK(recovered_test_channels[c] == test_channels[c]);
+      CHECK(recovered_test_tactors[c] == test_tactors[c]);
     }
     for (int c = 0; c < num_out; ++c) {
       CHECK(fabs(recovered.gains[c] - channel_map.gains[c])
