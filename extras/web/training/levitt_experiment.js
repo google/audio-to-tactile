@@ -1,5 +1,5 @@
 /**
- * Copyright 2021-2022 Google LLC
+ * Copyright 2021-2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,6 +72,14 @@ class LevittExperiment {
   }
 
   /**
+   * Indicates whether the current level has saturated to the min or max.
+   * @return {boolean} True if saturated.
+   */
+  get saturated() {
+    return !(this.minLevel < this.level && this.level < this.maxLevel);
+  }
+
+  /**
    * Records the response to a trial, adjusts history, and sets new level.
    * @param {boolean} newAnswer Correctness of the user response.
    * @return {number} New level value.
@@ -139,14 +147,15 @@ class LevittExperiment {
 
   /**
    * Determines whether a new run should start, by comparing the last answer
-   * to the current answer. If they are different, begin a new run.
+   * to the current answer. If they differ, or if the level has saturated, begin
+   * a new run.
    * @return {boolean} Whether to start a new run.
    */
   beginNewRun() {
     let changeLength = this.changeHistory.length;
     let lastChange = this.changeHistory[changeLength - 2];
     let thisChange = this.changeHistory[changeLength - 1];
-    return (changeLength > 1) && (lastChange != thisChange);
+    return (changeLength > 1) && (lastChange != thisChange || this.saturated);
   }
 
   /**
