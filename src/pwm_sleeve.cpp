@@ -1,4 +1,4 @@
-// Copyright 2020-2021 Google LLC
+// Copyright 2020-2022 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -179,7 +179,7 @@ void Pwm::UpdateChannelWithGain(int channel, float gain, const float* data,
                                 int stride) {
   uint16_t* dest = GetChannelPointer(channel);
   const float scale = 0.5f * kTopValue * gain;
-  const float offset = scale + 0.5f;
+  const float offset = 0.5f * kTopValue + 0.5f;
   for (int i = 0; i < kNumPwmValues; ++i, data += stride) {
     dest[i * kChannelsPerModule] =
         static_cast<uint16_t>(scale * (*data) + offset);
