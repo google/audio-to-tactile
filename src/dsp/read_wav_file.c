@@ -19,6 +19,7 @@
 
 #include "dsp/read_wav_file.h"
 
+#include <errno.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -78,7 +79,8 @@ int16_t* Read16BitWavFile(const char* file_name, size_t* num_samples,
   ReadWavInfo info;
 
   if (!f) {
-    LOG_ERROR("Error: Failed to open \"%s\" for reading.\n", file_name);
+    LOG_ERROR("Error: Failed to open \"%s\" for reading: %s\n", file_name,
+              strerror(errno));
     return NULL;
   }
   if (!ReadWavHeaderGeneric(&w, &info)) {
@@ -153,7 +155,8 @@ int32_t* ReadWavFile(const char* file_name, size_t* num_samples,
   ReadWavInfo info;
 
   if (!f) {
-    LOG_ERROR("Error: Failed to open \"%s\" for reading.\n", file_name);
+    LOG_ERROR("Error: Failed to open \"%s\" for reading: %s\n", file_name,
+              strerror(errno));
     return NULL;
   }
   if (!ReadWavHeaderGeneric(&w, &info)) {

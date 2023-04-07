@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2022 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,11 @@
 
 #include "dsp/write_wav_file.h"
 
+#include <errno.h>
 #include <stdio.h>
+#include <string.h>
 
+#include "dsp/logging.h"
 #include "dsp/write_wav_file_generic.h"
 
 static size_t WriteBytes(const void* bytes, size_t num_bytes, void* io_ptr) {
@@ -64,6 +67,8 @@ int WriteWavFileInternal(const char* file_name, const void* samples,
   WavWriter w = WavWriterLocal(f);
   w.has_error = 0; /* Clear the error flag. */
   if (!f) {
+    LOG_ERROR("Error: Failed to open \"%s\" for writing: %s\n", file_name,
+              strerror(errno));
     goto fail; /* Failed to open file_name for writing. */
   }
 
@@ -74,6 +79,7 @@ int WriteWavFileInternal(const char* file_name, const void* samples,
   }
 
   if (w.has_error) {
+    LOG_ERROR("Error while writing \"%s\".\n", file_name);
     goto fail;
   }
 
@@ -83,7 +89,13 @@ int WriteWavFileInternal(const char* file_name, const void* samples,
     WriteWavSamplesGeneric(&w, (const int16_t*)samples, num_samples);
   }
 
+  if (w.has_error) {
+    LOG_ERROR("Error while writing \"%s\".\n", file_name);
+    goto fail;
+  }
+
   if (fclose(f)) {
+    LOG_ERROR("Error while closing \"%s\".\n", file_name);
     goto fail; /* I/O error while closing file. */
   }
   return 1;
