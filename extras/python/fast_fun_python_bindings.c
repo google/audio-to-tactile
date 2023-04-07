@@ -1,4 +1,4 @@
-/* Copyright 2021-2022 Google LLC
+/* Copyright 2021-2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -87,12 +87,30 @@ static void ArrayFastTanh(char** args, npy_intp const* dimensions,
   }
 }
 
+static void ArrayFastSigmoid(char** args, npy_intp const* dimensions,
+                             npy_intp const* steps, void* unused_data) {
+  char* in = args[0];
+  char* out = args[1];
+  const npy_intp n = dimensions[0];
+  const npy_intp in_step = steps[0];
+  const npy_intp out_step = steps[1];
+  npy_intp i;
+
+  for (i = 0; i < n; ++i) {
+    *((float*)out) = FastSigmoid(*(float*)in);
+    in += in_step;
+    out += out_step;
+  }
+}
+
 static PyUFuncGenericFunction kFastLog2Funs[1] = {
     (PyUFuncGenericFunction)&ArrayFastLog2};
 static PyUFuncGenericFunction kFastExp2Funs[1] = {
     (PyUFuncGenericFunction)&ArrayFastExp2};
 static PyUFuncGenericFunction kFastTanhFuns[1] = {
     (PyUFuncGenericFunction)&ArrayFastTanh};
+static PyUFuncGenericFunction kFastSigmoidFuns[1] = {
+    (PyUFuncGenericFunction)&ArrayFastSigmoid};
 
 static PyMethodDef kModuleMethods[] = {
   {NULL, NULL, 0, NULL}
@@ -140,7 +158,8 @@ PyMODINIT_FUNC PyInit_fast_fun_python_bindings(void) {
   PyObject* dict = PyModule_GetDict(m);
   if (!AddUFuncToDict(dict, "fast_log2_impl", kFastLog2Funs) ||
       !AddUFuncToDict(dict, "fast_exp2_impl", kFastExp2Funs) ||
-      !AddUFuncToDict(dict, "fast_tanh_impl", kFastTanhFuns)) {
+      !AddUFuncToDict(dict, "fast_tanh_impl", kFastTanhFuns) ||
+      !AddUFuncToDict(dict, "fast_sigmoid_impl", kFastSigmoidFuns)) {
     return NULL;
   }
 

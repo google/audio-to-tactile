@@ -1,4 +1,4 @@
-# Copyright 2020 Google LLC
+# Copyright 2020, 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -84,6 +84,21 @@ class FastFunTest(unittest.TestCase):
     self.assertEqual(dsp.fast_tanh(np.float32(0.0)), 0.0)
     self.assertEqual(dsp.fast_tanh(np.float32(1000.0)), 1.0)
     self.assertEqual(dsp.fast_tanh(np.float32(-1000.0)), -1.0)
+
+  def test_fast_sigmoid_accuracy(self):
+    x = np.random.uniform(-12.0, 12.0, size=10000).astype(np.float32)
+
+    output = dsp.fast_sigmoid(x)
+    self.assertTupleEqual(output.shape, x.shape)
+    self.assertEqual(output.dtype, np.float32)
+    expected = 1.0 / (1.0 + np.exp(-x))
+    max_abs_error = np.max(np.abs(output - expected))
+    self.assertLess(max_abs_error, 0.0004)
+
+    # Check large arguments.
+    self.assertEqual(dsp.fast_sigmoid(np.float32(0.0)), 0.5)
+    self.assertEqual(dsp.fast_sigmoid(np.float32(1000.0)), 1.0)
+    self.assertEqual(dsp.fast_sigmoid(np.float32(-1000.0)), 0.0)
 
 
 # Tested resampling sample rates in Hz.

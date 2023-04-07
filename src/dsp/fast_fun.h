@@ -1,4 +1,4 @@
-/* Copyright 2019-2020, 2022 Google LLC
+/* Copyright 2019-2020, 2022-2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
  *
  * Fast log2, exp2, pow, and tanh functions in C.
  *
- * This library implements fast log2 (log base 2), exp2 (2^x), power x^y, and
- * tanh functions for 32-bit float arguments through float bit manipulations and
- * small lookup tables.
+ * This library implements fast log2 (log base 2), exp2 (2^x), power x^y, tanh,
+ * and sigmoid functions for 32-bit float arguments through float bit
+ * manipulations and small lookup tables.
  *
  * NOTE: This library assumes `float` uses 32-bit IEEE 754 floating point
  * representation. Most current machines do, but not all.
@@ -38,25 +38,28 @@
  *  - FastExp2(x) has max relative error of about 0.3%.
  *  - FastPow(x) has max relative error of about 0.5%.
  *  - FastTanh(x) has max absolute error of about 0.0008.
+ *  - FastSigmoid(x) has max absolute error of about 0.0004.
  *
  * Benchmarks (measured by extras/benchmark/fast_fun_benchmark.cpp):
  * These functions take an order of magnitude less time than those in math.h.
  * Benchmark timings of calling each function 1000 times on an Intel Skylake
- * Xeon (3696 MHz CPUs). To get the time for an individual call, divide
- * times in the table by 1000, e.g. one FastLog2 call costs 0.757 ns.
+ * Xeon (2000 MHz CPUs). To get the time for an individual call, divide times in
+ * the table by 1000, e.g. one FastLog2 call costs 1 ns.
  *
- * Results on SkyLake, 2020-11-06:
- * --------------------------------------------------------
- * Benchmark              Time             CPU   Iterations
- * --------------------------------------------------------
- * BM_FastLog2          757 ns          757 ns      3679674
- * BM_math_log2f       7210 ns         7209 ns       388585
- * BM_FastExp2          804 ns          804 ns      3488574
- * BM_math_exp2f      10364 ns        10364 ns       265980
- * BM_FastPow          1620 ns         1620 ns      1728112
- * BM_math_powf       55983 ns        55980 ns        50033
- * BM_FastTanh         1219 ns         1219 ns      2299992
- * BM_math_tanhf      17309 ns        17308 ns       161420
+ * Results on SkyLake, 2023-02-20:
+ * ----------------------------------------------------------
+ * Benchmark                Time             CPU   Iterations
+ * ----------------------------------------------------------
+ * BM_FastLog2           1025 ns         1022 ns       587651
+ * BM_math_log2f         4745 ns         4737 ns       145170
+ * BM_FastExp2            761 ns          760 ns       899909
+ * BM_math_exp2f         3619 ns         3614 ns       193111
+ * BM_FastPow            2170 ns         2166 ns       323478
+ * BM_math_powf         15778 ns        15754 ns        42702
+ * BM_FastTanh           1673 ns         1671 ns       414148
+ * BM_math_tanhf        22670 ns        22632 ns        30033
+ * BM_FastSigmoid        1492 ns         1489 ns       465835
+ * BM_math_sigmoid       4907 ns         4897 ns       143939
  */
 
 #ifndef AUDIO_TO_TACTILE_SRC_DSP_FAST_FUN_H_
@@ -80,7 +83,7 @@ typedef char kFastFunStaticAssert_FLOAT_AND_INT32_T_MUST_HAVE_SAME_SIZE[
 extern const float kFastFunLog2Table[256];
 extern const int32_t kFastFunExp2Table[256];
 
-/* Fast log base 2, accurate to about 0.003 max abs error, ~0.8ns on Skylake.
+/* Fast log base 2, accurate to about 0.003 max abs error, ~1 ns on Skylake.
  *
  * Limitations:
  *  - x is assumed to be positive and finite.
@@ -122,7 +125,7 @@ static float FastLog2(float x) {
   return (((x_bits >> 23) & 0xFF) - 127) + kFastFunLog2Table[significand];
 }
 
-/* Fast 2^x, accurate to about 0.3% relative error, ~0.8ns on Skylake.
+/* Fast 2^x, accurate to about 0.3% relative error, ~0.8 ns on Skylake.
  *
  * Limitations:
  *  - Assumes |x| <= 126. (Otherwise, result may be nonsensical.)
@@ -166,7 +169,7 @@ static float FastExp2(float x) {
   return result;
 }
 
-/* Fast power x^y for x > 0, with about 0.5% relative error, ~1.6ns on Skylake.
+/* Fast power x^y for x > 0, with about 0.5% relative error, ~2 ns on Skylake.
  *
  * Limitations:
  *  - Assumes x is positive and finite.
@@ -180,7 +183,7 @@ static float FastExp2(float x) {
  */
 static float FastPow(float x, float y) { return FastExp2(FastLog2(x) * y); }
 
-/* Fast tanh(x), accurate to about 0.0008 max abs error, ~1.2ns on Skylake.
+/* Fast tanh(x), accurate to about 0.0008 max abs error, ~1.7 ns on Skylake.
  *
  * The result is valid for non-NaN x (even for large x). The implementation
  * comes from the relationship
@@ -194,6 +197,21 @@ static float FastTanh(float x) {
   if (x <= -9.011f) { return -1.0f; }
   const float exp_2x = FastExp2((float)(2.0 / M_LN2) * x);
   return (exp_2x - 1.0f) / (exp_2x + 1.0f);
+}
+
+/* Fast sigmoid (logistic) function, accurate to about 0.0004 max abs error,
+ * ~1.5 ns on Skylake.
+ *
+ * The result is valid for non-NaN x (even for large x). The implementation is
+ *
+ *   sigmoid(x) = 1 / (1 + exp(-x))
+ *              ~= 1 / (1 + FastExp2((-1 / M_LN2) * x).
+ */
+static float FastSigmoid(float x) {
+  /* For |x| >= 8.517, the exact value is within 0.0002 of saturating. */
+  if (x >= 8.517f) { return 1.0f; }
+  if (x <= -8.517f) { return 0.0f; }
+  return 1.0f / (1.0f + FastExp2((float)(-1.0 / M_LN2) * x));
 }
 
 #ifdef __cplusplus

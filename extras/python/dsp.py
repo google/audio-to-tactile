@@ -1,4 +1,4 @@
-# Copyright 2020-2021 Google LLC
+# Copyright 2020-2021, 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -94,6 +94,20 @@ def fast_tanh(x):
     np.float32 or numpy array of the same shape.
   """
   return fast_fun_python_bindings.fast_tanh_impl(x)
+
+
+def fast_sigmoid(x):
+  """Fast sigmoid (logistic) function. Wraps `FastSigmoid()` in the C library.
+
+  An approximation of 1/(1+exp(-x)) accurate to about 0.0004 max abs error. The
+  result is valid for non-NaN x, even for large x.
+
+  Args:
+    x: Scalar or numpy array of np.float32 dtype.
+  Returns:
+    np.float32 or numpy array of the same shape.
+  """
+  return fast_fun_python_bindings.fast_sigmoid_impl(x)
 
 
 class Resampler:

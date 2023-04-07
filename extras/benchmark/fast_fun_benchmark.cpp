@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC
+// Copyright 2020, 2023 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -46,12 +46,13 @@ std::vector<float> Log2TestValues() {
 }
 }  // namespace
 
+// Benchmark of FastLog2().
 static void BM_FastLog2(benchmark::State& state) {
   std::vector<float> values = Log2TestValues();
   std::vector<float> result(kNumCalls);
 
   for (auto _ : state) {
-    benchmark::DoNotOptimize(values.data());
+    benchmark::ClobberMemory();
     for (int i = 0; i < kNumCalls; ++i) {
       result[i] = FastLog2(values[i]);
     }
@@ -60,12 +61,13 @@ static void BM_FastLog2(benchmark::State& state) {
 }
 BENCHMARK(BM_FastLog2);
 
+// Benchmark of math.h log2f().
 static void BM_math_log2f(benchmark::State& state) {
   std::vector<float> values = Log2TestValues();
   std::vector<float> result(kNumCalls);
 
   for (auto _ : state) {
-    benchmark::DoNotOptimize(values.data());
+    benchmark::ClobberMemory();
     for (int i = 0; i < kNumCalls; ++i) {
       result[i] = log2f(values[i]);
     }
@@ -88,12 +90,13 @@ std::vector<float> Exp2TestValues() {
 }
 }  // namespace
 
+// Benchmark of FastExp2().
 static void BM_FastExp2(benchmark::State& state) {
   std::vector<float> values = Exp2TestValues();
   std::vector<float> result(kNumCalls);
 
   for (auto _ : state) {
-    benchmark::DoNotOptimize(values.data());
+    benchmark::ClobberMemory();
     for (int i = 0; i < kNumCalls; ++i) {
       result[i] = FastExp2(values[i]);
     }
@@ -102,12 +105,13 @@ static void BM_FastExp2(benchmark::State& state) {
 }
 BENCHMARK(BM_FastExp2);
 
+// Benchmark of math.h exp2f().
 static void BM_math_exp2f(benchmark::State& state) {
   std::vector<float> values = Exp2TestValues();
   std::vector<float> result(kNumCalls);
 
   for (auto _ : state) {
-    benchmark::DoNotOptimize(values.data());
+    benchmark::ClobberMemory();
     for (int i = 0; i < kNumCalls; ++i) {
       result[i] = exp2f(values[i]);
     }
@@ -130,12 +134,13 @@ std::vector<std::pair<float, float>> PowTestValues() {
 }
 }  // namespace
 
+// Benchmark of FastPow().
 static void BM_FastPow(benchmark::State& state) {
   std::vector<std::pair<float, float>> values = PowTestValues();
   std::vector<float> result(kNumCalls);
 
   for (auto _ : state) {
-    benchmark::DoNotOptimize(values.data());
+    benchmark::ClobberMemory();
     for (int i = 0; i < kNumCalls; ++i) {
       result[i] = FastPow(values[i].first, values[i].second);
     }
@@ -144,12 +149,13 @@ static void BM_FastPow(benchmark::State& state) {
 }
 BENCHMARK(BM_FastPow);
 
+// Benchmark of math.h powf().
 static void BM_math_powf(benchmark::State& state) {
   std::vector<std::pair<float, float>> values = PowTestValues();
   std::vector<float> result(kNumCalls);
 
   for (auto _ : state) {
-    benchmark::DoNotOptimize(values.data());
+    benchmark::ClobberMemory();
     for (int i = 0; i < kNumCalls; ++i) {
       result[i] = powf(values[i].first, values[i].second);
     }
@@ -172,12 +178,13 @@ std::vector<float> TanhTestValues() {
 }
 }  // namespace
 
+// Benchmark of FastTanh().
 static void BM_FastTanh(benchmark::State& state) {
   std::vector<float> values = TanhTestValues();
   std::vector<float> result(kNumCalls);
 
   for (auto _ : state) {
-    benchmark::DoNotOptimize(values.data());
+    benchmark::ClobberMemory();
     for (int i = 0; i < kNumCalls; ++i) {
       result[i] = FastTanh(values[i]);
     }
@@ -186,12 +193,13 @@ static void BM_FastTanh(benchmark::State& state) {
 }
 BENCHMARK(BM_FastTanh);
 
+// Benchmark of math.h tanf().
 static void BM_math_tanhf(benchmark::State& state) {
   std::vector<float> values = TanhTestValues();
   std::vector<float> result(kNumCalls);
 
   for (auto _ : state) {
-    benchmark::DoNotOptimize(values.data());
+    benchmark::ClobberMemory();
     for (int i = 0; i < kNumCalls; ++i) {
       result[i] = tanhf(values[i]);
     }
@@ -199,5 +207,38 @@ static void BM_math_tanhf(benchmark::State& state) {
   }
 }
 BENCHMARK(BM_math_tanhf);
+
+// sigmoid benchmarks. _________________________________________________________
+// The sigmoid benchmarks reuse TanhTestValues() from above.
+
+// Benchmark of FastSigmoid().
+static void BM_FastSigmoid(benchmark::State& state) {
+  std::vector<float> values = TanhTestValues();
+  std::vector<float> result(kNumCalls);
+
+  for (auto _ : state) {
+    benchmark::ClobberMemory();
+    for (int i = 0; i < kNumCalls; ++i) {
+      result[i] = FastSigmoid(values[i]);
+    }
+    benchmark::DoNotOptimize(result.data());
+  }
+}
+BENCHMARK(BM_FastSigmoid);
+
+// Benchmark of math.h-based sigmoid: `1.0f / (1.0f + expf(-x))`.
+static void BM_math_sigmoid(benchmark::State& state) {
+  std::vector<float> values = TanhTestValues();
+  std::vector<float> result(kNumCalls);
+
+  for (auto _ : state) {
+    benchmark::ClobberMemory();
+    for (int i = 0; i < kNumCalls; ++i) {
+      result[i] = 1.0f / (1.0f + expf(-values[i]));
+    }
+    benchmark::DoNotOptimize(result.data());
+  }
+}
+BENCHMARK(BM_math_sigmoid);
 
 BENCHMARK_MAIN();

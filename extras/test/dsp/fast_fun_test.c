@@ -1,4 +1,4 @@
-/* Copyright 2019, 2021 Google LLC
+/* Copyright 2019, 2021, 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -132,6 +132,35 @@ static void TestFastTanhAccuracy(void) {
   CHECK(FastTanh(0.0f) == 0.0f);
   CHECK(FastTanh(1000.0f) == 1.0f); /* Check large arguments. */
   CHECK(FastTanh(-1000.0f) == -1.0f);
+}
+
+/* Compare FastSigmoid with math.h. */
+static void TestFastSigmoidAccuracy(void) {
+  puts("TestFastSigmoidAccuracy");
+  /* Determined by testing 1 million random points uniformly in [-12, 12]. */
+  const double kThreshold = 0.0004;
+  double max_abs_error = 0.0;
+  int i;
+
+  for (i = 0; i < 1000000; ++i) {
+    const double x = 12.0 * (2 * RandUniform() - 1);
+    const double y = 1.0 / (1.0 + exp(-x));
+
+    const double abs_error = fabs(FastSigmoid(x) - y);
+    if (abs_error > max_abs_error) {
+      max_abs_error = abs_error;
+      if (abs_error >= kThreshold) {
+        printf("x=%g: FastSigmoid(x)=%g 1/(1+exp(-x))=%g\n",
+               x, FastSigmoid(x), y);
+      }
+    }
+  }
+
+  CHECK(max_abs_error < kThreshold);
+
+  CHECK(FastSigmoid(0.0f) == 0.5f);
+  CHECK(FastSigmoid(1000.0f) == 1.0f); /* Check large arguments. */
+  CHECK(FastSigmoid(-1000.0f) == 0.0f);
 }
 
 /* Finite differences of FastLog2 are close to exact derivative. */
@@ -298,6 +327,7 @@ int main(int argc, char** argv) {
   TestFastExp2Accuracy();
   TestFastPowAccuracy();
   TestFastTanhAccuracy();
+  TestFastSigmoidAccuracy();
   TestFastLog2DerivativeAccuracy();
   TestFastExp2DerivativeAccuracy();
   TestFastLog2Monotonicity();
