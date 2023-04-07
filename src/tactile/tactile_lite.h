@@ -55,6 +55,20 @@ extern "C" {
 #endif
 
 typedef struct {
+  /* Feedback may be a problem in applications where the input is live
+   * microphone audio, and if that microphone is close enough to the output
+   * tactor to pick up vibration noise. We avoid feedback using a 4th-order
+   * Cheybshev type 2 highpass filter. feedback_hpf_cutoff_hz is the cutoff in
+   * Hz for highpass filter to suppress tactor noise feedback.
+   *
+   * In applications where feedback is not a problem (e.g. because the audio
+   * is prerecorded), this highpass filter may be bypassed by setting
+   * feedback_hpf_cutoff_hz = 0.
+   */
+  float feedback_hpf_cutoff_hz;
+  /* Stopband ripple in dB for the feedback highpass filter. */
+  float feedback_hpf_stopband_ripple_db;
+
   /* Low and high cutoff edges in Hz for the 2nd order Butterworth bandpass
    * filter. This bandpass filter is the first processing that the input signal
    * passes through.
@@ -105,7 +119,9 @@ extern const SparsePeakPickerParams kDefaultSparsePeakPickerParams;
 typedef struct {
   /* Input sample rate in Hz. */
   float input_sample_rate_hz;
-  /* Bandpass filter coefficients, represented as two second-order sections. */
+  /* Feedback highpass filter coeffs, represented as two 2nd-order sections. */
+  BiquadFilterCoeffs feedback_hpf_biquad_coeffs[2];
+  /* Bandpass filter coefficients. */
   BiquadFilterCoeffs bpf_biquad_coeffs[2];
   /* Energy envelope smoothing coefficients. */
   BiquadFilterCoeffs energy_biquad_coeffs;
@@ -119,6 +135,7 @@ typedef struct {
   float compressor_delta;
   int num_warm_up_samples;
 
+  BiquadFilterState feedback_hpf_biquad_state[2];
   BiquadFilterState bpf_biquad_state[2];
   BiquadFilterState energy_biquad_state;
   /* Decimation factor after computing the energy envelope. */

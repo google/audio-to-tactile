@@ -21,8 +21,11 @@
 
 #include "dsp/butterworth.h"
 #include "dsp/fast_fun.h"
+#include "dsp/iir_design.h"
 
 const SingleBandEnvelopeParams kDefaultSingleBandEnvelopeParams = {
+    /*feedback_hpf_cutoff_hz=*/180.0f,
+    /*feedback_hpf_stopband_ripple_db=*/40.0f,
     /* Broad vowel channel, sensitive to 300-3500 Hz. */
     /*bpf_low_edge_hz=*/300.0f,
     /*bpf_high_edge_hz=*/3500.0f,
@@ -76,6 +79,20 @@ int SingleBandEnvelopeInit(SingleBandEnvelope* state,
     return 0;
   }
 
+  if (!(params->feedback_hpf_cutoff_hz > 0.0f)) {
+    /* Bypass the feedback highpass filter. */
+    state->feedback_hpf_biquad_coeffs[0] = kBiquadFilterIdentityCoeffs;
+    state->feedback_hpf_biquad_coeffs[1] = kBiquadFilterIdentityCoeffs;
+  } else if (DesignChebyshev2Highpass(
+                 4, params->feedback_hpf_stopband_ripple_db,
+                 params->feedback_hpf_cutoff_hz, input_sample_rate_hz,
+                 state->feedback_hpf_biquad_coeffs, 2) != 2) {
+    fprintf(stderr,
+            "SingleBandEnvelopeInit: "
+            "Failed to design feedback highpass filter.\n");
+    return 0;
+  }
+
   state->input_sample_rate_hz = input_sample_rate_hz;
   state->decimation_factor = decimation_factor;
   state->gate_thresh_factor = params->denoising_strength;
@@ -103,6 +120,8 @@ int SingleBandEnvelopeInit(SingleBandEnvelope* state,
 }
 
 void SingleBandEnvelopeReset(SingleBandEnvelope* state) {
+  BiquadFilterInitZero(&state->feedback_hpf_biquad_state[0]);
+  BiquadFilterInitZero(&state->feedback_hpf_biquad_state[1]);
   BiquadFilterInitZero(&state->bpf_biquad_state[0]);
   BiquadFilterInitZero(&state->bpf_biquad_state[1]);
   BiquadFilterInitZero(&state->energy_biquad_state);
@@ -150,10 +169,18 @@ void SingleBandEnvelopeProcessSamples(SingleBandEnvelope* state,
 
     int j;
     for (j = 0; j < decimation_factor; ++j) {
-      /* Apply bandpass filter. */
+      /* Apply feedback highpass filter. */
       float sample = BiquadFilterProcessOneSample(
+          &state->feedback_hpf_biquad_coeffs[0],
+          &state->feedback_hpf_biquad_state[0], input[j]);
+      sample = BiquadFilterProcessOneSample(
+          &state->feedback_hpf_biquad_coeffs[1],
+          &state->feedback_hpf_biquad_state[1], sample);
+
+      /* Apply bandpass filter. */
+      sample = BiquadFilterProcessOneSample(
           &state->bpf_biquad_coeffs[0],
-          &state->bpf_biquad_state[0], input[j]);
+          &state->bpf_biquad_state[0], sample);
       sample = BiquadFilterProcessOneSample(
           &state->bpf_biquad_coeffs[1],
           &state->bpf_biquad_state[1], sample);
