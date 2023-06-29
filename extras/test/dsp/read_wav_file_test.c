@@ -1,4 +1,4 @@
-/* Copyright 2019, 2021-2022 Google LLC
+/* Copyright 2019, 2021-2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 
 #include "src/dsp/read_wav_file.h"
 
-#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -356,27 +355,24 @@ static void TestReadMulawWav(void) {
 
 static void TestReadMulawWavGeneric(void) {
   puts("TestReadMulawWavGeneric");
-  static const int16_t kExpected16BitSamples[8] = {
-    29052, 20860, 18812, 31100, -7164, 716, -25980, -24956
+  static const int32_t kExpectedSamples[8] = {
+    29052 * INT32_C(65536), 20860 * INT32_C(65536), 18812 * INT32_C(65536),
+    31100 * INT32_C(65536), -7164 * INT32_C(65536), 716 * INT32_C(65536),
+    -25980 * INT32_C(65536), -24956 * INT32_C(65536)
   };
-  int32_t expected_samples[8];
   const char* wav_file_name = NULL;
   int32_t* samples = NULL;
   size_t num_samples;
   int num_channels;
   int sample_rate_hz;
-  int i;
 
-  for (i = 0; i < 8; i++) {
-    expected_samples[i] = (int32_t) kExpected16BitSamples[i] << 16;
-  }
   wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
   WriteBytesAsFile(wav_file_name, kTestMulawWavFile, sizeof(kTestMulawWavFile));
 
   samples = CHECK_NOTNULL(ReadWavFile(wav_file_name, &num_samples,
                                       &num_channels, &sample_rate_hz));
   CHECK(num_samples == 8);
-  CHECK(memcmp(samples, expected_samples, sizeof(int32_t) * 8) == 0);
+  CHECK(memcmp(samples, kExpectedSamples, sizeof(int32_t) * 8) == 0);
   CHECK(num_channels == 1);
   CHECK(sample_rate_hz == 8000);
 
@@ -437,7 +433,10 @@ static void TestWriteReadRoundTrips(void) {
 
   for (num_channels = 1; num_channels <= 8; ++num_channels) {
     int sample_rate_hz = rand() % 100000;
-    size_t num_samples = 32 + (rand() % 100);
+    /* Internally, reading uses a 1 KB buffer. Pick a number of samples that
+     * fills the read buffer three times.
+     */
+    size_t num_samples = 1025 + (rand() % 100);
     int16_t* samples = CHECK_NOTNULL((int16_t*) malloc(
         sizeof(int16_t) * num_samples));
     int16_t* read_samples = NULL;

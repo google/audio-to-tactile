@@ -33,3 +33,10 @@ filegroup(
         "tactile_pattern_*.wav",
     ]),
 )
+
+filegroup(
+    name = "wav_format_examples",
+    srcs = glob([
+        "wav_*.wav",
+    ]),
+)

@@ -1,4 +1,4 @@
-/* Copyright 2019, 2021 Google LLC
+/* Copyright 2019, 2021, 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,10 @@
 
 #include "dsp/write_wav_file_generic.h"
 
+#include <string.h>
+
+#include "dsp/serialize.h"
+
 #define kWavFmtExtensionCode 0xFFFE
 #define kWavPcmCode 1
 #define kWavPcmGuid "\x00\x00\x00\x00\x10\x00\x80\x00\x00\xAA\x00\x38\x9B\x71"
@@ -37,32 +41,21 @@ static void WriteUnsignedChar(int value, WavWriter* w) {
 
 /* Mimics fputs. */
 static void WriteString(const char* str, WavWriter* w) {
-  int length = 0;
-  const char* str2 = str;
-  /* Compute the length of the string in bytes. */
-  while (*(str2++)) { ++length; }
-  WriteWithErrorCheck(str, length, w);
+  WriteWithErrorCheck(str, strlen(str), w);
 }
 
 /* Write uint16_t in little endian order. */
 static void WriteUint16(uint16_t value, WavWriter* w) {
-  WriteUnsignedChar(value, w);
-  WriteUnsignedChar(value >> 8, w);
-}
-
-/* Write lower three bytes of uint32_t in little endian order. */
-static void WriteUint32MsbTo24(uint32_t value, WavWriter* w) {
-  WriteUnsignedChar(value >> 8, w);
-  WriteUnsignedChar(value >> 16, w);
-  WriteUnsignedChar(value >> 24, w);
+  uint8_t bytes[2];
+  LittleEndianWriteU16(value, bytes);
+  WriteWithErrorCheck(bytes, sizeof(bytes), w);
 }
 
 /* Write uint32_t in little endian order. */
 static void WriteUint32(uint32_t value, WavWriter* w) {
-  WriteUnsignedChar(value, w);
-  WriteUnsignedChar(value >> 8, w);
-  WriteUnsignedChar(value >> 16, w);
-  WriteUnsignedChar(value >> 24, w);
+  uint8_t bytes[4];
+  LittleEndianWriteU32(value, bytes);
+  WriteWithErrorCheck(bytes, sizeof(bytes), w);
 }
 
 /* Gets the fmt extension channel mask, which specifies the speakers to play the
@@ -172,14 +165,27 @@ int WriteWavHeaderGeneric24Bit(WavWriter* w, size_t num_samples,
 
 int WriteWavSamplesGeneric(WavWriter* w, const int16_t* samples,
                            size_t num_samples) {
-  size_t i;
   if (w == NULL || w->io_ptr == NULL || samples == NULL) {
     return 0;
   }
   w->has_error = 0;  /* Clear the error flag. */
-  for (i = 0; i < num_samples; ++i) {
-    WriteUint16(samples[i], w);
+
+  uint8_t buffer[1024];
+  while (num_samples) {
+    int count = sizeof(buffer) / sizeof(int16_t);
+    if ((size_t)count > num_samples) { count = (int)num_samples; }
+
+    int i;
+    for (i = 0; i < count; ++i) {
+      LittleEndianWriteU16(samples[i], buffer + 2 * i);
+    }
+
+    /* Call the writing callback with ~1 KB at a time. */
+    WriteWithErrorCheck(buffer, 2 * count, w);
+    samples += count;
+    num_samples -= count;
   }
+
   /* 16-bit samples never need a pad byte. */
   if (w->has_error) {
     return 0;
@@ -190,16 +196,36 @@ int WriteWavSamplesGeneric(WavWriter* w, const int16_t* samples,
 
 int WriteWavSamplesGeneric24Bit(WavWriter* w, const int32_t* samples,
                                 size_t num_samples) {
-  size_t i;
   if (w == NULL || w->io_ptr == NULL || samples == NULL) {
     return 0;
   }
   w->has_error = 0; /* Clear the error flag. */
-  for (i = 0; i < num_samples; ++i) {
-    WriteUint32MsbTo24(samples[i], w);
+
+  const /*bool*/ int needs_padding = (num_samples % 2 == 1);
+
+  uint8_t buffer[1023];
+  while (num_samples) {
+    int count = sizeof(buffer) / 3;
+    if ((size_t)count > num_samples) { count = (int)num_samples; }
+
+    int i;
+    int offset;
+    for (i = 0, offset = 0; i < count; ++i, offset += 3) {
+      /* Write lower three bytes of uint32_t in little endian order. */
+      const uint32_t value = (uint32_t) samples[i];
+      buffer[offset + 0] = (uint8_t) (value >> 8);
+      buffer[offset + 1] = (uint8_t) (value >> 16);
+      buffer[offset + 2] = (uint8_t) (value >> 24);
+    }
+
+    /* Call the writing callback with ~1 KB at a time. */
+    WriteWithErrorCheck(buffer, offset, w);
+    samples += count;
+    num_samples -= count;
   }
+
   /* Pad byte to ensure 16-bit alignment. */
-  if (num_samples % 2 == 1) {
+  if (needs_padding) {
     WriteUnsignedChar(0, w);
   }
   if (w->has_error) {

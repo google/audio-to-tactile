@@ -20,7 +20,6 @@
 #include "dsp/read_wav_file.h"
 
 #include <errno.h>
-#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -125,19 +124,30 @@ static void InPlaceFloatToInt32Conversion(size_t num_elements, void* input) {
   CHECK(sizeof(int32_t) == 4);
   CHECK(sizeof(float) == 4);
 
-  const float kLowest = INT32_MIN;
-  const float kMax = INT32_MAX;
-  const float normalizer = -kLowest;
   unsigned char* bytes = input;
   size_t i;
   for (i = 0; i < num_elements; ++i, bytes += 4) {
-    float input_float = 0;
-    memcpy(&input_float, bytes, 4);
-    float normalized = input_float * normalizer;
-    float clipped = normalized > kMax ? kMax : normalized;
-    clipped = clipped < kLowest ? kLowest : clipped;
-    if (clipped != clipped /* isnan(clipped) */) { clipped = 0; }
-    int32_t input_int = (int32_t)clipped;
+    float sample_f32;
+    memcpy(&sample_f32, bytes, 4);
+
+    int32_t input_int;
+    if (sample_f32 != sample_f32 /* isnan(sample_f32) */) {
+      input_int = 0;
+    } else {
+      sample_f32 *= 2147483648.0f;  /* Scale [-1, 1] to int32_t range. */
+      /* Beware that 32-bit float cannot represent INT32_MAX exactly,
+       * (float)INT32_MAX = 2147483648.0f, which is off by one and would
+       * overflow if casted to int32_t.
+       */
+      if (sample_f32 >= (float)INT32_MAX) {
+        input_int = INT32_MAX;
+      } else if (sample_f32 <= (float)INT32_MIN) {
+        input_int = INT32_MIN;
+      } else {
+        input_int = (int32_t)sample_f32;
+      }
+    }
+
     memcpy(bytes, &input_int, 4);
   }
 }
