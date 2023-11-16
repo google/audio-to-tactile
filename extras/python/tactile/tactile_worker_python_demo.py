@@ -97,7 +97,7 @@ def main(argv):
   play_wav_file = args.input.endswith('.wav')
 
   if play_wav_file:
-    wav_samples, sample_rate_hz = dsp.read_wav_file(
+    wav_samples, sample_rate_hz = dsp.read_wav_file(  # pytype: disable=wrong-arg-types  # numpy-scalars
         args.input, dtype=np.float32)
     wav_samples = wav_samples.mean(axis=1)
     input_device = None

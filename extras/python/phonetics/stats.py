@@ -56,13 +56,13 @@ class Confusion:
   def stimulus_bits(self) -> float:
     """Entropy of the stimulus (input) distribution in bits."""
     hist = self.matrix.sum(axis=1).astype(float)
-    return scipy.stats.entropy(hist / hist.sum(), base=2)
+    return scipy.stats.entropy(hist / hist.sum(), base=2)  # pytype: disable=bad-return-type  # numpy-scalars
 
   @property
   def response_bits(self) -> float:
     """Entropy of the response (output) distribution in bits."""
     hist = self.matrix.sum(axis=0).astype(float)
-    return scipy.stats.entropy(hist / hist.sum(), base=2)
+    return scipy.stats.entropy(hist / hist.sum(), base=2)  # pytype: disable=bad-return-type  # numpy-scalars
 
   @property
   def transfer_bits(self) -> float:
@@ -90,7 +90,7 @@ class Confusion:
     Returns:
       Float, information transfer in units of bits.
     """
-    return self.stimulus_bits + self.response_bits - scipy.stats.entropy(
+    return self.stimulus_bits + self.response_bits - scipy.stats.entropy(  # pytype: disable=bad-return-type  # numpy-scalars
         self.matrix.flatten(), base=2)
 
   def group_by(self, group_dict: Mapping[str, Any]) -> 'Confusion':

@@ -267,4 +267,4 @@ class Linear(hk.Module):
       y += jnp.broadcast_to(b, y.shape)
       penalty += self.b_regularizer(b)
 
-    return y, penalty
+    return y, penalty  # pytype: disable=bad-return-type  # jax-ndarray

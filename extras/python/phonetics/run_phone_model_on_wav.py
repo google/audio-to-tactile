@@ -115,7 +115,7 @@ def plot_output(frames, frame_rate, scores, target_names, title):
 
 def main(_):
   # Read WAV file.
-  samples, sample_rate_hz = dsp.read_wav_file(FLAGS.input, dtype=np.float32)
+  samples, sample_rate_hz = dsp.read_wav_file(FLAGS.input, dtype=np.float32)  # pytype: disable=wrong-arg-types  # numpy-scalars
   samples = samples.mean(axis=1)
 
   # Make the frontend and network.

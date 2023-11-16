@@ -282,7 +282,7 @@ def train_model(meta: Metadata,
 
   # Initialize network and optimizer.
   seed = np.uint64(random.getrandbits(64))
-  params = model.init(jax.random.PRNGKey(seed),
+  params = model.init(jax.random.PRNGKey(seed),  # pytype: disable=wrong-arg-types  # numpy-scalars
                       {'observed': train_x[0], 'label': train_y[0]})
   optimizer = optax.adam(1e-3)
   opt_state = optimizer.init(params)

@@ -205,7 +205,7 @@ def save_figure(filename: Union[str, IO[bytes]],
   canvas = FigureCanvasAgg(fig)
   canvas.draw()
   _, _, width, height = canvas.figure.bbox.bounds
-  fig.savefig(filename, quality=quality, optimize=optimize)
+  fig.savefig(filename, pil_kwargs={'quality': quality, 'optimize': optimize})
   return int(width), int(height)
 
 

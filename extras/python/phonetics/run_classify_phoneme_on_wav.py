@@ -130,7 +130,7 @@ def append_to_dict(timeseries: Any, scores: Dict[str, Any]) -> None:
 
 def main(_):
   # Read WAV file.
-  samples, sample_rate_hz = dsp.read_wav_file(FLAGS.input, dtype=np.float32)
+  samples, sample_rate_hz = dsp.read_wav_file(FLAGS.input, dtype=np.float32)  # pytype: disable=wrong-arg-types  # numpy-scalars
   samples = samples.mean(axis=1)
 
   # Run frontend to get CARL frames. The classifier expects input sample rate

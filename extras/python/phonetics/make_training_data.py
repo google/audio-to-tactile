@@ -219,7 +219,7 @@ def process_one_wav_file(wav_file: str) -> Dict[str, List[np.ndarray]]:
     Examples dict with values of shape (num_examples, num_frames, num_channels).
     `examples[phone][i]` is the input for the ith example with label `phone`.
   """
-  samples_orig, sample_rate_hz = dsp.read_wav_file(wav_file, dtype=np.float32)
+  samples_orig, sample_rate_hz = dsp.read_wav_file(wav_file, dtype=np.float32)  # pytype: disable=wrong-arg-types  # numpy-scalars
   samples_orig = samples_orig.mean(axis=1)
 
   phone_times = phone_util.get_phone_times(
