@@ -13,7 +13,7 @@
  * limitations under the License.
  *
  *
- * 16 or 24-bit WAV writer. Don't use this file directly unless you are
+ * 16, 24, or 32-bit WAV writer. Don't use this file directly unless you are
  * adding support for a different kind of filesystem.
  *
  * For reading local files, see write_wav_file.h.
@@ -52,6 +52,9 @@ int WriteWavHeaderGeneric(WavWriter* w, size_t num_samples, int sample_rate_hz,
 int WriteWavHeaderGeneric24Bit(WavWriter* w, size_t num_samples,
                                int sample_rate_hz, int num_channels);
 
+int WriteWavHeaderGeneric32Bit(WavWriter* w, size_t num_samples,
+                               int sample_rate_hz, int num_channels);
+
 /* Write samples into a WAV file.  samples should be interleaved, and
  * num_samples must be an integer multiple of num_channels. Returns 1 on
  * success, 0 on failure.
@@ -61,6 +64,10 @@ int WriteWavSamplesGeneric(WavWriter* w, const int16_t* samples,
 
 /* Same as above but writing 24-bit samples. The lower 8 bits truncated. */
 int WriteWavSamplesGeneric24Bit(WavWriter* w, const int32_t* samples,
+                                size_t num_samples);
+
+/* Same as above but writing 32-bit samples. */
+int WriteWavSamplesGeneric32Bit(WavWriter* w, const int32_t* samples,
                                 size_t num_samples);
 
 #ifdef __cplusplus

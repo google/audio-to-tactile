@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "dsp/logging.h"
+#include "dsp/read_wav_info.h"
 #include "dsp/serialize.h"
 
 #define kBitsPerSample 16
@@ -165,8 +166,12 @@ static int ReadWavFmtChunk(WavReader* w, ReadWavInfo* info,
         info->encoding = kPcm24Encoding;
         info->destination_alignment_bytes = 4 /* 32-bit int */;
         info->sample_format = kInt32;
+      } else if (significant_bits_per_sample == 32) {
+        info->encoding = kPcm32Encoding;
+        info->destination_alignment_bytes = 4 /* 32-bit int */;
+        info->sample_format = kInt32;
       } else {
-        LOG_ERROR("Error: Only 16 and 24 bit PCM data is supported.\n");
+        LOG_ERROR("Error: Only 16, 24, and 32 bit PCM data is supported.\n");
         return 0;
       }
       break;

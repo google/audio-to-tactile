@@ -46,6 +46,13 @@ int WriteWavHeader24Bit(FILE* f, size_t num_samples, int sample_rate_hz,
                                     num_channels);
 }
 
+int WriteWavHeader32Bit(FILE* f, size_t num_samples, int sample_rate_hz,
+                        int num_channels) {
+  WavWriter w = WavWriterLocal(f);
+  return WriteWavHeaderGeneric32Bit(&w, num_samples, sample_rate_hz,
+                                    num_channels);
+}
+
 int WriteWavSamples(FILE* f, const int16_t* samples, size_t num_samples) {
   WavWriter w = WavWriterLocal(f);
   return WriteWavSamplesGeneric(&w, samples, num_samples);
@@ -56,9 +63,14 @@ int WriteWavSamples24Bit(FILE* f, const int32_t* samples, size_t num_samples) {
   return WriteWavSamplesGeneric24Bit(&w, samples, num_samples);
 }
 
+int WriteWavSamples32Bit(FILE* f, const int32_t* samples, size_t num_samples) {
+  WavWriter w = WavWriterLocal(f);
+  return WriteWavSamplesGeneric32Bit(&w, samples, num_samples);
+}
+
 int WriteWavFileInternal(const char* file_name, const void* samples,
                          size_t num_samples, int sample_rate_hz,
-                         int num_channels, int /* bool */ is_24_bit) {
+                         int num_channels, int bit_depth) {
   if (file_name == NULL || sample_rate_hz <= 0 || num_channels <= 0 ||
       num_samples % num_channels != 0 || num_samples > (UINT32_MAX - 60) / 2) {
     goto fail; /* Invalid input arguments. */
@@ -72,7 +84,9 @@ int WriteWavFileInternal(const char* file_name, const void* samples,
     goto fail; /* Failed to open file_name for writing. */
   }
 
-  if (is_24_bit) {
+  if (bit_depth == 32) {
+    WriteWavHeaderGeneric32Bit(&w, num_samples, sample_rate_hz, num_channels);
+  } else if (bit_depth == 24) {
     WriteWavHeaderGeneric24Bit(&w, num_samples, sample_rate_hz, num_channels);
   } else {
     WriteWavHeaderGeneric(&w, num_samples, sample_rate_hz, num_channels);
@@ -83,7 +97,9 @@ int WriteWavFileInternal(const char* file_name, const void* samples,
     goto fail;
   }
 
-  if (is_24_bit) {
+  if (bit_depth == 32) {
+    WriteWavSamplesGeneric32Bit(&w, (const int32_t*)samples, num_samples);
+  } else if (bit_depth == 24) {
     WriteWavSamplesGeneric24Bit(&w, (const int32_t*)samples, num_samples);
   } else {
     WriteWavSamplesGeneric(&w, (const int16_t*)samples, num_samples);
@@ -108,12 +124,19 @@ fail:
 int WriteWavFile(const char* file_name, const int16_t* samples,
                  size_t num_samples, int sample_rate_hz, int num_channels) {
   return WriteWavFileInternal(file_name, samples, num_samples, sample_rate_hz,
-                              num_channels, 0);
+                              num_channels, 16);
 }
 
 int WriteWavFile24Bit(const char* file_name, const int32_t* samples,
                       size_t num_samples, int sample_rate_hz,
                       int num_channels) {
   return WriteWavFileInternal(file_name, samples, num_samples, sample_rate_hz,
-                              num_channels, 1);
+                              num_channels, 24);
+}
+
+int WriteWavFile32Bit(const char* file_name, const int32_t* samples,
+                      size_t num_samples, int sample_rate_hz,
+                      int num_channels) {
+  return WriteWavFileInternal(file_name, samples, num_samples, sample_rate_hz,
+                              num_channels, 32);
 }

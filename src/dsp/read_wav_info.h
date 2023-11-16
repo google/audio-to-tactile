@@ -43,6 +43,7 @@ struct ReadWavInfo {
   enum EncodingType {
     kPcm16Encoding,
     kPcm24Encoding,
+    kPcm32Encoding,
     kMuLawEncoding,
     kIeeeFloat32Encoding,
     kIeeeFloat64Encoding,

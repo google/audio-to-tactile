@@ -13,7 +13,7 @@
  * limitations under the License.
  *
  *
- * C library to write 16 or 24-bit WAV files.
+ * C library to write 16, 24 or 32-bit WAV files.
  *
  * The simplest usage of this API is to use the WriteWavFile function, which
  * requires the samples to be buffered at the application layer.
@@ -82,6 +82,16 @@ int WriteWavHeader24Bit(FILE* f, size_t num_samples, int sample_rate_hz,
 int WriteWavSamples24Bit(FILE* f, const int32_t* samples, size_t num_samples);
 
 int WriteWavFile24Bit(const char* file_name, const int32_t* samples,
+                      size_t num_samples, int sample_rate_hz, int num_channels);
+
+/* Same functionality as the three functions above, but for 32-bit WAV files.
+ * The full 32 bits of each int32_t are written to the file. */
+
+int WriteWavHeader32Bit(FILE* f, size_t num_samples, int sample_rate_hz,
+                        int num_channels);
+int WriteWavSamples32Bit(FILE* f, const int32_t* samples, size_t num_samples);
+
+int WriteWavFile32Bit(const char* file_name, const int32_t* samples,
                       size_t num_samples, int sample_rate_hz, int num_channels);
 
 #ifdef __cplusplus

@@ -163,6 +163,12 @@ int WriteWavHeaderGeneric24Bit(WavWriter* w, size_t num_samples,
                                        num_channels, 24);
 }
 
+int WriteWavHeaderGeneric32Bit(WavWriter* w, size_t num_samples,
+                               int sample_rate_hz, int num_channels) {
+  return WriteWavHeaderGenericInternal(w, num_samples, sample_rate_hz,
+                                       num_channels, 32);
+}
+
 int WriteWavSamplesGeneric(WavWriter* w, const int16_t* samples,
                            size_t num_samples) {
   if (w == NULL || w->io_ptr == NULL || samples == NULL) {
@@ -228,6 +234,37 @@ int WriteWavSamplesGeneric24Bit(WavWriter* w, const int32_t* samples,
   if (needs_padding) {
     WriteUnsignedChar(0, w);
   }
+  if (w->has_error) {
+    return 0;
+  }
+
+  return 1;
+}
+
+int WriteWavSamplesGeneric32Bit(WavWriter* w, const int32_t* samples,
+                                size_t num_samples) {
+  if (w == NULL || w->io_ptr == NULL || samples == NULL) {
+    return 0;
+  }
+  w->has_error = 0; /* Clear the error flag. */
+
+  uint8_t buffer[1024];
+  while (num_samples) {
+    int count = sizeof(buffer) / sizeof(int32_t);
+    if ((size_t)count > num_samples) { count = (int)num_samples; }
+
+    int i;
+    for (i = 0; i < count; ++i) {
+      LittleEndianWriteU32(samples[i], buffer + 4 * i);
+    }
+
+    /* Call the writing callback with ~1 KB at a time. */
+    WriteWithErrorCheck(buffer, 4 * count, w);
+    samples += count;
+    num_samples -= count;
+  }
+
+  /* 32-bit samples never need a pad byte. */
   if (w->has_error) {
     return 0;
   }

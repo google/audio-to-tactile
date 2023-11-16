@@ -16,8 +16,8 @@
 #ifndef AUDIO_TO_TACTILE_SRC_DSP_READ_WAV_FILE_GENERIC_H_
 #define AUDIO_TO_TACTILE_SRC_DSP_READ_WAV_FILE_GENERIC_H_
 
-/* A WAV reader with support for 16 or 24-bit linear PCM format, mu-law format,
- * or IEEE floating point format (32 or 64 bits).
+/* A WAV reader with support for 16, 24, or 32-bit linear PCM format, mu-law
+ * format, or IEEE floating point format (32 or 64 bits).
  *
  * Don't use this file directly unless you are adding support for a different
  * kind of filesystem. See read_wav_file.h or audio/util/wavfile.
