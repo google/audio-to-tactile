@@ -19,8 +19,9 @@ load("//:defs.bzl", "c_library")
 
 package(
     default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
 )
+
+licenses(["notice"])
 
 c_library(
     name = "basic_sdl_app",

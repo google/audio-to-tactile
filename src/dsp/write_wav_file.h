@@ -1,4 +1,4 @@
-/* Copyright 2019 Google LLC
+/* Copyright 2019, 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,8 +28,8 @@
  * fclose(f);
  *
  * The API also supports streaming without knowing the length in advance by
- * first writing a dummy header, using the following pattern.  The number of
- * channels must be correct in the dummy header:
+ * first writing a placeholder header, using the following pattern. The number
+ * of channels must be correct in the placeholder header:
  * FILE* f = fopen(filename, "wb");
  * WriteWavHeader(f, 0, 0, nchannels);
  * WriteWavSamples(...);

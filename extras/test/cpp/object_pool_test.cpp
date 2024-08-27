@@ -1,4 +1,4 @@
-// Copyright 2021 Google LLC
+// Copyright 2021, 2023 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@
 
 namespace audio_tactile {
 
-// A dummy object for testing the pool. This object has a `label` member so that
+// A toy object for testing the pool. This object has a `label` member so that
 // the test can distinguish different instances, and `constructor_count` and
 // `destructor_count` static members to track the number of constructor and
 // destructor calls.

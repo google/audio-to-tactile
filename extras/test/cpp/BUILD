@@ -15,7 +15,7 @@
 #
 # Tests for src/cpp.
 
-package(licenses = ["notice"])
+licenses(["notice"])
 
 DEFAULT_COPTS = [
     # Embedded development tools don't necessarily support the latest C++

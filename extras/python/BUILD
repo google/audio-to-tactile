@@ -21,8 +21,9 @@ package(
     default_visibility = [
         "//visibility:public",
     ],
-    licenses = ["notice"],
 )
+
+licenses(["notice"])
 
 py_library(
     name = "dsp",

@@ -23,7 +23,7 @@ import numpy as np
 
 from extras.python.phonetics import phone_util
 
-flags.DEFINE_integer('dummy_test_flag', 123, '')
+flags.DEFINE_integer('toy_test_flag', 123, '')
 
 FLAGS = flags.FLAGS
 
@@ -31,10 +31,10 @@ FLAGS = flags.FLAGS
 class PhoneUtilTest(absltest.TestCase):
 
   def test_get_main_module_flags_dict(self):
-    """Test that get_main_module_flags_dict() sees `FLAGS.dummy_test_flag`."""
+    """Test that get_main_module_flags_dict() sees `FLAGS.toy_test_flag`."""
     flags_dict = phone_util.get_main_module_flags_dict()
-    self.assertIn('dummy_test_flag', flags_dict)
-    self.assertEqual(flags_dict['dummy_test_flag'], FLAGS.dummy_test_flag)
+    self.assertIn('toy_test_flag', flags_dict)
+    self.assertEqual(flags_dict['toy_test_flag'], FLAGS.toy_test_flag)
 
   def test_get_phone_label_filename(self):
     """Test get_phone_label_filename()."""

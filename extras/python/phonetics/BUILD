@@ -19,8 +19,9 @@ load("//:defs.bzl", "py_extension")
 
 package(
     default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
 )
+
+licenses(["notice"])
 
 py_extension(
     name = "classify_phoneme",

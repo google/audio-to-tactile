@@ -1,4 +1,4 @@
-/* Copyright 2020-2022 Google LLC
+/* Copyright 2020-2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -201,7 +201,7 @@ static int SetScoresSubDict(PyObject* parent_dict,
 
 /* Define `classify_phone_labels()`. */
 static PyObject* ClassifyPhonemeLabelsPython(
-    PyObject* dummy, PyObject* args, PyObject* kw) {
+    PyObject* unused, PyObject* args, PyObject* kw) {
   PyObject* frames_arg;
   static const char* keywords[] = {"frames", NULL};
 
@@ -242,7 +242,7 @@ static PyObject* ClassifyPhonemeLabelsPython(
 
 /* Define `classify_phone_scores()`. */
 static PyObject* ClassifyPhonemeScoresPython(
-    PyObject* dummy, PyObject* args, PyObject* kw) {
+    PyObject* unused, PyObject* args, PyObject* kw) {
   PyObject* frames_arg;
   static const char* keywords[] = {"frames", NULL};
 

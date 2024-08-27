@@ -19,8 +19,9 @@ load("//:defs.bzl", "c_library", "c_test")
 
 package(
     default_visibility = ["//visibility:public"],
-    licenses = ["notice"],  # Apache 2.0
 )
+
+licenses(["notice"])
 
 c_library(
     name = "yuan2005",

@@ -1,4 +1,4 @@
-/* Copyright 2019, 2021 Google LLC
+/* Copyright 2019, 2021, 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -135,7 +135,7 @@ static void TestWriteMonoWavStreaming(void) {
   wav_file_name = CHECK_NOTNULL(tmpnam(NULL));
   FILE* f = NULL;
   CHECK(f = fopen(wav_file_name, "wb"));
-  CHECK(WriteWavHeader(f, 0, 48000, 1)); /* Write a dummy header. */
+  CHECK(WriteWavHeader(f, 0, 48000, 1)); /* Write placeholder header. */
   CHECK(WriteWavSamples(f, kSamples + 0, 2));
   CHECK(WriteWavSamples(f, kSamples + 2, 2));
   fseek(f, 0, SEEK_SET);

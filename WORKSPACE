@@ -4,9 +4,9 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 http_archive(
     name = "benchmark",
-    urls = ["https://github.com/google/benchmark/archive/v1.5.2.zip"],
-    sha256 = "21e6e096c9a9a88076b46bd38c33660f565fa050ca427125f64c4a8bf60f336b",
-    strip_prefix = "benchmark-1.5.2",
+    sha256 = "1a6f0678cbcac65a12e2178d77d3c97d050d173389220c9df57e9249a40827ec",
+    strip_prefix = "benchmark-1.9.0",
+    urls = ["https://github.com/google/benchmark/archive/v1.9.0.zip"],
 )
 
 http_archive(

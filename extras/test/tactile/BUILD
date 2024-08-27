@@ -17,7 +17,7 @@
 
 load("//:defs.bzl", "c_test")
 
-package(licenses = ["notice"])
+licenses(["notice"])
 
 c_test(
     name = "envelope_tracker_test",

@@ -220,7 +220,7 @@ def _rational_polynomial_colormap(
 
 
 # A nice perceptually-uniform blue->green->orange colormap.
-matplotlib.cm.register_cmap(
+matplotlib.colormaps.register(
     name='density',
     cmap=_rational_polynomial_colormap('density', [
         ([0.74167, -0.76313, -0.53475, 0.21633, 0.51098, 0.01247, -0.48087,

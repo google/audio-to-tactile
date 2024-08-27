@@ -1,4 +1,4 @@
-/* Copyright 2019, 2022 Google LLC
+/* Copyright 2019, 2022-2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,7 +99,7 @@ static PyArrayObject* MakeOutputArray(int num_rows, int num_cols) {
 
 /* Define `embed_vowel()`. */
 static PyObject* EmbedVowelPython(
-    PyObject* dummy, PyObject* args, PyObject* kw) {
+    PyObject* unused, PyObject* args, PyObject* kw) {
   PyObject* frame_arg;
   static const char* keywords[] = {"frame", NULL};
 
@@ -142,7 +142,7 @@ static float ComputeScore(const EmbedVowelTarget* target, const float* coord) {
 
 /* Define `embed_vowel_scores()`. */
 static PyObject* EmbedVowelScoresPython(
-    PyObject* dummy, PyObject* args, PyObject* kw) {
+    PyObject* unused, PyObject* args, PyObject* kw) {
   PyObject* frame_arg;
   static const char* keywords[] = {"frame", NULL};
 

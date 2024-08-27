@@ -17,8 +17,9 @@
 
 package(
     default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
 )
+
+licenses(["notice"])
 
 filegroup(
     name = "phone_wavs",

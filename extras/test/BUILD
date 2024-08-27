@@ -12,7 +12,7 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
-package(licenses = ["notice"])
+licenses(["notice"])
 
 py_test(
     name = "arduino_format_test",

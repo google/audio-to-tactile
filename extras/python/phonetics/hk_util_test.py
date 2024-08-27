@@ -1,4 +1,4 @@
-# Copyright 2020 Google LLC
+# Copyright 2020, 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -34,7 +34,7 @@ class FooMetadata:
 
 
 def foo_model(batch, meta: FooMetadata):
-  """A dummy MLP model used for testing below."""
+  """A toy MLP model used for testing below."""
   x = batch['x']
   for i, units in enumerate(meta.hidden_units):
     x = hk.Linear(units)(x)

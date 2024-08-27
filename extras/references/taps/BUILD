@@ -31,8 +31,9 @@ load("//:defs.bzl", "c_binary", "c_library", "c_test")
 
 package(
     default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
 )
+
+licenses(["notice"])
 
 c_library(
     name = "phoneme_code",

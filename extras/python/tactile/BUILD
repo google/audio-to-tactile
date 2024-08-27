@@ -16,11 +16,13 @@
 # Python bindings for src/tactile.
 
 load("//:defs.bzl", "py_extension")
+load("//third_party/bazel_rules/rules_python/python:py_extension.bzl", "py_extension")
 
 package(
     default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
 )
+
+licenses(["notice"])
 
 py_extension(
     name = "enveloper",

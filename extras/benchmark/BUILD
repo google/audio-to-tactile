@@ -1,4 +1,4 @@
-# Copyright 2020-2021 Google LLC
+# Copyright 2020-2021, 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not
 # use this file except in compliance with the License. You may obtain a copy of
@@ -15,7 +15,7 @@
 #
 # Benchmarks.
 
-package(licenses = ["notice"])
+licenses(["notice"])
 
 C_OPTS = ["-Wno-unused-function"]
 
@@ -42,6 +42,16 @@ cc_binary(
 cc_binary(
     name = "q_resampler_benchmark",
     srcs = ["q_resampler_benchmark.cpp"],
+    copts = C_OPTS,
+    deps = [
+        "//:dsp",
+        "@benchmark//:benchmark_main",
+    ],
+)
+
+cc_binary(
+    name = "wav_file_benchmark",
+    srcs = ["wav_file_benchmark.cpp"],
     copts = C_OPTS,
     deps = [
         "//:dsp",

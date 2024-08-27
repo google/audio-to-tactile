@@ -1,4 +1,4 @@
-/* Copyright 2020-2022 Google LLC
+/* Copyright 2020-2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -263,7 +263,7 @@ static int ConvertSampleFormat(const char* src,
 }
 
 /* Implements `read_wav_impl()` Python function. */
-static PyObject* ReadWavImpl(PyObject* dummy, PyObject* args, PyObject* kw) {
+static PyObject* ReadWavImpl(PyObject* unused, PyObject* args, PyObject* kw) {
   PyObject* file_object_arg = NULL;
   PyArray_Descr* descr = NULL;
   static const char* keywords[] = {"file_object", "dtype", NULL};
@@ -410,7 +410,7 @@ static size_t WriteFun(
 }
 
 /* Implements `write_wav_impl()` Python function. */
-static PyObject* WriteWavImpl(PyObject* dummy, PyObject* args, PyObject* kw) {
+static PyObject* WriteWavImpl(PyObject* unused, PyObject* args, PyObject* kw) {
   PyObject* file_object_arg = NULL;
   PyObject* samples_arg = NULL;
   int sample_rate_hz = 0;
