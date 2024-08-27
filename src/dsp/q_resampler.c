@@ -311,7 +311,8 @@ int QResamplerProcessSamples(QResampler* resampler, const float* input,
    * or i < i_end = delayed_input_frames + num_input_frames - num_taps + 1.
    */
   int i_end = resampler->delayed_input_frames + num_input_frames - num_taps + 1;
-  __attribute__((unused)) int num_written = 0;
+  int num_written = 0;
+  (void)num_written;
 
   /* Process samples where the filter straddles delayed_input and input. */
   while (i < resampler->delayed_input_frames && i < i_end) {

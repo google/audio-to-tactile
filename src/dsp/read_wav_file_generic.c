@@ -77,7 +77,7 @@ static size_t ReadWithErrorCheck(void* bytes, size_t num_bytes, WavReader* w) {
   size_t read_bytes = w->read_fun(bytes, num_bytes, w->io_ptr);
   if (num_bytes != read_bytes) {
     if (read_bytes < num_bytes) {
-      memset(bytes + read_bytes, 0, num_bytes - read_bytes);
+      memset((char*)bytes + read_bytes, 0, num_bytes - read_bytes);
     }
     w->has_error = 1;
     if (w->eof_fun != NULL && w->eof_fun(w->io_ptr)) {
@@ -93,14 +93,14 @@ static void SeekWithErrorCheck(size_t num_bytes, WavReader* w) {
     failure = w->seek_fun(num_bytes, w->io_ptr);
   } else {
     /* Allocate small buffer even for large seeks. */
-    char dummy[256];
-    for (; num_bytes > sizeof(dummy); num_bytes -= sizeof(dummy)) {
-      if (w->read_fun(dummy, sizeof(dummy), w->io_ptr) != sizeof(dummy)) {
+    char buffer[256];
+    for (; num_bytes > sizeof(buffer); num_bytes -= sizeof(buffer)) {
+      if (w->read_fun(buffer, sizeof(buffer), w->io_ptr) != sizeof(buffer)) {
         w->has_error = 1;
         return;
       }
     }
-    failure = w->read_fun(dummy, num_bytes, w->io_ptr) != num_bytes;
+    failure = w->read_fun(buffer, num_bytes, w->io_ptr) != num_bytes;
   }
   if (failure) {
     w->has_error = 1;

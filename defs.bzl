@@ -48,19 +48,20 @@ def py_extension(name = None, srcs = None, data = None, visibility = None, deps 
 
 CONDITION_WINDOWS = "@bazel_tools//src/conditions:windows"
 
-WARNING_OPTS = [
-    # Warn about mixed signed-unsigned integer comparisons.
-    "-Wsign-compare",
-    # Warn about `()` declarations. In C, but not C++, a function taking no args
-    # should be declared as `void foo(void);`, not `void foo();`.
-    # See e.g. https://stackoverflow.com/a/13950800/13223986.
-    "-Wstrict-prototypes",
-    # Suppress "unused function" warnings on `static` functions in .h files.
-    "-Wno-unused-function",
-] + select({
+WARNING_OPTS = select({
     CONDITION_WINDOWS: [],
-    # Warn about needlessly set variables. Not supported on Windows.
-    "//conditions:default": ["-Wunused-but-set-variable"],
+    "//conditions:default": [
+        # Warn about `()` declarations. In C, but not C++, a function taking no args
+        # should be declared as `void foo(void);`, not `void foo();`.
+        # See e.g. https://stackoverflow.com/a/13950800/13223986.
+        "-Wstrict-prototypes",
+        # Suppress "unused function" warnings on `static` functions in .h files.
+        "-Wno-unused-function",
+        # Warn about needlessly set variables. Not supported on Windows.
+        "-Wunused-but-set-variable",
+        # Warn about mixed signed-unsigned integer comparisons.
+        "-Wsign-compare",
+    ],
 })
 
 # Build with C89 standard compatibility.
